@@ -34,8 +34,9 @@
     #caption {
       position: fixed; bottom: 44px; left: 44px; z-index: 50;
       color: #fff;
-      font-size: clamp(0.75rem, 1.5vw, 1rem);
-      font-weight: 400; letter-spacing: 0.06em;
+      font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-weight: 400; letter-spacing: 0.04em;
       text-shadow: 0 1px 4px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.6);
       pointer-events: none;
       transition: opacity 0.6s ease-in-out;
@@ -317,6 +318,15 @@ function dismissHint() {
   if (!hintDismissed) { hintDismissed = true; hintEl.classList.add("hidden"); }
 }
 setTimeout(dismissHint, 5000);
+
+// ── Shuffle ───────────────────────────────────────────────
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+shuffle(VIDEOS);
 
 // ── Init ──────────────────────────────────────────────────
 function init() {
