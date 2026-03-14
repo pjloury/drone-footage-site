@@ -71,11 +71,16 @@
     #hint.hidden { opacity: 0; }
 
     /* ── Progress bar ─────────────────────────────────────── */
-    #bar {
-      position: fixed; bottom: 0; left: 0;
-      height: 2px; width: 0%;
-      background: rgba(255,255,255,.45);
+    #bar-track {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 2px;
+      background: rgba(255,255,255,.12);
       z-index: 50; pointer-events: none;
+    }
+    #bar {
+      height: 100%; width: 0%;
+      background: rgba(255,255,255,.55);
+      transition: width 0.25s linear;
     }
 
     /* ── Welcome overlay ─────────────────────────────────── */
@@ -191,7 +196,7 @@
 <div id="caption"></div>
 <div id="dots"></div>
 <div id="hint">← &nbsp;&nbsp; → &nbsp; to navigate</div>
-<div id="bar"></div>
+<div id="bar-track"><div id="bar"></div></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -283,12 +288,13 @@ const hintEl   = document.getElementById("hint");
 const barEl    = document.getElementById("bar");
 const spinner  = document.getElementById("spinner");
 
-let current       = 0;
-let front         = "A";
-let busy          = false;
-let hintDismissed = false;
-let barRaf        = null;
-let barStart      = null;
+let current         = 0;
+let front           = "A";
+let busy            = false;
+let hintDismissed   = false;
+let nextPreloaded   = false;
+
+const PRELOAD_BEFORE_END_S = 5; // seconds before end to start buffering next video
 
 function url(index) {
   return `${BASE_URL}/${VIDEOS[index].file}`;
@@ -308,24 +314,14 @@ function updateDots() {
     d.classList.toggle("active", i === current));
 }
 
-// ── Progress bar ─────────────────────────────────────────
-function startBar(duration) {
-  cancelAnimationFrame(barRaf);
-  barEl.style.width = "0%";
-  barStart = null;
-  const total = (duration || 60) * 1000;
-  function tick(now) {
-    if (!barStart) barStart = now;
-    const pct = Math.min(((now - barStart) / total) * 100, 100);
-    barEl.style.width = pct + "%";
-    if (pct < 100) barRaf = requestAnimationFrame(tick);
-  }
-  barRaf = requestAnimationFrame(tick);
+// ── Progress bar (timeupdate-driven) ─────────────────────
+function updateBar(vid) {
+  if (!vid.duration) return;
+  const pct = (vid.currentTime / vid.duration) * 100;
+  barEl.style.width = pct + "%";
 }
 function resetBar() {
-  cancelAnimationFrame(barRaf);
   barEl.style.width = "0%";
-  barStart = null;
 }
 
 // ── Caption ───────────────────────────────────────────────
@@ -337,10 +333,21 @@ function setCaption(text) {
   }, 350);
 }
 
+// ── Gapless preload ───────────────────────────────────────
+function preloadNext() {
+  if (nextPreloaded) return;
+  nextPreloaded = true;
+  const idleVid = front === "A" ? vidB : vidA;
+  const nextIdx = ((current + 1) % VIDEOS.length + VIDEOS.length) % VIDEOS.length;
+  idleVid.src = url(nextIdx);
+  idleVid.load();
+}
+
 // ── Core navigate ─────────────────────────────────────────
 function goTo(index) {
   if (busy) return;
   busy = true;
+  nextPreloaded = false;
   resetBar();
 
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
@@ -350,11 +357,14 @@ function goTo(index) {
   const fwdLayer  = front === "A" ? layerA : layerB;
   const fwdVid    = front === "A" ? vidA   : vidB;
 
-  // Preload next into back layer and play it
-  backVid.src = url(current);
-  backVid.load();
-
-  backVid.play().catch(() => {});   // autoplay; browser may need muted (already set)
+  // If already preloaded into backVid for this index, just seek & play
+  const expectedSrc = url(current);
+  if (!backVid.src || !backVid.src.includes(VIDEOS[current].file)) {
+    backVid.src = expectedSrc;
+    backVid.load();
+  }
+  backVid.currentTime = 0;
+  backVid.play().catch(() => {});
 
   // Crossfade
   backLayer.classList.add("active");
@@ -365,17 +375,24 @@ function goTo(index) {
   updateDots();
 
   setTimeout(() => {
-    // Stop and unload the now-hidden video to free memory/bandwidth
+    // Unload the now-hidden video
     fwdVid.pause();
+    fwdVid.ontimeupdate = null;
+    fwdVid.onended = null;
     fwdVid.removeAttribute("src");
     fwdVid.load();
 
     busy = false;
 
-    // Start bar using actual video duration if known
-    startBar(backVid.duration || 60);
+    // Drive progress bar from actual playback position
+    backVid.ontimeupdate = () => {
+      updateBar(backVid);
+      // Start buffering next video 5s before this one ends
+      if (backVid.duration && (backVid.duration - backVid.currentTime) <= PRELOAD_BEFORE_END_S) {
+        preloadNext();
+      }
+    };
 
-    // Wire up auto-advance to the video's own ended event
     backVid.onended = next;
   }, CROSSFADE_MS + 100);
 }
@@ -421,19 +438,19 @@ function init() {
   vidA.src = url(0);
   vidA.load();
 
-  // Preload video 1 into layer B silently
-  if (VIDEOS.length > 1) {
-    vidB.src = url(1);
-    vidB.load();
-  }
-
   // Wait for video to be ready enough to play
   vidA.addEventListener("canplay", () => {
     spinner.classList.add("gone");
     layerA.classList.add("active");
     vidA.play().catch(() => {});
     caption.textContent = VIDEOS[0].caption;
-    startBar(vidA.duration || 60);
+
+    vidA.ontimeupdate = () => {
+      updateBar(vidA);
+      if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
+        preloadNext();
+      }
+    };
     vidA.onended = next;
   }, { once: true });
 
