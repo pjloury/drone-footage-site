@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drone Footage</title>
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: 'Georgia', 'Times New Roman', serif;
+    }
+
+    /* ── Layers ────────────────────────────────────────────── */
+    #stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .layer {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 1.8s ease-in-out;
+      pointer-events: none;
+    }
+
+    .layer.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .layer iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ── Caption ───────────────────────────────────────────── */
+    #caption {
+      position: fixed;
+      bottom: 44px;
+      left: 44px;
+      z-index: 50;
+      color: #fff;
+      font-size: clamp(0.75rem, 1.5vw, 1rem);
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      text-shadow:
+        0 1px 4px rgba(0,0,0,0.9),
+        0 0 12px rgba(0,0,0,0.6);
+      pointer-events: none;
+      transition: opacity 0.7s ease-in-out;
+    }
+
+    #caption.fade {
+      opacity: 0;
+    }
+
+    /* ── Progress dots ─────────────────────────────────────── */
+    #dots {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transition: background 0.4s ease, transform 0.4s ease;
+    }
+
+    .dot.active {
+      background: rgba(255,255,255,0.85);
+      transform: scale(1.4);
+    }
+
+    /* ── Arrow hint (fades after first interaction) ────────── */
+    #hint {
+      position: fixed;
+      bottom: 44px;
+      right: 44px;
+      z-index: 50;
+      color: rgba(255,255,255,0.35);
+      font-size: clamp(0.6rem, 1.1vw, 0.8rem);
+      letter-spacing: 0.14em;
+      pointer-events: none;
+      transition: opacity 1.2s ease;
+    }
+
+    #hint.hidden {
+      opacity: 0;
+    }
+
+    /* ── Progress bar ──────────────────────────────────────── */
+    #progressBar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0%;
+      background: rgba(255,255,255,0.45);
+      z-index: 50;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="layer" id="layerA"><iframe id="iframeA" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
+  <div class="layer" id="layerB"><iframe id="iframeB" allowfullscreen allow="autoplay; encrypted-media"></iframe></div>
+</div>
+
+<div id="caption"></div>
+<div id="dots"></div>
+<div id="hint">← &nbsp;&nbsp; → &nbsp; to navigate</div>
+<div id="progressBar"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  CONFIGURATION
+//
+//  Add each drone video below. For each entry you need:
+//    id      — the Google Drive file ID
+//    caption — the location text shown bottom-left
+//
+//  How to find your file ID:
+//    1. Upload the video to Google Drive
+//    2. Right-click the file → Share → change access to
+//       "Anyone with the link" → copy the link
+//    3. The link looks like:
+//         https://drive.google.com/file/d/1aBcDeFgHiJkLmNoPqRsTuVwXyZ/view
+//                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+//                                         this part is your file ID
+//    4. Paste just that ID string into the id field below
+// ═══════════════════════════════════════════════════════════════════════
+
+const VIDEOS = [
+  { id: "1-Dgqcvk0aUPhUZQA44CgetPj6sy3LxcX", caption: "Location 1"  },
+  { id: "1pPL4ytqjWFjBogrt1WrMMB1eooWHMyyr",  caption: "Location 2"  },
+  { id: "16Xab-tWoR5IxeJiHAj8DrHwgnQjyNa07",  caption: "Location 3"  },
+  { id: "16ozSDmbe4AjkURFW-sdruGTACmI5Pbwl",  caption: "Location 4"  },
+  { id: "1ANriRk42KMSLf_aauZqscVnRBeB3aZxB",  caption: "Location 5"  },
+  { id: "1LsQeRxTCr-1TxjmJCoazjdyWNnkbaleP",  caption: "Location 6"  },
+  { id: "1N6V4vugL7ZjTT_TCz2_nblbIqRpVeOsA",  caption: "Location 7"  },
+  { id: "1Rjge79uuZ10AoELT-ypQlAEf6q00Cy2W",  caption: "Location 8"  },
+  { id: "1_Z4Ix8d7dRw42lpSJkIBgFgy2J3O8wsg",  caption: "Location 9"  },
+  { id: "1hp1njQTabw19A71wqK02AThE90-bJRvY",  caption: "Location 10" },
+  { id: "1ivvjfeBpS3EXlMHEDRdVBvFya-kJg5mG",  caption: "Location 11" },
+  { id: "1lqwpUyH0D5un1m7tfeccDmXKmzMosLsI",  caption: "Location 12" },
+  { id: "1nn1z47tIowqSqka24zMWI6I5UYz8vVCV",  caption: "Location 13" },
+  { id: "1oY-Fn16I-HzvZrizIgndx8cyx0Xl1GPu",  caption: "Location 14" },
+];
+
+// How long each video plays before automatically advancing (milliseconds)
+const VIDEO_DURATION_MS = 60_000;
+
+// Duration of the crossfade — keep in sync with the CSS transition above
+const CROSSFADE_MS = 1800;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  Engine — no edits needed below this line
+// ═══════════════════════════════════════════════════════════════════════
+
+const layerA    = document.getElementById("layerA");
+const layerB    = document.getElementById("layerB");
+const iframeA   = document.getElementById("iframeA");
+const iframeB   = document.getElementById("iframeB");
+const captionEl = document.getElementById("caption");
+const dotsEl    = document.getElementById("dots");
+const hintEl    = document.getElementById("hint");
+const barEl     = document.getElementById("progressBar");
+
+let current       = 0;
+let front         = "A";   // which layer is currently visible
+let busy          = false;
+let autoTimer     = null;
+let barStart      = null;
+let barRaf        = null;
+let hintDismissed = false;
+
+function embedUrl(id) {
+  return `https://drive.google.com/file/d/${id}/preview?autoplay=1`;
+}
+
+// ── Dots ─────────────────────────────────────────────────────────────
+function buildDots() {
+  dotsEl.innerHTML = "";
+  VIDEOS.forEach((_, i) => {
+    const d = document.createElement("div");
+    d.className = "dot" + (i === current ? " active" : "");
+    dotsEl.appendChild(d);
+  });
+}
+
+function updateDots() {
+  dotsEl.querySelectorAll(".dot").forEach((d, i) => {
+    d.classList.toggle("active", i === current);
+  });
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────
+function startBar() {
+  cancelAnimationFrame(barRaf);
+  barEl.style.width = "0%";
+  barStart = null;
+
+  function tick(now) {
+    if (barStart === null) barStart = now;
+    const pct = Math.min(((now - barStart) / VIDEO_DURATION_MS) * 100, 100);
+    barEl.style.width = pct + "%";
+    if (pct < 100) barRaf = requestAnimationFrame(tick);
+  }
+  barRaf = requestAnimationFrame(tick);
+}
+
+function resetBar() {
+  cancelAnimationFrame(barRaf);
+  barEl.style.width = "0%";
+}
+
+// ── Caption crossfade ─────────────────────────────────────────────────
+function setCaption(text) {
+  captionEl.classList.add("fade");
+  setTimeout(() => {
+    captionEl.textContent = text;
+    captionEl.classList.remove("fade");
+  }, 350);
+}
+
+// ── Core navigate ─────────────────────────────────────────────────────
+function goTo(index) {
+  if (busy || VIDEOS.length < 2) return;
+  busy = true;
+  clearTimeout(autoTimer);
+  resetBar();
+
+  current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
+
+  const backLayer  = front === "A" ? layerB  : layerA;
+  const backIframe = front === "A" ? iframeB : iframeA;
+  const frontLayer = front === "A" ? layerA  : layerB;
+
+  // Load the incoming video into the hidden layer
+  backIframe.src = embedUrl(VIDEOS[current].id);
+
+  // Crossfade: reveal back layer, hide front layer
+  backLayer.classList.add("active");
+
+  // Give the iframe one frame to begin loading before fading in
+  requestAnimationFrame(() => {
+    frontLayer.classList.remove("active");
+  });
+
+  front = front === "A" ? "B" : "A";
+
+  setCaption(VIDEOS[current].caption);
+  updateDots();
+
+  // After fade completes: unload stale layer, resume timing
+  setTimeout(() => {
+    const staleIframe = front === "A" ? iframeB : iframeA;
+    staleIframe.src = "";      // stop audio / free bandwidth
+    busy = false;
+    startBar();
+    scheduleAuto();
+  }, CROSSFADE_MS + 100);
+}
+
+function next() { goTo(current + 1); }
+function prev() { goTo(current - 1); }
+
+function scheduleAuto() {
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(next, VIDEO_DURATION_MS);
+}
+
+// ── Keyboard navigation ───────────────────────────────────────────────
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") { dismissHint(); next(); }
+  if (e.key === "ArrowLeft")  { dismissHint(); prev(); }
+});
+
+// ── Touch / swipe ─────────────────────────────────────────────────────
+let touchStartX = null;
+document.addEventListener("touchstart", e => {
+  touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
+document.addEventListener("touchend", e => {
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) {
+    dismissHint();
+    dx < 0 ? next() : prev();
+  }
+  touchStartX = null;
+}, { passive: true });
+
+// ── Hint auto-dismiss ─────────────────────────────────────────────────
+function dismissHint() {
+  if (!hintDismissed) {
+    hintDismissed = true;
+    hintEl.classList.add("hidden");
+  }
+}
+setTimeout(dismissHint, 5000);
+
+// ── Init ──────────────────────────────────────────────────────────────
+function init() {
+  if (!VIDEOS.length) {
+    document.body.innerHTML = `
+      <div style="color:#fff;padding:3rem;font-family:sans-serif;line-height:1.7">
+        <h2 style="margin-bottom:1rem">No videos configured</h2>
+        <p>Open <code>index.html</code> and fill in the <code>VIDEOS</code> array at the top of the script.</p>
+      </div>`;
+    return;
+  }
+
+  buildDots();
+
+  // Show first video immediately
+  iframeA.src = embedUrl(VIDEOS[0].id);
+  layerA.classList.add("active");
+  captionEl.textContent = VIDEOS[0].caption;
+  front = "A";
+
+  startBar();
+  scheduleAuto();
+}
+
+init();
+</script>
+</body>
+</html>
