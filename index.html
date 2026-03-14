@@ -29,8 +29,24 @@
 
     .layer video {
       width: 100%; height: 100%;
-      object-fit: cover;   /* fill the screen, crop edges if needed */
+      object-fit: cover;
+      object-position: center center;
       display: block;
+    }
+
+    /* Portrait mobile: force cover from center, crop sides naturally */
+    @media (orientation: portrait) and (max-width: 768px) {
+      .layer video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center center;
+      }
+      #caption {
+        font-size: clamp(1rem, 5vw, 1.4rem);
+        bottom: 60px; left: 20px; right: 20px;
+      }
+      #hint { display: none; }
     }
 
     /* ── Caption ──────────────────────────────────────────── */
@@ -104,6 +120,16 @@
       top: 24px;
       left: 24px;
       transform: translate(0, 0) scale(0.32);
+    }
+
+    @media (max-width: 768px) {
+      #welcome:not(.docked) {
+        /* On mobile, scale the welcome box down to fit portrait width */
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      #welcome.docked {
+        transform: translate(0, 0) scale(0.22);
+      }
     }
 
     .welcome-box {
@@ -335,12 +361,17 @@ function setCaption(text) {
 
 // ── Gapless preload ───────────────────────────────────────
 function preloadNext() {
-  if (nextPreloaded) return;
+  if (nextPreloaded || busy) return;
   nextPreloaded = true;
   const idleVid = front === "A" ? vidB : vidA;
   const nextIdx = ((current + 1) % VIDEOS.length + VIDEOS.length) % VIDEOS.length;
-  idleVid.src = url(nextIdx);
-  idleVid.load();
+  const nextUrl = url(nextIdx);
+  // Only load if idle layer isn't already holding this video
+  if (!idleVid.src || !idleVid.src.includes(VIDEOS[nextIdx].file)) {
+    idleVid.src = nextUrl;
+    idleVid.preload = "auto";
+    idleVid.load();
+  }
 }
 
 // ── Core navigate ─────────────────────────────────────────
@@ -432,30 +463,75 @@ function shuffle(arr) {
 shuffle(VIDEOS);
 
 // ── Init ──────────────────────────────────────────────────
+function startPlayback() {
+  spinner.classList.add("gone");
+  layerA.classList.add("active");
+  vidA.play().catch(() => {
+    // Mobile Safari blocked autoplay — show a tap-to-start overlay
+    showTapPrompt();
+  });
+  caption.textContent = VIDEOS[0].caption;
+  vidA.ontimeupdate = () => {
+    updateBar(vidA);
+    if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
+      preloadNext();
+    }
+  };
+  vidA.onended = next;
+}
+
+function showTapPrompt() {
+  const tap = document.createElement("div");
+  tap.id = "tap-prompt";
+  tap.style.cssText = `
+    position:fixed;inset:0;z-index:500;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;background:rgba(0,0,0,0.01);
+  `;
+  tap.innerHTML = `<div style="color:rgba(255,255,255,0.7);font-size:0.85rem;letter-spacing:0.2em;text-transform:uppercase;pointer-events:none;">Tap to play</div>`;
+  document.body.appendChild(tap);
+  tap.addEventListener("click", () => {
+    vidA.play().catch(() => {});
+    tap.remove();
+  }, { once: true });
+}
+
 function init() {
   buildDots();
 
   vidA.src = url(0);
+  vidA.muted = true;
+  vidA.playsInline = true;
+  vidA.preload = "auto";
   vidA.load();
 
-  // Wait for video to be ready enough to play
-  vidA.addEventListener("canplay", () => {
+  let started = false;
+  function tryStart() {
+    if (started) return;
+    started = true;
+    startPlayback();
+  }
+
+  // canplay fires when enough data is ready
+  vidA.addEventListener("canplay", tryStart, { once: true });
+  // canplaythrough as backup
+  vidA.addEventListener("canplaythrough", tryStart, { once: true });
+  // Fallback: dismiss spinner after 5s regardless
+  setTimeout(() => {
     spinner.classList.add("gone");
-    layerA.classList.add("active");
-    vidA.play().catch(() => {});
-    caption.textContent = VIDEOS[0].caption;
-
-    vidA.ontimeupdate = () => {
-      updateBar(vidA);
-      if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
-        preloadNext();
-      }
-    };
-    vidA.onended = next;
-  }, { once: true });
-
-  // Fallback if canplay never fires
-  setTimeout(() => spinner.classList.add("gone"), 4000);
+    if (!started) {
+      started = true;
+      // Try to play anyway — may need tap on mobile
+      vidA.play().catch(() => showTapPrompt());
+      caption.textContent = VIDEOS[0].caption;
+      vidA.ontimeupdate = () => {
+        updateBar(vidA);
+        if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
+          preloadNext();
+        }
+      };
+      vidA.onended = next;
+    }
+  }, 5000);
 }
 
 init();
