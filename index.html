@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Drone Footage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300&family=Inter:wght@300&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -75,6 +78,42 @@
       z-index: 50; pointer-events: none;
     }
 
+    /* ── Welcome overlay ─────────────────────────────────── */
+    #welcome {
+      position: fixed; inset: 0; z-index: 300;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 1.6s ease-in-out;
+    }
+    #welcome.fade-out { opacity: 0; }
+
+    .welcome-box {
+      display: inline-flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.85);
+      padding: clamp(28px, 5vw, 56px) clamp(40px, 8vw, 96px);
+      gap: 14px;
+    }
+    .welcome-name {
+      font-family: 'Cormorant Garamond', 'Didot', 'Bodoni MT', 'Playfair Display', 'Times New Roman', serif;
+      font-size: clamp(2.4rem, 6vw, 5rem);
+      font-weight: 300;
+      letter-spacing: 0.28em;
+      color: #fff;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .welcome-sub {
+      font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+      font-size: clamp(0.6rem, 1.4vw, 0.9rem);
+      font-weight: 300;
+      letter-spacing: 0.38em;
+      color: rgba(255,255,255,0.9);
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
     /* ── Loading spinner (shown while first video buffers) ── */
     #spinner {
       position: fixed; inset: 0; z-index: 200;
@@ -94,6 +133,13 @@
   </style>
 </head>
 <body>
+
+<div id="welcome">
+  <div class="welcome-box">
+    <div class="welcome-name">PJ Loury</div>
+    <div class="welcome-sub">Drone Videography</div>
+  </div>
+</div>
 
 <div id="spinner"><div class="ring"></div></div>
 
@@ -356,6 +402,13 @@ function init() {
 }
 
 init();
+
+// ── Welcome overlay dismiss ───────────────────────────────
+const welcomeEl = document.getElementById("welcome");
+setTimeout(() => {
+  welcomeEl.classList.add("fade-out");
+  setTimeout(() => { welcomeEl.style.display = "none"; }, 1600);
+}, 10000);
 </script>
 </body>
 </html>
