@@ -314,19 +314,24 @@ const hintEl   = document.getElementById("hint");
 const barEl    = document.getElementById("bar");
 const spinner  = document.getElementById("spinner");
 
-let current         = 0;
-let front           = "A";
-let busy            = false;
-let hintDismissed   = false;
-let nextPreloaded   = false;
+let current       = 0;
+let transitioning = false;
+let hintDismissed = false;
+// which layer is currently SHOWING: "A" or "B"
+let activeLayer   = "A";
 
-const PRELOAD_BEFORE_END_S = 5; // seconds before end to start buffering next video
+const PRELOAD_SECS = 6;
 
-function url(index) {
-  return `${BASE_URL}/${VIDEOS[index].file}`;
+function url(i) {
+  return `${BASE_URL}/${VIDEOS[i].file}`;
 }
 
-// ── Dots ─────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────
+function activeVid()  { return activeLayer === "A" ? vidA : vidB; }
+function idleVid()    { return activeLayer === "A" ? vidB : vidA; }
+function activeEl()   { return activeLayer === "A" ? layerA : layerB; }
+function idleEl()     { return activeLayer === "A" ? layerB : layerA; }
+
 function buildDots() {
   dotsEl.innerHTML = "";
   VIDEOS.forEach((_, i) => {
@@ -340,104 +345,98 @@ function updateDots() {
     d.classList.toggle("active", i === current));
 }
 
-// ── Progress bar (timeupdate-driven) ─────────────────────
 function updateBar(vid) {
   if (!vid.duration) return;
-  const pct = (vid.currentTime / vid.duration) * 100;
-  barEl.style.width = pct + "%";
+  barEl.style.width = (vid.currentTime / vid.duration * 100) + "%";
 }
-function resetBar() {
-  barEl.style.width = "0%";
-}
+function resetBar() { barEl.style.width = "0%"; }
 
-// ── Caption ───────────────────────────────────────────────
 function setCaption(text) {
   caption.classList.add("fade");
-  setTimeout(() => {
-    caption.textContent = text;
-    caption.classList.remove("fade");
-  }, 350);
+  setTimeout(() => { caption.textContent = text; caption.classList.remove("fade"); }, 350);
 }
 
-// ── Gapless preload ───────────────────────────────────────
-function preloadNext() {
-  if (nextPreloaded || busy) return;
-  nextPreloaded = true;
-  const idleVid = front === "A" ? vidB : vidA;
-  const nextIdx = ((current + 1) % VIDEOS.length + VIDEOS.length) % VIDEOS.length;
-  const nextUrl = url(nextIdx);
-  // Only load if idle layer isn't already holding this video
-  if (!idleVid.src || !idleVid.src.includes(VIDEOS[nextIdx].file)) {
-    idleVid.src = nextUrl;
-    idleVid.preload = "auto";
-    idleVid.load();
-  }
+// wire up the currently-active video's progress + auto-advance
+function wireActive(vid) {
+  vid.ontimeupdate = () => {
+    updateBar(vid);
+    if (vid.duration && (vid.duration - vid.currentTime) < PRELOAD_SECS) {
+      preloadIntoIdle();
+    }
+  };
+  vid.onended = () => goTo(current + 1);
 }
 
-// ── Core navigate ─────────────────────────────────────────
+// silently buffer next video into idle layer
+let preloadedIdx = -1;
+function preloadIntoIdle() {
+  const nextIdx = (current + 1) % VIDEOS.length;
+  if (preloadedIdx === nextIdx) return;
+  preloadedIdx = nextIdx;
+  const iv = idleVid();
+  iv.ontimeupdate = null;
+  iv.onended = null;
+  iv.src = url(nextIdx);
+  iv.preload = "auto";
+  iv.load();
+}
+
+// ── core navigate ─────────────────────────────────────────
 function goTo(index) {
-  if (busy) return;
-  busy = true;
-  nextPreloaded = false;
+  if (transitioning) return;
+  transitioning = true;
   resetBar();
 
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
 
-  const backLayer = front === "A" ? layerB : layerA;
-  const backVid   = front === "A" ? vidB   : vidA;
-  const fwdLayer  = front === "A" ? layerA : layerB;
-  const fwdVid    = front === "A" ? vidA   : vidB;
+  const incoming = idleVid();
+  const incomingLayer = idleEl();
+  const outgoingVid = activeVid();
+  const outgoingLayer = activeEl();
 
-  // If already preloaded into backVid for this index, just seek & play
-  const expectedSrc = url(current);
-  if (!backVid.src || !backVid.src.includes(VIDEOS[current].file)) {
-    backVid.src = expectedSrc;
-    backVid.load();
+  // Load if not already preloaded for this index
+  if (preloadedIdx !== current || !incoming.src.includes(VIDEOS[current].file)) {
+    incoming.src = url(current);
+    incoming.preload = "auto";
+    incoming.load();
   }
-  backVid.currentTime = 0;
-  backVid.play().catch(() => {});
+
+  // Start playing the incoming video
+  const playPromise = incoming.play();
+  (playPromise || Promise.resolve()).catch(() => {});
 
   // Crossfade
-  backLayer.classList.add("active");
-  requestAnimationFrame(() => fwdLayer.classList.remove("active"));
-  front = front === "A" ? "B" : "A";
+  incomingLayer.classList.add("active");
+  setTimeout(() => outgoingLayer.classList.remove("active"), 50);
+
+  // Flip active layer
+  activeLayer = activeLayer === "A" ? "B" : "A";
+  preloadedIdx = -1;
 
   setCaption(VIDEOS[current].caption);
   updateDots();
 
   setTimeout(() => {
-    // Unload the now-hidden video
-    fwdVid.pause();
-    fwdVid.ontimeupdate = null;
-    fwdVid.onended = null;
-    fwdVid.removeAttribute("src");
-    fwdVid.load();
+    // Stop and blank the outgoing video to free memory
+    outgoingVid.pause();
+    outgoingVid.ontimeupdate = null;
+    outgoingVid.onended = null;
+    outgoingVid.src = "";
 
-    busy = false;
-
-    // Drive progress bar from actual playback position
-    backVid.ontimeupdate = () => {
-      updateBar(backVid);
-      // Start buffering next video 5s before this one ends
-      if (backVid.duration && (backVid.duration - backVid.currentTime) <= PRELOAD_BEFORE_END_S) {
-        preloadNext();
-      }
-    };
-
-    backVid.onended = next;
+    wireActive(incoming);
+    transitioning = false;
   }, CROSSFADE_MS + 100);
 }
 
 function next() { goTo(current + 1); }
 function prev() { goTo(current - 1); }
 
-// ── Keyboard ──────────────────────────────────────────────
+// ── keyboard / swipe ──────────────────────────────────────
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") { dismissHint(); next(); }
   if (e.key === "ArrowLeft")  { dismissHint(); prev(); }
 });
 
-// ── Touch / swipe ─────────────────────────────────────────
 let touchX = null;
 document.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
 document.addEventListener("touchend", e => {
@@ -447,57 +446,38 @@ document.addEventListener("touchend", e => {
   touchX = null;
 }, { passive: true });
 
-// ── Hint dismiss ──────────────────────────────────────────
 function dismissHint() {
   if (!hintDismissed) { hintDismissed = true; hintEl.classList.add("hidden"); }
 }
 setTimeout(dismissHint, 5000);
 
-// ── Shuffle ───────────────────────────────────────────────
-function shuffle(arr) {
+// ── shuffle ───────────────────────────────────────────────
+(function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-}
-shuffle(VIDEOS);
+})(VIDEOS);
 
-// ── Init ──────────────────────────────────────────────────
-function startPlayback() {
-  spinner.classList.add("gone");
-  layerA.classList.add("active");
-  vidA.play().catch(() => {
-    // Mobile Safari blocked autoplay — show a tap-to-start overlay
-    showTapPrompt();
-  });
-  caption.textContent = VIDEOS[0].caption;
-  vidA.ontimeupdate = () => {
-    updateBar(vidA);
-    if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
-      preloadNext();
-    }
-  };
-  vidA.onended = next;
-}
-
+// ── tap-to-play fallback (mobile Safari) ──────────────────
 function showTapPrompt() {
+  if (document.getElementById("tap-prompt")) return;
   const tap = document.createElement("div");
   tap.id = "tap-prompt";
-  tap.style.cssText = `
-    position:fixed;inset:0;z-index:500;display:flex;align-items:center;
-    justify-content:center;cursor:pointer;background:rgba(0,0,0,0.01);
-  `;
-  tap.innerHTML = `<div style="color:rgba(255,255,255,0.7);font-size:0.85rem;letter-spacing:0.2em;text-transform:uppercase;pointer-events:none;">Tap to play</div>`;
+  tap.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;cursor:pointer;";
+  tap.innerHTML = `<div style="color:rgba(255,255,255,.75);font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;background:rgba(0,0,0,.5);padding:12px 24px;border-radius:8px;">Tap to play</div>`;
   document.body.appendChild(tap);
   tap.addEventListener("click", () => {
-    vidA.play().catch(() => {});
+    activeVid().play().catch(() => {});
     tap.remove();
   }, { once: true });
 }
 
+// ── init ──────────────────────────────────────────────────
 function init() {
   buildDots();
 
+  // Set up first video on layer A
   vidA.src = url(0);
   vidA.muted = true;
   vidA.playsInline = true;
@@ -505,33 +485,20 @@ function init() {
   vidA.load();
 
   let started = false;
-  function tryStart() {
+  function begin() {
     if (started) return;
     started = true;
-    startPlayback();
+    spinner.classList.add("gone");
+    layerA.classList.add("active");
+    vidA.play().catch(() => showTapPrompt());
+    caption.textContent = VIDEOS[0].caption;
+    wireActive(vidA);
   }
 
-  // canplay fires when enough data is ready
-  vidA.addEventListener("canplay", tryStart, { once: true });
-  // canplaythrough as backup
-  vidA.addEventListener("canplaythrough", tryStart, { once: true });
-  // Fallback: dismiss spinner after 5s regardless
-  setTimeout(() => {
-    spinner.classList.add("gone");
-    if (!started) {
-      started = true;
-      // Try to play anyway — may need tap on mobile
-      vidA.play().catch(() => showTapPrompt());
-      caption.textContent = VIDEOS[0].caption;
-      vidA.ontimeupdate = () => {
-        updateBar(vidA);
-        if (vidA.duration && (vidA.duration - vidA.currentTime) <= PRELOAD_BEFORE_END_S) {
-          preloadNext();
-        }
-      };
-      vidA.onended = next;
-    }
-  }, 5000);
+  vidA.addEventListener("canplay",      begin, { once: true });
+  vidA.addEventListener("canplaythrough", begin, { once: true });
+  // hard fallback — give up waiting after 6s and try anyway
+  setTimeout(() => { spinner.classList.add("gone"); begin(); }, 6000);
 }
 
 init();
