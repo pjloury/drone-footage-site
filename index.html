@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Drone Footage</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,11 @@
     }
 
     /* ── Video layers ─────────────────────────────────────── */
-    #stage { position: relative; width: 100vw; height: 100vh; }
+    #stage {
+      position: fixed; inset: 0;
+      /* dvh fills the full visual viewport on mobile incl. landscape */
+      width: 100dvw; height: 100dvh;
+    }
 
     .layer {
       position: absolute; inset: 0;
@@ -34,27 +38,16 @@
       display: block;
     }
 
-    /* Portrait mobile: force cover from center, crop sides naturally */
-    @media (orientation: portrait) and (max-width: 768px) {
-      .layer video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center center;
-      }
-      #caption {
-        font-size: clamp(1rem, 5vw, 1.4rem);
-        bottom: 60px; left: 20px; right: 20px;
-      }
-      #hint { display: none; }
-    }
-
     /* ── Caption ──────────────────────────────────────────── */
     #caption {
-      position: fixed; bottom: 44px; left: 44px; z-index: 50;
+      position: fixed;
+      bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+      left: calc(44px + env(safe-area-inset-left, 0px));
+      right: calc(44px + env(safe-area-inset-right, 0px));
+      z-index: 50;
       color: #fff;
       font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
-      font-size: clamp(1.5rem, 3vw, 2rem);
+      font-size: clamp(1.2rem, 3vw, 2rem);
       font-weight: 400; letter-spacing: 0.04em;
       text-shadow: 0 1px 4px rgba(0,0,0,.9), 0 0 12px rgba(0,0,0,.6);
       pointer-events: none;
@@ -62,9 +55,26 @@
     }
     #caption.fade { opacity: 0; }
 
+    /* Portrait: smaller caption, no hint */
+    @media (orientation: portrait) {
+      #caption { font-size: clamp(1rem, 5vw, 1.4rem); }
+      #hint { display: none; }
+    }
+
+    /* Landscape mobile: compact caption, respect safe areas */
+    @media (orientation: landscape) and (max-height: 500px) {
+      #caption {
+        font-size: clamp(0.85rem, 2.5vh, 1.2rem);
+        bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      }
+      #dots { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+    }
+
     /* ── Progress dots ────────────────────────────────────── */
     #dots {
-      position: fixed; bottom: 20px; left: 50%;
+      position: fixed;
+      bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+      left: 50%;
       transform: translateX(-50%);
       z-index: 50; display: flex; gap: 8px;
       pointer-events: none;
@@ -78,7 +88,10 @@
 
     /* ── Arrow hint ───────────────────────────────────────── */
     #hint {
-      position: fixed; bottom: 44px; right: 44px; z-index: 50;
+      position: fixed;
+      bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+      right: calc(44px + env(safe-area-inset-right, 0px));
+      z-index: 50;
       color: rgba(255,255,255,.35);
       font-size: clamp(.6rem, 1.1vw, .8rem); letter-spacing: .14em;
       pointer-events: none;
@@ -117,18 +130,26 @@
     }
 
     #welcome.docked {
-      top: 24px;
-      left: 24px;
+      top: calc(24px + env(safe-area-inset-top, 0px));
+      left: calc(24px + env(safe-area-inset-left, 0px));
       transform: translate(0, 0) scale(0.32);
     }
 
     @media (max-width: 768px) {
       #welcome:not(.docked) {
-        /* On mobile, scale the welcome box down to fit portrait width */
         transform: translate(-50%, -50%) scale(0.6);
       }
       #welcome.docked {
         transform: translate(0, 0) scale(0.22);
+      }
+    }
+
+    @media (orientation: landscape) and (max-height: 500px) {
+      #welcome:not(.docked) {
+        transform: translate(-50%, -50%) scale(0.45);
+      }
+      #welcome.docked {
+        transform: translate(0, 0) scale(0.18);
       }
     }
 
@@ -502,6 +523,12 @@ function init() {
 }
 
 init();
+
+// ── Handle orientation change ─────────────────────────────
+// Force a resize event so browser recalculates dvh/safe-area on rotate
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 200);
+});
 
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
