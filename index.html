@@ -27,7 +27,7 @@
     .layer {
       position: absolute; inset: 0;
       opacity: 0;
-      transition: opacity 1.8s ease-in-out;
+      transition: opacity 3.2s ease-in-out;
     }
     .layer.active { opacity: 1; }
 
@@ -319,7 +319,7 @@ const VIDEOS = [
   { file: "video-62.mp4", caption: "Sather Tower, Berkeley"             },
 ];
 
-const CROSSFADE_MS = 1800;  // must match CSS transition duration above
+const CROSSFADE_MS = 3200;  // slow crossfade gives video more time to buffer
 
 // ═══════════════════════════════════════════════════════════
 //  Engine
@@ -426,7 +426,7 @@ function bufferAhead() {
     const v = document.createElement("video");
     v.muted = true;
     v.playsInline = true;
-    v.preload = "auto";
+    v.preload = "metadata";   // cheap — only fetches headers + first keyframe
     v.crossOrigin = "anonymous";
     v.src = url(idx);
     v.load();
@@ -501,10 +501,13 @@ function goTo(index) {
   incoming.onended      = null;
   incoming.onerror      = null;
 
-  // Use preloaded pool if available, else load fresh
+  // Use preloaded pool if available — upgrade from metadata → auto to buffer full video
   const pooled = preloadPool[current];
-  if (pooled && pooled.vid.readyState >= 2) {
-    incoming.src = pooled.vid.src;
+  if (pooled) {
+    if (!incoming.src.includes(VIDEOS[current].file)) {
+      incoming.src = url(current);
+    }
+    incoming.preload = "auto";
     incoming.load();
   } else if (!incoming.src.includes(VIDEOS[current].file)) {
     incoming.src     = url(current);
