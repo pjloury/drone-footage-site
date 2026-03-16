@@ -338,10 +338,14 @@ const spinner  = document.getElementById("spinner");
 let current       = 0;
 let transitioning = false;
 let hintDismissed = false;
-// which layer is currently SHOWING: "A" or "B"
 let activeLayer   = "A";
+let navQueue      = [];   // queued navigation indices from rapid swipes
 
-const PRELOAD_SECS = 6;
+const PRELOAD_SECS  = 8;
+const PRELOAD_AHEAD = 2;  // buffer this many videos ahead
+
+// Off-screen video pool for lookahead buffering
+const preloadPool = {};   // idx → <video> element
 
 function url(i) {
   return `${BASE_URL}/${VIDEOS[i].file}`;
@@ -374,99 +378,161 @@ function resetBar() { barEl.style.width = "0%"; }
 
 function setCaption(text) {
   caption.classList.add("fade");
-  setTimeout(() => { caption.textContent = text; caption.classList.remove("fade"); }, 350);
+  setTimeout(() => { caption.textContent = text; caption.classList.remove("fade"); }, 300);
 }
 
-// wire up the currently-active video's progress + auto-advance
 function wireActive(vid) {
   vid.ontimeupdate = () => {
     updateBar(vid);
     if (vid.duration && (vid.duration - vid.currentTime) < PRELOAD_SECS) {
-      preloadIntoIdle();
+      bufferAhead();
     }
   };
   vid.onended = () => goTo(current + 1);
 }
 
-// silently buffer next video into idle layer
-let preloadedIdx = -1;
-function preloadIntoIdle() {
-  const nextIdx = (current + 1) % VIDEOS.length;
-  if (preloadedIdx === nextIdx) return;
-  preloadedIdx = nextIdx;
-  const iv = idleVid();
-  iv.ontimeupdate = null;
-  iv.onended = null;
-  iv.src = url(nextIdx);
-  iv.preload = "auto";
-  iv.load();
+// ── lookahead buffer pool ─────────────────────────────────
+function bufferAhead() {
+  for (let offset = 1; offset <= PRELOAD_AHEAD; offset++) {
+    const idx = (current + offset) % VIDEOS.length;
+    if (preloadPool[idx]) continue; // already buffering
+    const v = document.createElement("video");
+    v.muted = true;
+    v.playsInline = true;
+    v.preload = "auto";
+    v.src = url(idx);
+    v.load();
+    preloadPool[idx] = v;
+  }
+  // Evict old entries beyond N+3 to avoid memory leak
+  Object.keys(preloadPool).forEach(k => {
+    const dist = ((+k - current) + VIDEOS.length) % VIDEOS.length;
+    if (dist > PRELOAD_AHEAD + 2) {
+      preloadPool[k].src = "";
+      delete preloadPool[k];
+    }
+  });
+}
+
+// ── canvas snapshot for instant visual feedback ───────────
+function snapshotCurrentFrame() {
+  const vid = activeVid();
+  if (!vid || vid.readyState < 2) return null;
+  try {
+    const c = document.createElement("canvas");
+    c.width  = vid.videoWidth  || 640;
+    c.height = vid.videoHeight || 360;
+    c.getContext("2d").drawImage(vid, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.7);
+  } catch { return null; }
+}
+
+// Freeze the current frame visually as we load the next video
+function freezeOutgoing(outgoingLayer) {
+  const snap = snapshotCurrentFrame();
+  if (!snap) return null;
+  const img = document.createElement("img");
+  img.src = snap;
+  img.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2;";
+  outgoingLayer.appendChild(img);
+  return img;
+}
+
+// ── process queued navigation ─────────────────────────────
+function flushQueue() {
+  if (transitioning || navQueue.length === 0) return;
+  const next = navQueue.shift();
+  goTo(next);
 }
 
 // ── core navigate ─────────────────────────────────────────
 function goTo(index) {
-  if (transitioning) return;
+  if (transitioning) {
+    // Queue the request — replace stale queued entries (only care about latest)
+    navQueue = [index];
+    return;
+  }
   transitioning = true;
   resetBar();
 
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
 
-  // Snapshot references BEFORE flipping activeLayer
+  // Snapshot refs BEFORE flipping activeLayer
   const incoming      = idleVid();
   const incomingLayer = idleEl();
   const outgoing      = activeVid();
   const outgoingLayer = activeEl();
 
-  // Flip active layer NOW (helpers will return new values after this)
-  activeLayer  = activeLayer === "A" ? "B" : "A";
-  preloadedIdx = -1;
+  // Flip now
+  activeLayer = activeLayer === "A" ? "B" : "A";
 
-  // Clear handlers on incoming so stale events don't fire
+  // Clear stale handlers on incoming
   incoming.ontimeupdate = null;
   incoming.onended      = null;
   incoming.onerror      = null;
 
-  // Load video if not already preloaded
-  if (!incoming.src.includes(VIDEOS[current].file)) {
+  // Use preloaded pool if available, else load fresh
+  const pooled = preloadPool[current];
+  if (pooled && pooled.readyState >= 2) {
+    // Transfer buffered src to the layer video for playback
+    incoming.src = pooled.src;
+    incoming.load();
+    delete preloadPool[current];
+  } else if (!incoming.src.includes(VIDEOS[current].file)) {
     incoming.src     = url(current);
     incoming.preload = "auto";
     incoming.load();
   }
 
+  // Instant visual: freeze outgoing frame while we wait
+  const frozenImg = freezeOutgoing(outgoingLayer);
+
   setCaption(VIDEOS[current].caption);
   updateDots();
 
-  // Skip-ahead watchdog — if stuck for 4s, skip to next
+  // Watchdog: skip if truly stuck after 4s
   const watchdog = setTimeout(() => {
-    if (transitioning) { transitioning = false; goTo(current + 1); }
+    if (!transitioning) return;
+    if (frozenImg) frozenImg.remove();
+    transitioning = false;
+    flushQueue();
+    if (navQueue.length === 0) goTo(current + 1);
   }, 4000);
 
   function crossfadeIn() {
     clearTimeout(watchdog);
-    incoming.play().catch(() => {});          // muted — should always succeed
+    incoming.play().catch(() => {});
+
+    // Crossfade: bring in new layer, keep outgoing visible until fade completes
     incomingLayer.classList.add("active");
-    setTimeout(() => outgoingLayer.classList.remove("active"), 50);
 
     setTimeout(() => {
-      // Stop outgoing and let it idle (don't blank src — avoids corruption)
+      outgoingLayer.classList.remove("active");
+      // Remove frozen snapshot once outgoing has faded
+      if (frozenImg) setTimeout(() => frozenImg.remove(), 200);
+    }, 50);
+
+    setTimeout(() => {
       outgoing.pause();
       outgoing.ontimeupdate = null;
       outgoing.onended      = null;
-
       wireActive(incoming);
+      bufferAhead();
       transitioning = false;
+      flushQueue(); // process any queued swipe
     }, CROSSFADE_MS + 100);
   }
 
-  // Play as soon as we have enough data, or immediately if already buffered
-  if (incoming.readyState >= 3) {         // HAVE_FUTURE_DATA or better
+  // If already buffered enough, go immediately; otherwise wait for canplay
+  if (incoming.readyState >= 3) {
     crossfadeIn();
   } else {
     incoming.addEventListener("canplay", crossfadeIn, { once: true });
   }
 }
 
-function next() { goTo(current + 1); }
-function prev() { goTo(current - 1); }
+function next() { goTo((navQueue.length ? navQueue[navQueue.length-1] : current) + 1); }
+function prev() { goTo((navQueue.length ? navQueue[navQueue.length-1] : current) - 1); }
 
 // ── keyboard / swipe ──────────────────────────────────────
 document.addEventListener("keydown", e => {
@@ -479,7 +545,7 @@ document.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; },
 document.addEventListener("touchend", e => {
   if (touchX === null) return;
   const dx = e.changedTouches[0].clientX - touchX;
-  if (Math.abs(dx) > 50) { dismissHint(); dx < 0 ? next() : prev(); }
+  if (Math.abs(dx) > 35) { dismissHint(); dx < 0 ? next() : prev(); }
   touchX = null;
 }, { passive: true });
 
