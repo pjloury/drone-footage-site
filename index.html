@@ -116,7 +116,7 @@
     #welcome {
       position: fixed; z-index: 300;
       display: flex; align-items: center; justify-content: center;
-      pointer-events: none;
+      cursor: pointer;
 
       /* centered hero state */
       top: 50%; left: 50%;
@@ -124,9 +124,9 @@
       transform-origin: top left;
 
       transition:
-        top 1.2s cubic-bezier(0.77, 0, 0.175, 1),
-        left 1.2s cubic-bezier(0.77, 0, 0.175, 1),
-        transform 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+        top 1.0s cubic-bezier(0.77, 0, 0.175, 1),
+        left 1.0s cubic-bezier(0.77, 0, 0.175, 1),
+        transform 1.0s cubic-bezier(0.77, 0, 0.175, 1);
     }
 
     #welcome.docked {
@@ -363,9 +363,12 @@ function updateBar(vid) {
   if (vid.duration) barEl.style.width = (vid.currentTime / vid.duration * 100) + "%";
 }
 function resetBar() { barEl.style.width = "0%"; }
-function setCaption(text) {
+function setCaption(text, delayIn) {
   caption.classList.add("fade");
-  setTimeout(() => { caption.textContent = text; caption.classList.remove("fade"); }, 300);
+  setTimeout(() => {
+    caption.textContent = text;
+    caption.classList.remove("fade");
+  }, delayIn || 300);
 }
 
 // Pre-buffer next video into back layer quietly
@@ -404,7 +407,8 @@ function goTo(index) {
     incoming.load();
   }
 
-  setCaption(VIDEOS[current].caption);
+  // Fade caption out immediately with the crossfade
+  caption.classList.add("fade");
   updateDots();
 
   // Flip front/back tracking
@@ -426,6 +430,12 @@ function goTo(index) {
 
     incomingLayer.classList.add("active");
     setTimeout(() => outgoingLayer.classList.remove("active"), 100);
+
+    // Caption fades in halfway through the crossfade
+    setTimeout(() => {
+      caption.textContent = VIDEOS[current].caption;
+      caption.classList.remove("fade");
+    }, CROSSFADE_MS / 2);
 
     setTimeout(() => {
       outgoing.pause();
@@ -457,18 +467,38 @@ function next() { goTo(current + 1); }
 function prev() { goTo(current - 1); }
 
 // ── keyboard / swipe ──────────────────────────────────────
+// ── Welcome overlay toggle ────────────────────────────────
+let welcomeDocked = false;
+function toggleWelcome() {
+  welcomeDocked = !welcomeDocked;
+  welcomeEl.classList.toggle("docked", welcomeDocked);
+}
+
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowRight") { dismissHint(); next(); }
   if (e.key === "ArrowLeft")  { dismissHint(); prev(); }
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); toggleWelcome(); }
 });
 
 let touchX = null;
-document.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
+let touchY = null;
+document.addEventListener("touchstart", e => {
+  touchX = e.touches[0].clientX;
+  touchY = e.touches[0].clientY;
+}, { passive: true });
 document.addEventListener("touchend", e => {
   if (touchX === null) return;
   const dx = e.changedTouches[0].clientX - touchX;
-  if (Math.abs(dx) > 35) { dismissHint(); dx < 0 ? next() : prev(); }
+  const dy = e.changedTouches[0].clientY - touchY;
+  if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 35) {
+    // vertical swipe — toggle welcome overlay
+    toggleWelcome();
+  } else if (Math.abs(dx) > 35) {
+    dismissHint();
+    dx < 0 ? next() : prev();
+  }
   touchX = null;
+  touchY = null;
 }, { passive: true });
 
 function dismissHint() {
@@ -539,7 +569,9 @@ window.addEventListener("orientationchange", () => {
 
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
+welcomeEl.addEventListener("click", toggleWelcome);
 setTimeout(() => {
+  welcomeDocked = true;
   welcomeEl.classList.add("docked");
 }, 30000);
 </script>
