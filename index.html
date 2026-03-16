@@ -27,7 +27,7 @@
     .layer {
       position: absolute; inset: 0;
       opacity: 0;
-      transition: opacity 3.2s ease-in-out;
+      transition: opacity 4s ease-in-out;
     }
     .layer.active { opacity: 1; }
 
@@ -319,7 +319,7 @@ const VIDEOS = [
   { file: "video-62.mp4", caption: "Sather Tower, Berkeley"             },
 ];
 
-const CROSSFADE_MS = 3200;  // slow crossfade gives video more time to buffer
+const CROSSFADE_MS = 4000;
 
 // ═══════════════════════════════════════════════════════════
 //  Engine
@@ -396,30 +396,34 @@ function goTo(index) {
   const outgoing      = frontVid();
   const outgoingLayer = frontLayer();
 
-  // Clear any stale handlers
+  // Kill outgoing handlers IMMEDIATELY — prevents preloadNext() from
+  // clobbering the incoming video's src while it's trying to load
+  outgoing.ontimeupdate = null;
+  outgoing.onended      = null;
+
+  // Clear stale handlers on incoming
   incoming.ontimeupdate = null;
   incoming.onended      = null;
 
-  // Load if not already preloaded for this video
+  // Load if not already preloaded
   if (!incoming.src.includes(VIDEOS[current].file)) {
     incoming.src     = url(current);
     incoming.preload = "auto";
     incoming.load();
   }
 
-  // Fade caption out immediately with the crossfade
-  caption.classList.add("fade");
-  updateDots();
-
   // Flip front/back tracking
   front = front === "A" ? "B" : "A";
 
-  // Watchdog: if canplay never fires (broken video), skip after 5s
+  // START THE VISUAL TRANSITION IMMEDIATELY (feels responsive)
+  // Outgoing starts fading out right away regardless of load state
+  caption.classList.add("fade");
+  updateDots();
+  setTimeout(() => outgoingLayer.classList.remove("active"), 50);
+
+  // Watchdog: skip broken/stuck video after 5s
   const watchdog = setTimeout(() => {
     if (!transitioning) return;
-    console.warn("watchdog: skipping stuck video", current);
-    incoming.ontimeupdate = null;
-    incoming.onended      = null;
     transitioning = false;
     goTo(current + 1);
   }, 5000);
@@ -427,11 +431,9 @@ function goTo(index) {
   function doTransition() {
     clearTimeout(watchdog);
     incoming.play().catch(() => {});
-
     incomingLayer.classList.add("active");
-    setTimeout(() => outgoingLayer.classList.remove("active"), 100);
 
-    // Caption fades in halfway through the crossfade
+    // Caption fades in halfway through
     setTimeout(() => {
       caption.textContent = VIDEOS[current].caption;
       caption.classList.remove("fade");
@@ -439,10 +441,6 @@ function goTo(index) {
 
     setTimeout(() => {
       outgoing.pause();
-      outgoing.ontimeupdate = null;
-      outgoing.onended      = null;
-
-      // Wire up progress bar + auto-advance + preload
       incoming.ontimeupdate = () => {
         updateBar(incoming);
         if (incoming.duration && (incoming.duration - incoming.currentTime) < 8) {
@@ -450,12 +448,10 @@ function goTo(index) {
         }
       };
       incoming.onended = () => goTo(current + 1);
-
       transitioning = false;
     }, CROSSFADE_MS + 100);
   }
 
-  // If already buffered enough, go now; otherwise wait
   if (incoming.readyState >= 3) {
     doTransition();
   } else {
