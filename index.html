@@ -236,8 +236,8 @@
 <div id="spinner"><div class="ring"></div></div>
 
 <div id="stage">
-  <div class="layer" id="layerA"><video id="vidA" playsinline muted preload="auto"></video></div>
-  <div class="layer" id="layerB"><video id="vidB" playsinline muted preload="auto"></video></div>
+  <div class="layer" id="layerA"><video id="vidA" playsinline muted preload="auto" crossorigin="anonymous"></video></div>
+  <div class="layer" id="layerB"><video id="vidB" playsinline muted preload="auto" crossorigin="anonymous"></video></div>
 </div>
 
 <div id="caption"></div>
@@ -392,23 +392,53 @@ function wireActive(vid) {
 }
 
 // ── lookahead buffer pool ─────────────────────────────────
+// preloadPool[idx] = { vid: <video>, poster: <dataURL|null> }
+function grabFirstFrame(vid, cb) {
+  // Seek to 0 and snapshot once we have image data
+  function trySnap() {
+    if (vid.readyState < 2) return;
+    try {
+      const c = document.createElement("canvas");
+      c.width  = vid.videoWidth  || 1280;
+      c.height = vid.videoHeight || 720;
+      c.getContext("2d").drawImage(vid, 0, 0, c.width, c.height);
+      cb(c.toDataURL("image/jpeg", 0.75));
+    } catch { cb(null); }
+  }
+
+  if (vid.readyState >= 2) {
+    vid.currentTime = 0;
+    vid.addEventListener("seeked", () => trySnap(), { once: true });
+    if (vid.currentTime === 0) trySnap(); // already at 0
+  } else {
+    vid.addEventListener("loadeddata", () => {
+      vid.currentTime = 0;
+      vid.addEventListener("seeked", () => trySnap(), { once: true });
+      if (vid.currentTime === 0) trySnap();
+    }, { once: true });
+  }
+}
+
 function bufferAhead() {
   for (let offset = 1; offset <= PRELOAD_AHEAD; offset++) {
     const idx = (current + offset) % VIDEOS.length;
-    if (preloadPool[idx]) continue; // already buffering
+    if (preloadPool[idx]) continue;
     const v = document.createElement("video");
     v.muted = true;
     v.playsInline = true;
     v.preload = "auto";
+    v.crossOrigin = "anonymous";
     v.src = url(idx);
     v.load();
-    preloadPool[idx] = v;
+    const entry = { vid: v, poster: null };
+    preloadPool[idx] = entry;
+    grabFirstFrame(v, dataUrl => { entry.poster = dataUrl; });
   }
-  // Evict old entries beyond N+3 to avoid memory leak
+  // Evict stale entries
   Object.keys(preloadPool).forEach(k => {
     const dist = ((+k - current) + VIDEOS.length) % VIDEOS.length;
     if (dist > PRELOAD_AHEAD + 2) {
-      preloadPool[k].src = "";
+      preloadPool[k].vid.src = "";
       delete preloadPool[k];
     }
   });
@@ -473,19 +503,30 @@ function goTo(index) {
 
   // Use preloaded pool if available, else load fresh
   const pooled = preloadPool[current];
-  if (pooled && pooled.readyState >= 2) {
-    // Transfer buffered src to the layer video for playback
-    incoming.src = pooled.src;
+  if (pooled && pooled.vid.readyState >= 2) {
+    incoming.src = pooled.vid.src;
     incoming.load();
-    delete preloadPool[current];
   } else if (!incoming.src.includes(VIDEOS[current].file)) {
     incoming.src     = url(current);
     incoming.preload = "auto";
     incoming.load();
   }
 
-  // Instant visual: freeze outgoing frame while we wait
-  const frozenImg = freezeOutgoing(outgoingLayer);
+  // Instant poster: show incoming first-frame immediately if we have it
+  // This replaces the black gap — user sees the destination frame right away
+  let incomingPosterImg = null;
+  if (pooled && pooled.poster) {
+    incomingPosterImg = document.createElement("img");
+    incomingPosterImg.src = pooled.poster;
+    incomingPosterImg.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;";
+    incomingLayer.appendChild(incomingPosterImg);
+    // Show incoming layer immediately (poster visible, video will play on top)
+    incomingLayer.classList.add("active");
+  }
+  if (pooled) delete preloadPool[current];
+
+  // Freeze outgoing frame as fallback if no incoming poster
+  const frozenImg = incomingPosterImg ? null : freezeOutgoing(outgoingLayer);
 
   setCaption(VIDEOS[current].caption);
   updateDots();
@@ -503,12 +544,14 @@ function goTo(index) {
     clearTimeout(watchdog);
     incoming.play().catch(() => {});
 
-    // Crossfade: bring in new layer, keep outgoing visible until fade completes
+    // Remove incoming poster now that video is playing
+    if (incomingPosterImg) setTimeout(() => incomingPosterImg.remove(), 200);
+
+    // Bring in incoming layer (may already be active if poster was shown)
     incomingLayer.classList.add("active");
 
     setTimeout(() => {
       outgoingLayer.classList.remove("active");
-      // Remove frozen snapshot once outgoing has faded
       if (frozenImg) setTimeout(() => frozenImg.remove(), 200);
     }, 50);
 
@@ -519,11 +562,11 @@ function goTo(index) {
       wireActive(incoming);
       bufferAhead();
       transitioning = false;
-      flushQueue(); // process any queued swipe
+      flushQueue();
     }, CROSSFADE_MS + 100);
   }
 
-  // If already buffered enough, go immediately; otherwise wait for canplay
+  // If already buffered, crossfade immediately; otherwise wait for canplay
   if (incoming.readyState >= 3) {
     crossfadeIn();
   } else {
