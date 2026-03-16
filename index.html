@@ -410,84 +410,58 @@ function goTo(index) {
 
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
 
-  const incoming     = idleVid();
+  // Snapshot references BEFORE flipping activeLayer
+  const incoming      = idleVid();
   const incomingLayer = idleEl();
-  const outgoingVid  = activeVid();
+  const outgoing      = activeVid();
   const outgoingLayer = activeEl();
 
-  // Clear any previous error/event handlers on incoming
-  incoming.onerror   = null;
-  incoming.ontimeupdate = null;
-  incoming.onended   = null;
+  // Flip active layer NOW (helpers will return new values after this)
+  activeLayer  = activeLayer === "A" ? "B" : "A";
+  preloadedIdx = -1;
 
-  // Load if not already preloaded for this index
-  if (preloadedIdx !== current || !incoming.src.includes(VIDEOS[current].file)) {
-    incoming.src = url(current);
+  // Clear handlers on incoming so stale events don't fire
+  incoming.ontimeupdate = null;
+  incoming.onended      = null;
+  incoming.onerror      = null;
+
+  // Load video if not already preloaded
+  if (!incoming.src.includes(VIDEOS[current].file)) {
+    incoming.src     = url(current);
     incoming.preload = "auto";
     incoming.load();
   }
 
-  // Flip active layer bookkeeping now so helpers are correct
-  activeLayer = activeLayer === "A" ? "B" : "A";
-  preloadedIdx = -1;
-
   setCaption(VIDEOS[current].caption);
   updateDots();
 
-  // Attempt to play — with retry on error
-  function attemptPlay() {
-    incoming.play().then(() => {
-      // Success — crossfade in
-      incomingLayer.classList.add("active");
-      setTimeout(() => outgoingLayer.classList.remove("active"), 50);
+  // Skip-ahead watchdog — if stuck for 4s, skip to next
+  const watchdog = setTimeout(() => {
+    if (transitioning) { transitioning = false; goTo(current + 1); }
+  }, 4000);
 
-      setTimeout(() => {
-        outgoingVid.pause();
-        outgoingVid.ontimeupdate = null;
-        outgoingVid.onended = null;
-        // Detach src gently — pause first, then replace src
-        outgoingVid.src = url((current + 1) % VIDEOS.length); // pre-warm next
-        outgoingVid.load();
+  function crossfadeIn() {
+    clearTimeout(watchdog);
+    incoming.play().catch(() => {});          // muted — should always succeed
+    incomingLayer.classList.add("active");
+    setTimeout(() => outgoingLayer.classList.remove("active"), 50);
 
-        wireActive(incoming);
-        transitioning = false;
-      }, CROSSFADE_MS + 100);
+    setTimeout(() => {
+      // Stop outgoing and let it idle (don't blank src — avoids corruption)
+      outgoing.pause();
+      outgoing.ontimeupdate = null;
+      outgoing.onended      = null;
 
-    }).catch(() => {
-      // play() failed — try once more after a short load wait
-      incoming.load();
-      incoming.addEventListener("canplay", () => {
-        incoming.play().catch(() => {});
-        incomingLayer.classList.add("active");
-        setTimeout(() => outgoingLayer.classList.remove("active"), 50);
-        setTimeout(() => {
-          outgoingVid.pause();
-          outgoingVid.ontimeupdate = null;
-          outgoingVid.onended = null;
-          wireActive(incoming);
-          transitioning = false;
-        }, CROSSFADE_MS + 100);
-      }, { once: true });
-
-      // If still stuck after 4s, skip to next video
-      setTimeout(() => {
-        if (transitioning) {
-          transitioning = false;
-          goTo(current + 1);
-        }
-      }, 4000);
-    });
+      wireActive(incoming);
+      transitioning = false;
+    }, CROSSFADE_MS + 100);
   }
 
-  // If src just set and not ready yet, wait for canplay; otherwise play immediately
-  if (incoming.readyState >= 3) {
-    attemptPlay();
+  // Play as soon as we have enough data, or immediately if already buffered
+  if (incoming.readyState >= 3) {         // HAVE_FUTURE_DATA or better
+    crossfadeIn();
   } else {
-    incoming.addEventListener("canplay", attemptPlay, { once: true });
-    // Fallback: if canplay doesn't fire in 3s, try anyway
-    setTimeout(() => {
-      if (transitioning) attemptPlay();
-    }, 3000);
+    incoming.addEventListener("canplay", crossfadeIn, { once: true });
   }
 }
 
