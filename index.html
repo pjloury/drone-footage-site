@@ -82,7 +82,7 @@
     .dot {
       width: 5px; height: 5px; border-radius: 50%;
       background: rgba(255,255,255,.25);
-      transition: background .4s, transform .4s;
+      transition: background .4s, transform .4s, opacity .4s;
     }
     .dot.active { background: rgba(255,255,255,.85); transform: scale(1.4); }
 
@@ -340,6 +340,27 @@ let transitioning = false;
 let hintDismissed = false;
 let front         = "A"; // which layer is currently showing
 
+// Expose testability globals — read/write surface for unit and DOM tests
+window.VIDEOS       = VIDEOS;
+window.CROSSFADE_MS = CROSSFADE_MS;
+window.MAX_DOTS     = 9;    // set before buildDots() runs; matches const below
+window.HALF_DOTS    = 4;    // Math.floor(9 / 2)
+Object.defineProperty(window, 'current', {
+  get() { return current; },
+  set(v) { current = v; },
+  configurable: true,
+});
+Object.defineProperty(window, 'transitioning', {
+  get() { return transitioning; },
+  set(v) { transitioning = v; },
+  configurable: true,
+});
+Object.defineProperty(window, 'front', {
+  get() { return front; },
+  set(v) { front = v; },
+  configurable: true,
+});
+
 function url(i) { return `${BASE_URL}/${VIDEOS[i].file}`; }
 
 function frontVid()   { return front === "A" ? vidA : vidB; }
@@ -347,29 +368,33 @@ function frontLayer() { return front === "A" ? layerA : layerB; }
 function backVid()    { return front === "A" ? vidB : vidA; }
 function backLayer()  { return front === "A" ? layerB : layerA; }
 
+const MAX_DOTS  = 9;
+const HALF_DOTS = Math.floor(MAX_DOTS / 2);
+
 function buildDots() {
   dotsEl.innerHTML = "";
-  VIDEOS.forEach((_, i) => {
+  for (let i = 0; i < MAX_DOTS; i++) {
     const d = document.createElement("div");
-    d.className = "dot" + (i === 0 ? " active" : "");
+    d.className = "dot" + (i === HALF_DOTS ? " active" : "");
     dotsEl.appendChild(d);
-  });
+  }
 }
 function updateDots() {
-  dotsEl.querySelectorAll(".dot").forEach((d, i) =>
-    d.classList.toggle("active", i === current));
+  const total = VIDEOS.length;
+  [...dotsEl.querySelectorAll(".dot")].forEach((d, slot) => {
+    const idx  = current - HALF_DOTS + slot;
+    const dist = Math.abs(slot - HALF_DOTS);
+    const inRange = idx >= 0 && idx < total;
+    d.classList.toggle("active", slot === HALF_DOTS);
+    d.style.opacity = inRange
+      ? (dist === 0 ? "1" : dist <= 1 ? "0.6" : "0.3")
+      : "0";
+  });
 }
 function updateBar(vid) {
   if (vid.duration) barEl.style.width = (vid.currentTime / vid.duration * 100) + "%";
 }
 function resetBar() { barEl.style.width = "0%"; }
-function setCaption(text, delayIn) {
-  caption.classList.add("fade");
-  setTimeout(() => {
-    caption.textContent = text;
-    caption.classList.remove("fade");
-  }, delayIn || 300);
-}
 
 // Pre-buffer next video into back layer quietly
 function preloadNext() {
@@ -382,12 +407,23 @@ function preloadNext() {
   bv.preload = "auto";
   bv.load();
 }
+function preloadPrev() {
+  const prevIdx = (current - 1 + VIDEOS.length) % VIDEOS.length;
+  const bv = backVid();
+  if (bv.src.includes(VIDEOS[prevIdx].file)) return; // already loaded
+  bv.ontimeupdate = null;
+  bv.onended = null;
+  bv.src = url(prevIdx);
+  bv.preload = "auto";
+  bv.load();
+}
 
 function goTo(index) {
   if (transitioning) return;
   transitioning = true;
   resetBar();
 
+  const goingBackward = index < current;
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
 
   // Grab refs before flip
@@ -424,6 +460,7 @@ function goTo(index) {
   // Watchdog: skip broken/stuck video after 5s
   const watchdog = setTimeout(() => {
     if (!transitioning) return;
+    incoming.removeEventListener("canplay", doTransition);
     transitioning = false;
     goTo(current + 1);
   }, 5000);
@@ -448,6 +485,7 @@ function goTo(index) {
         }
       };
       incoming.onended = () => goTo(current + 1);
+      if (goingBackward) preloadPrev();
       transitioning = false;
     }, CROSSFADE_MS + 100);
   }
@@ -461,6 +499,12 @@ function goTo(index) {
 
 function next() { goTo(current + 1); }
 function prev() { goTo(current - 1); }
+
+// Expose engine functions for tests
+window.goTo        = goTo;
+window.preloadNext = preloadNext;
+window.backVid     = backVid;
+window.frontVid    = frontVid;
 
 // ── keyboard / swipe ──────────────────────────────────────
 // ── Welcome overlay toggle ────────────────────────────────
@@ -510,20 +554,6 @@ setTimeout(dismissHint, 5000);
   }
 })(VIDEOS);
 
-// ── tap-to-play fallback (mobile Safari) ──────────────────
-function showTapPrompt() {
-  if (document.getElementById("tap-prompt")) return;
-  const tap = document.createElement("div");
-  tap.id = "tap-prompt";
-  tap.style.cssText = "position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;cursor:pointer;";
-  tap.innerHTML = `<div style="color:rgba(255,255,255,.75);font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;background:rgba(0,0,0,.5);padding:12px 24px;border-radius:8px;">Tap to play</div>`;
-  document.body.appendChild(tap);
-  tap.addEventListener("click", () => {
-    frontVid().play().catch(() => {});
-    tap.remove();
-  }, { once: true });
-}
-
 // ── init ──────────────────────────────────────────────────
 function init() {
   buildDots();
@@ -541,7 +571,7 @@ function init() {
     started = true;
     spinner.classList.add("gone");
     layerA.classList.add("active");
-    vidA.play().catch(() => showTapPrompt());
+    vidA.play().catch(() => {});
     caption.textContent = VIDEOS[0].caption;
     vidA.ontimeupdate = () => {
       updateBar(vidA);
@@ -551,17 +581,10 @@ function init() {
   }
 
   vidA.addEventListener("canplay", begin, { once: true });
-  vidA.addEventListener("canplaythrough", begin, { once: true });
   setTimeout(() => { spinner.classList.add("gone"); begin(); }, 6000);
 }
 
 init();
-
-// ── Handle orientation change ─────────────────────────────
-// Force a resize event so browser recalculates dvh/safe-area on rotate
-window.addEventListener("orientationchange", () => {
-  setTimeout(() => window.dispatchEvent(new Event("resize")), 200);
-});
 
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
