@@ -58,7 +58,7 @@
     @media (orientation: portrait) {
       #caption {
         font-size: clamp(1rem, 5vw, 1.4rem);
-        bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(84px + env(safe-area-inset-bottom, 0px));
       }
       #hint { display: none; }
     }
@@ -107,7 +107,6 @@
       bottom: calc(44px + env(safe-area-inset-bottom, 0px));
       right: calc(44px + env(safe-area-inset-right, 0px));
       z-index: 50;
-      overflow: hidden;
 
       display: inline-flex; align-items: center; justify-content: center;
       padding: 10px 22px;
@@ -132,38 +131,13 @@
       user-select: none;
 
       transition:
-        background 0.5s ease,
-        border-color 0.5s ease,
-        box-shadow 0.5s ease;
+        background 0.4s ease,
+        border-color 0.4s ease,
+        box-shadow 0.4s ease;
     }
 
-    /* Shimmer sweep pseudo-element */
-    #contact::after {
-      content: '';
-      position: absolute;
-      top: 0; bottom: 0; width: 100%;
-      background: linear-gradient(
-        105deg,
-        transparent 15%,
-        rgba(255,255,255,0.06) 35%,
-        rgba(255,255,255,0.36) 50%,
-        rgba(255,255,255,0.06) 65%,
-        transparent 85%
-      );
-      transform: translateX(-200%);
-      pointer-events: none;
-    }
-    #contact.shimmer::after {
-      animation: contact-shimmer 0.72s cubic-bezier(0.4, 0, 0.6, 1) forwards;
-    }
-    @keyframes contact-shimmer {
-      from { transform: translateX(-200%); }
-      to   { transform: translateX( 200%); }
-    }
-
-    /* Revealed state — email showing, outline gone */
-    #contact.revealed {
-      background: rgba(255,255,255,0.13);
+    #contact:hover {
+      background: rgba(255,255,255,0.14);
       border-color: rgba(255,255,255,0);
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,0.28),
@@ -172,14 +146,14 @@
         0 2px 8px rgba(0,0,0,0.18);
     }
 
-    /* Label (letter spans live here) */
+    /* Label */
     #contact-label {
-      position: relative;
       color: rgba(255,255,255,0.82);
+      transition: opacity 0.3s ease;
     }
-    .contact-letter { display: inline-block; }
+    #contact:hover #contact-label { opacity: 0; }
 
-    /* Email overlay */
+    /* Email — crossfades over the label on hover */
     #contact-email {
       position: absolute;
       inset: 0;
@@ -188,38 +162,26 @@
       letter-spacing: 0.07em;
       text-transform: none;
       opacity: 0;
-      transition: opacity 0.35s ease;
+      transition: opacity 0.3s ease;
       pointer-events: none;
       user-select: text;
     }
-    #contact.revealed #contact-email {
+    #contact:hover #contact-email {
       opacity: 1;
       pointer-events: auto;
     }
 
-    /* Letter keyframes */
-    @keyframes letter-hide {
-      from { opacity: 1; transform: translateY(0px);  filter: blur(0px);  }
-      to   { opacity: 0; transform: translateY(4px);  filter: blur(1px);  }
-    }
-    @keyframes letter-return {
-      from { opacity: 0; transform: translateY(-3px); filter: blur(3px);  }
-      70%  {             transform: translateY( 1px); filter: blur(0.3px);}
-      to   { opacity: 1; transform: translateY( 0px); filter: blur(0px);  }
-    }
-
     @media (orientation: portrait) {
-      /* Align with caption/logo left edge, sit below caption */
       #contact {
         right: auto;
         left: calc(24px + env(safe-area-inset-left, 0px));
-        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(34px + env(safe-area-inset-bottom, 0px));
         font-size: clamp(0.6rem, 3vw, 0.75rem);
       }
     }
     @media (orientation: landscape) and (max-height: 500px) {
       #contact {
-        bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(34px + env(safe-area-inset-bottom, 0px));
         font-size: clamp(0.55rem, 2vh, 0.7rem);
         padding: 8px 16px;
       }
@@ -373,7 +335,7 @@
 <div id="dots"></div>
 <div id="hint">← &nbsp;&nbsp; → &nbsp; to navigate</div>
 <div id="contact">
-  <span id="contact-label"></span>
+  <span id="contact-label">Get in touch</span>
   <span id="contact-email">pjloury@gmail.com</span>
 </div>
 <div id="bar-track"><div id="bar"></div></div>
@@ -718,62 +680,6 @@ function init() {
 }
 
 init();
-
-// ── Get in touch reveal ───────────────────────────────────
-(function () {
-  const el    = document.getElementById('contact');
-  const label = document.getElementById('contact-label');
-
-  // Build letter spans
-  const LABEL_TEXT = 'Get in touch';
-  [...LABEL_TEXT].forEach((ch, i) => {
-    const s = document.createElement('span');
-    s.className = 'contact-letter';
-    s.textContent = ch === ' ' ? '\u00A0' : ch;
-    s.dataset.i = i;
-    label.appendChild(s);
-  });
-
-  function letters() { return [...label.querySelectorAll('.contact-letter')]; }
-
-  let state = 'idle';
-  let cleanupTimer = null;
-
-  el.addEventListener('mouseenter', () => {
-    clearTimeout(cleanupTimer);
-    el.classList.remove('shimmer');
-    state = 'revealed';
-
-    // Animate each letter out with stagger
-    letters().forEach((s, i) => {
-      s.style.animation = `letter-hide 0.18s ease ${i * 14}ms both forwards`;
-    });
-    el.classList.add('revealed');
-  });
-
-  el.addEventListener('mouseleave', () => {
-    if (state === 'idle') return;
-    state = 'returning';
-    el.classList.remove('revealed');
-
-    // Trigger shimmer sweep
-    el.classList.remove('shimmer');
-    void el.offsetWidth; // force reflow so animation restarts
-    el.classList.add('shimmer');
-
-    // Stagger letters back in — from-state (opacity:0) matches letter-hide end-state
-    letters().forEach((s, i) => {
-      s.style.animation = `letter-return 0.52s cubic-bezier(0.2, 0, 0.3, 1) ${55 + i * 28}ms both forwards`;
-    });
-
-    const settle = 55 + LABEL_TEXT.length * 28 + 560;
-    cleanupTimer = setTimeout(() => {
-      el.classList.remove('shimmer');
-      letters().forEach(s => { s.style.animation = ''; });
-      state = 'idle';
-    }, settle);
-  });
-}());
 
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
