@@ -42,8 +42,7 @@
     #caption {
       position: fixed;
       bottom: calc(44px + env(safe-area-inset-bottom, 0px));
-      left: calc(44px + env(safe-area-inset-left, 0px));
-      right: calc(44px + env(safe-area-inset-right, 0px));
+      left: calc(24px + env(safe-area-inset-left, 0px));
       z-index: 50;
       color: #fff;
       font-family: 'Inter', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
@@ -55,9 +54,12 @@
     }
     #caption.fade { opacity: 0; }
 
-    /* Portrait: smaller caption, no hint */
+    /* Portrait: smaller caption, raised to clear the contact button below */
     @media (orientation: portrait) {
-      #caption { font-size: clamp(1rem, 5vw, 1.4rem); }
+      #caption {
+        font-size: clamp(1rem, 5vw, 1.4rem);
+        bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      }
       #hint { display: none; }
     }
 
@@ -207,11 +209,11 @@
     }
 
     @media (orientation: portrait) {
-      /* Tuck below the caption on the left, away from the bottom-right corner */
+      /* Align with caption/logo left edge, sit below caption */
       #contact {
         right: auto;
-        left: calc(44px + env(safe-area-inset-left, 0px));
-        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        left: calc(24px + env(safe-area-inset-left, 0px));
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
         font-size: clamp(0.6rem, 3vw, 0.75rem);
       }
     }
@@ -226,7 +228,7 @@
     /* ── Progress bar ─────────────────────────────────────── */
     #bar-track {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: 2px;
+      height: 4px;
       background: rgba(255,255,255,.12);
       z-index: 50; pointer-events: none;
     }
