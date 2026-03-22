@@ -260,6 +260,10 @@
 // e.g. "https://pub-abc123.r2.dev"  (no trailing slash)
 const BASE_URL = "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev";
 
+// PostHog project token — safe to be public (write-only client key)
+const POSTHOG_KEY  = "phc_701yGTQYGk4qFNHVrtD7OkkRUTKC430N7psMw524Rl3";
+const POSTHOG_HOST = "https://us.i.posthog.com"; // EU: "https://eu.i.posthog.com"
+
 const VIDEOS = [
   // { file: "video-01.mp4", caption: "Woodside Mansion"                  },
   { file: "video-02.mp4", caption: "Good Morning Stanford"              },
@@ -328,6 +332,139 @@ const VIDEOS = [
 const CROSSFADE_MS = 4000;
 
 // ═══════════════════════════════════════════════════════════
+//  Telemetry (client-side; optional POST to TELEMETRY_URL)
+// ═══════════════════════════════════════════════════════════
+
+const SESSION_ID =
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : String(Date.now()) + "-" + Math.random().toString(36).slice(2);
+
+const TELEMETRY_FLUSH_MS = 3000;
+const TELEMETRY_BATCH_MAX = 12;
+const MAX_AUTO_SKIPS = 5;
+
+let telemetryQueue = [];
+let telemetryFlushTimer = null;
+let consecutiveAutoSkips = 0;
+/** If first clip errors and we recover via goTo, skip the 6s init timer calling begin() on vidA. */
+let suppressInitialBegin = false;
+/** Avoid auto-skipping on spurious `error` before first `begin()` (e.g. races during load). */
+let allowErrorRecovery = false;
+
+function clipPayloadFromVideo(v) {
+  const idx = v.dataset.clipIndex != null ? parseInt(v.dataset.clipIndex, 10) : NaN;
+  const safeIdx = Number.isFinite(idx) && idx >= 0 && idx < VIDEOS.length ? idx : null;
+  return {
+    clipIndex: safeIdx,
+    file: safeIdx != null ? VIDEOS[safeIdx].file : null,
+    src: v.currentSrc || v.src || null,
+    networkState: v.networkState,
+    readyState: v.readyState,
+  };
+}
+
+function resourceTimingForUrl(absUrl) {
+  if (!absUrl || typeof performance === "undefined" || !performance.getEntriesByName) return null;
+  try {
+    const entries = performance.getEntriesByName(absUrl);
+    const e = entries[entries.length - 1];
+    if (!e || e.entryType !== "resource") return null;
+    return {
+      durationMs: Math.round(e.duration),
+      transferSize: e.transferSize,
+      encodedBodySize: e.encodedBodySize,
+      responseStatus:
+        typeof e.responseStatus === "number" && e.responseStatus !== 0 ? e.responseStatus : null,
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Rough attribution hint — combine with mediaError + responseStatus in your dashboard. */
+function inferRootHint(ev) {
+  const code = ev.mediaErrorCode;
+  const http = ev.resourceHttpStatus;
+  if (http === 403 || http === 404) return "edge_http_status";
+  if (code === 3) return "browser_decode";
+  if (code === 4) return "browser_codec_or_container";
+  if (code === 2) return "network_load";
+  if (code === 1) return "aborted_or_detach";
+  if (ev.name === "stalled" || ev.name === "waiting") return "buffering_or_throughput";
+  if (ev.name === "play_rejected") return "browser_autoplay_or_policy";
+  return "unknown";
+}
+
+function queueTelemetry(ev) {
+  const base = {
+    ...ev,
+    sessionId: SESSION_ID,
+    t: Date.now(),
+    path: typeof location !== "undefined" ? location.pathname : "",
+    visibility: typeof document !== "undefined" ? document.visibilityState : "",
+    connection:
+      typeof navigator !== "undefined" && navigator.connection
+        ? {
+            effectiveType: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink,
+            rtt: navigator.connection.rtt,
+            saveData: navigator.connection.saveData,
+          }
+        : null,
+  };
+  telemetryQueue.push(base);
+  if (!POSTHOG_KEY && telemetryQueue.length > 48) telemetryQueue.shift();
+  if (typeof window !== "undefined") {
+    window.__droneTelemetry = {
+      sessionId: SESSION_ID,
+      last: base,
+      queued: telemetryQueue.length,
+    };
+  }
+  if (telemetryQueue.length >= TELEMETRY_BATCH_MAX) flushTelemetry();
+  else if (!telemetryFlushTimer && POSTHOG_KEY) {
+    telemetryFlushTimer = setTimeout(() => {
+      telemetryFlushTimer = null;
+      flushTelemetry();
+    }, TELEMETRY_FLUSH_MS);
+  }
+}
+
+function flushTelemetry() {
+  if (!POSTHOG_KEY || telemetryQueue.length === 0) return;
+  const events = telemetryQueue.splice(0, telemetryQueue.length);
+  const body = JSON.stringify({
+    api_key: POSTHOG_KEY,
+    batch: events.map(({ name, t, sessionId, ...properties }) => ({
+      event:       name,
+      distinct_id: SESSION_ID,
+      timestamp:   new Date(t).toISOString(),
+      properties,
+    })),
+  });
+  const url = POSTHOG_HOST + "/batch/";
+  try {
+    if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+      const ok = navigator.sendBeacon(url, new Blob([body], { type: "application/json" }));
+      if (ok) return;
+    }
+  } catch (_) {}
+  fetch(url, {
+    method: "POST",
+    body,
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+    mode: "cors",
+  }).catch(() => {});
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("pagehide", flushTelemetry);
+  window.addEventListener("beforeunload", flushTelemetry);
+}
+
+// ═══════════════════════════════════════════════════════════
 //  Engine
 // ═══════════════════════════════════════════════════════════
 
@@ -345,6 +482,9 @@ let current       = 0;
 let transitioning = false;
 let hintDismissed = false;
 let front         = "A"; // which layer is currently showing
+
+let activeGoToAbort    = null;
+let activeGoToWatchdog = null;
 
 // Expose testability globals — read/write surface for unit and DOM tests
 window.VIDEOS       = VIDEOS;
@@ -402,6 +542,17 @@ function updateBar(vid) {
 }
 function resetBar() { barEl.style.width = "0%"; }
 
+function clearGoToLoad() {
+  if (activeGoToAbort) {
+    try { activeGoToAbort.abort(); } catch (_) {}
+    activeGoToAbort = null;
+  }
+  if (activeGoToWatchdog != null) {
+    clearTimeout(activeGoToWatchdog);
+    activeGoToWatchdog = null;
+  }
+}
+
 // Pre-buffer next video into back layer quietly
 function preloadNext() {
   const nextIdx = (current + 1) % VIDEOS.length;
@@ -409,6 +560,7 @@ function preloadNext() {
   if (bv.src.includes(VIDEOS[nextIdx].file)) return; // already loaded
   bv.ontimeupdate = null;
   bv.onended = null;
+  bv.dataset.clipIndex = String(nextIdx);
   bv.src = url(nextIdx);
   bv.preload = "auto";
   bv.load();
@@ -419,17 +571,156 @@ function preloadPrev() {
   if (bv.src.includes(VIDEOS[prevIdx].file)) return; // already loaded
   bv.ontimeupdate = null;
   bv.onended = null;
+  bv.dataset.clipIndex = String(prevIdx);
   bv.src = url(prevIdx);
   bv.preload = "auto";
   bv.load();
 }
 
-function goTo(index) {
-  if (transitioning) return;
+function safePlay(video, context) {
+  return video.play().catch((err) => {
+    const abs = video.currentSrc || video.src;
+    const rt = resourceTimingForUrl(abs);
+    queueTelemetry({
+      name: "play_rejected",
+      context,
+      message: err && err.message ? err.message : String(err),
+      rootHint: "browser_autoplay_or_policy",
+      ...clipPayloadFromVideo(video),
+      resourceTiming: rt,
+      resourceHttpStatus: rt && rt.responseStatus,
+    });
+  });
+}
+
+function recoverFromClipError(video, source) {
+  allowErrorRecovery = true;
+  if (consecutiveAutoSkips >= MAX_AUTO_SKIPS) {
+    queueTelemetry({
+      name: "recover_cap",
+      source,
+      rootHint: "unknown",
+      ...clipPayloadFromVideo(video),
+    });
+    return;
+  }
+  if (video.dataset.clipIndex === "0") {
+    suppressInitialBegin = true;
+    spinner.classList.add("gone");
+  }
+  consecutiveAutoSkips++;
+  clearGoToLoad();
+  transitioning = false;
+  queueTelemetry({
+    name: "recover_skip",
+    source,
+    rootHint: "unknown",
+    ...clipPayloadFromVideo(video),
+  });
+  goTo(current + 1, { force: true });
+}
+
+function onVideoError(e) {
+  const v = e.target;
+  const me = v.error;
+  const abs = v.currentSrc || v.src;
+  const rt = resourceTimingForUrl(abs);
+  const mediaErrorCode = me ? me.code : null;
+  const mediaErrorMessage = me ? me.message : "";
+  queueTelemetry({
+    name: "video_error",
+    mediaErrorCode,
+    mediaErrorMessage,
+    rootHint: inferRootHint({
+      name: "video_error",
+      mediaErrorCode,
+      resourceHttpStatus: rt && rt.responseStatus,
+    }),
+    isFront: v === frontVid(),
+    transitioning,
+    preBootstrap: !allowErrorRecovery,
+    ...clipPayloadFromVideo(v),
+    resourceTiming: rt,
+    resourceHttpStatus: rt && rt.responseStatus,
+  });
+
+  if (!allowErrorRecovery) return;
+  // Avoid skipping the whole slideshow on spurious early errors (e.g. code 4 before any
+  // buffer). Still recover for true network failures (typically code 2) even at readyState 0.
+  if (mediaErrorCode === 1) return;
+  if (v.readyState < 2 && mediaErrorCode !== 2) {
+    queueTelemetry({
+      name: "video_error_ignored_prebuffer",
+      mediaErrorCode,
+      rootHint: inferRootHint({
+        name: "video_error",
+        mediaErrorCode,
+        resourceHttpStatus: rt && rt.responseStatus,
+      }),
+      ...clipPayloadFromVideo(v),
+    });
+    return;
+  }
+  if (v !== frontVid() && !transitioning) {
+    return;
+  }
+  recoverFromClipError(v, "media_error");
+}
+
+let stallLogTimer = null;
+function onStalled(e) {
+  if (stallLogTimer) return;
+  stallLogTimer = setTimeout(() => {
+    stallLogTimer = null;
+    const v = e.target;
+    const abs = v.currentSrc || v.src;
+    const rt = resourceTimingForUrl(abs);
+    queueTelemetry({
+      name: "stalled",
+      rootHint: "buffering_or_throughput",
+      ...clipPayloadFromVideo(v),
+      resourceTiming: rt,
+      resourceHttpStatus: rt && rt.responseStatus,
+    });
+  }, 2500);
+}
+
+function onWaiting(e) {
+  const v = e.target;
+  if (v !== frontVid()) return;
+  const abs = v.currentSrc || v.src;
+  const rt = resourceTimingForUrl(abs);
+  queueTelemetry({
+    name: "waiting",
+    rootHint: "buffering_or_throughput",
+    ...clipPayloadFromVideo(v),
+    resourceTiming: rt,
+    resourceHttpStatus: rt && rt.responseStatus,
+  });
+}
+
+function attachVideoAnalytics(v) {
+  v.addEventListener("error", onVideoError);
+  v.addEventListener("stalled", onStalled, { passive: true });
+  v.addEventListener("waiting", onWaiting, { passive: true });
+  v.addEventListener(
+    "playing",
+    () => {
+      consecutiveAutoSkips = 0;
+    },
+    { passive: true }
+  );
+}
+
+function goTo(index, opts) {
+  const force = opts && opts.force;
+  if (transitioning && !force) return;
+  clearGoToLoad();
   transitioning = true;
   resetBar();
 
-  const goingBackward = index < current;
+  const prevCurrent = current;
+  const goingBackward = index < prevCurrent;
   current = ((index % VIDEOS.length) + VIDEOS.length) % VIDEOS.length;
 
   // Grab refs before flip
@@ -447,6 +738,7 @@ function goTo(index) {
   incoming.ontimeupdate = null;
   incoming.onended      = null;
 
+  incoming.dataset.clipIndex = String(current);
   // Load if not already preloaded
   if (!incoming.src.includes(VIDEOS[current].file)) {
     incoming.src     = url(current);
@@ -463,17 +755,11 @@ function goTo(index) {
   updateDots();
   setTimeout(() => outgoingLayer.classList.remove("active"), 50);
 
-  // Watchdog: skip broken/stuck video after 5s
-  const watchdog = setTimeout(() => {
-    if (!transitioning) return;
-    incoming.removeEventListener("canplay", doTransition);
-    transitioning = false;
-    goTo(current + 1);
-  }, 5000);
+  activeGoToAbort = new AbortController();
 
   function doTransition() {
-    clearTimeout(watchdog);
-    incoming.play().catch(() => {});
+    clearGoToLoad();
+    safePlay(incoming, "goTo_crossfade");
     incomingLayer.classList.add("active");
 
     // Caption fades in halfway through
@@ -496,10 +782,33 @@ function goTo(index) {
     }, CROSSFADE_MS + 100);
   }
 
+  // Watchdog: skip broken/stuck video after 5s
+  activeGoToWatchdog = setTimeout(() => {
+    activeGoToWatchdog = null;
+    if (!transitioning) return;
+    const abs = incoming.currentSrc || incoming.src;
+    const rtW = resourceTimingForUrl(abs);
+    queueTelemetry({
+      name: "watchdog_timeout",
+      rootHint: "buffering_or_throughput",
+      fromIndex: prevCurrent,
+      ...clipPayloadFromVideo(incoming),
+      resourceTiming: rtW,
+      resourceHttpStatus: rtW && rtW.responseStatus,
+    });
+    clearGoToLoad();
+    transitioning = false;
+    goTo(current + 1);
+  }, 5000);
+
   if (incoming.readyState >= 3) {
     doTransition();
   } else {
-    incoming.addEventListener("canplay", doTransition, { once: true });
+    incoming.addEventListener(
+      "canplay",
+      doTransition,
+      { once: true, signal: activeGoToAbort.signal }
+    );
   }
 }
 
@@ -511,6 +820,9 @@ window.goTo        = goTo;
 window.preloadNext = preloadNext;
 window.backVid     = backVid;
 window.frontVid    = frontVid;
+
+attachVideoAnalytics(vidA);
+attachVideoAnalytics(vidB);
 
 // ── keyboard / swipe ──────────────────────────────────────
 // ── Welcome overlay toggle ────────────────────────────────
@@ -565,6 +877,7 @@ function init() {
   buildDots();
 
   // Set up first video on layer A
+  vidA.dataset.clipIndex = "0";
   vidA.src = url(0);
   vidA.muted = true;
   vidA.playsInline = true;
@@ -573,11 +886,13 @@ function init() {
 
   let started = false;
   function begin() {
+    if (suppressInitialBegin) return;
     if (started) return;
+    allowErrorRecovery = true;
     started = true;
     spinner.classList.add("gone");
     layerA.classList.add("active");
-    vidA.play().catch(() => {});
+    safePlay(vidA, "init_begin");
     caption.textContent = VIDEOS[0].caption;
     vidA.ontimeupdate = () => {
       updateBar(vidA);
