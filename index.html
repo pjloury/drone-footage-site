@@ -400,6 +400,7 @@ function inferRootHint(ev) {
 function queueTelemetry(ev) {
   const base = {
     ...ev,
+    ...DEVICE_CONTEXT,
     sessionId: SESSION_ID,
     t: Date.now(),
     path: typeof location !== "undefined" ? location.pathname : "",
@@ -508,7 +509,45 @@ Object.defineProperty(window, 'front', {
   configurable: true,
 });
 
-function url(i) { return `${BASE_URL}/${VIDEOS[i].file}`; }
+// Detect mobile once — used to route to lower-bitrate H.264 versions
+const IS_MOBILE = typeof navigator !== "undefined" &&
+  /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+function url(i) {
+  const file = VIDEOS[i].file;
+  return `${BASE_URL}/${IS_MOBILE ? file.replace(".mp4", "-mobile.mp4") : file}`;
+}
+
+/** Parse UA once for PostHog device context ($browser / $os / $device_type). */
+function getDeviceContext() {
+  if (typeof navigator === "undefined") return {};
+  const ua = navigator.userAgent || "";
+  const isTablet = /iPad|Android(?!.*Mobile)/i.test(ua);
+  const isMobile = IS_MOBILE && !isTablet;
+
+  let $browser = "unknown";
+  if (/Firefox\//i.test(ua))                          $browser = "Firefox";
+  else if (/Edg\//i.test(ua))                         $browser = "Edge";
+  else if (/OPR\//i.test(ua))                         $browser = "Opera";
+  else if (/Chrome\//i.test(ua))                      $browser = "Chrome";
+  else if (/Safari\//i.test(ua))                      $browser = "Safari";
+
+  let $os = "unknown";
+  if (/iPhone|iPod/.test(ua))                         $os = "iOS";
+  else if (/iPad/.test(ua))                           $os = "iPadOS";
+  else if (/Android/i.test(ua))                       $os = "Android";
+  else if (/Mac OS X/i.test(ua))                      $os = "macOS";
+  else if (/Windows/i.test(ua))                       $os = "Windows";
+  else if (/Linux/i.test(ua))                         $os = "Linux";
+
+  return {
+    $browser,
+    $os,
+    $device_type: isTablet ? "tablet" : isMobile ? "mobile" : "desktop",
+  };
+}
+
+const DEVICE_CONTEXT = getDeviceContext();
 
 function frontVid()   { return front === "A" ? vidA : vidB; }
 function frontLayer() { return front === "A" ? layerA : layerB; }
