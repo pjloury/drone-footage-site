@@ -1,4 +1,10 @@
 {
   "framework": null,
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/videos/:path*",
+      "destination": "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev/:path*"
+    }
+  ]
 }

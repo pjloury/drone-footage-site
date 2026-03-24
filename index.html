@@ -4,6 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>PJ Loury Videography</title>
+
+  <!-- Open Graph / iMessage link preview -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="PJ Loury — Drone Videography" />
+  <meta property="og:description" content="Aerial cinematography from around the world." />
+  <meta property="og:image"       content="https://pjloury-drones.vercel.app/og-image.jpg" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:url"         content="https://pjloury-drones.vercel.app" />
+
+  <!-- Twitter / X card (also used by iMessage on newer iOS) -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="PJ Loury — Drone Videography" />
+  <meta name="twitter:description" content="Aerial cinematography from around the world." />
+  <meta name="twitter:image"       content="https://pjloury-drones.vercel.app/og-image.jpg" />
+
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -259,7 +275,7 @@
 
 // Base URL of your Cloudflare R2 public bucket
 // e.g. "https://pub-abc123.r2.dev"  (no trailing slash)
-const BASE_URL = "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev";
+const BASE_URL = "/videos";
 
 // PostHog project token — safe to be public (write-only client key)
 const POSTHOG_KEY  = "phc_701yGTQYGk4qFNHVrtD7OkkRUTKC430N7psMw524Rl3";
