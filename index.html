@@ -529,9 +529,19 @@ Object.defineProperty(window, 'front', {
 const IS_MOBILE = typeof navigator !== "undefined" &&
   /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+// Tracks clips that have been downgraded from full-res to mobile quality due to slow loading
+const degradedClips = new Set();
+
 function url(i) {
   const file = VIDEOS[i].file;
-  return `${BASE_URL}/${IS_MOBILE ? file.replace(".mp4", "-mobile.mp4") : file}`;
+  const useLowRes = IS_MOBILE || degradedClips.has(i);
+  return `${BASE_URL}/${useLowRes ? file.replace(".mp4", "-mobile.mp4") : file}`;
+}
+
+// Returns the filename segment actually being used for a given index (accounting for degradation)
+function videoFilename(i) {
+  const file = VIDEOS[i].file;
+  return (IS_MOBILE || degradedClips.has(i)) ? file.replace(".mp4", "-mobile.mp4") : file;
 }
 
 /** Parse UA once for PostHog device context ($browser / $os / $device_type). */
@@ -613,7 +623,7 @@ function clearGoToLoad() {
 function preloadNext() {
   const nextIdx = (current + 1) % VIDEOS.length;
   const bv = backVid();
-  if (bv.src.includes(VIDEOS[nextIdx].file)) return; // already loaded
+  if (bv.src.includes(videoFilename(nextIdx))) return; // already loaded
   bv.ontimeupdate = null;
   bv.onended = null;
   bv.dataset.clipIndex = String(nextIdx);
@@ -624,7 +634,7 @@ function preloadNext() {
 function preloadPrev() {
   const prevIdx = (current - 1 + VIDEOS.length) % VIDEOS.length;
   const bv = backVid();
-  if (bv.src.includes(VIDEOS[prevIdx].file)) return; // already loaded
+  if (bv.src.includes(videoFilename(prevIdx))) return; // already loaded
   bv.ontimeupdate = null;
   bv.onended = null;
   bv.dataset.clipIndex = String(prevIdx);
@@ -795,8 +805,8 @@ function goTo(index, opts) {
   incoming.onended      = null;
 
   incoming.dataset.clipIndex = String(current);
-  // Load if not already preloaded
-  if (!incoming.src.includes(VIDEOS[current].file)) {
+  // Load if not already preloaded at the correct quality level
+  if (!incoming.src.includes(videoFilename(current))) {
     incoming.src     = url(current);
     incoming.preload = "auto";
     incoming.load();
@@ -813,7 +823,47 @@ function goTo(index, opts) {
 
   activeGoToAbort = new AbortController();
 
+  // Quality fallback: if full-res hasn't buffered within 2.5s, silently retry at mobile quality.
+  // The existing canplay listener fires again for the new src — no other wiring needed.
+  let fallbackTimer = null;
+  function tryFallback() {
+    fallbackTimer = null;
+    if (IS_MOBILE || degradedClips.has(current)) return;
+    degradedClips.add(current);
+    queueTelemetry({
+      name: "quality_fallback",
+      rootHint: "buffering_or_throughput",
+      ...clipPayloadFromVideo(incoming),
+    });
+    incoming.src = url(current); // url() now returns mobile URL for this index
+    incoming.preload = "auto";
+    incoming.load();
+    // Reset watchdog so mobile version gets its own full 5s window
+    clearTimeout(activeGoToWatchdog);
+    activeGoToWatchdog = setTimeout(() => {
+      activeGoToWatchdog = null;
+      if (!transitioning) return;
+      const abs = incoming.currentSrc || incoming.src;
+      const rtW = resourceTimingForUrl(abs);
+      queueTelemetry({
+        name: "watchdog_timeout",
+        rootHint: "buffering_or_throughput",
+        fromIndex: prevCurrent,
+        ...clipPayloadFromVideo(incoming),
+        resourceTiming: rtW,
+        resourceHttpStatus: rtW && rtW.responseStatus,
+      });
+      clearGoToLoad();
+      transitioning = false;
+      goTo(current + 1);
+    }, 5000);
+  }
+  if (!IS_MOBILE && !degradedClips.has(current) && incoming.readyState < 3) {
+    fallbackTimer = setTimeout(tryFallback, 2500);
+  }
+
   function doTransition() {
+    if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
     clearGoToLoad();
     safePlay(incoming, "goTo_crossfade");
     incomingLayer.classList.add("active");
