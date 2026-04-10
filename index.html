@@ -245,6 +245,128 @@
       animation: spin .8s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Section selector ─────────────────────────────────── */
+    #section-btn {
+      position: fixed;
+      top: calc(20px + env(safe-area-inset-top, 0px));
+      right: calc(20px + env(safe-area-inset-right, 0px));
+      z-index: 100;
+      width: 36px; height: 36px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.3s, border-color 0.3s, opacity 0.6s;
+      opacity: 0; pointer-events: none;
+    }
+    #section-btn.visible { opacity: 1; pointer-events: auto; }
+    #section-btn:hover, #section-btn.active {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.5);
+    }
+    #section-btn svg {
+      width: 16px; height: 16px;
+      stroke: rgba(255,255,255,0.7);
+      stroke-width: 2; stroke-linecap: round; fill: none;
+    }
+
+    #section-dropdown {
+      position: fixed;
+      top: calc(64px + env(safe-area-inset-top, 0px));
+      right: calc(20px + env(safe-area-inset-right, 0px));
+      z-index: 100;
+      min-width: 195px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(24px) saturate(1.6);
+      -webkit-backdrop-filter: blur(24px) saturate(1.6);
+      border-radius: 12px;
+      padding: 6px 0;
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    #section-dropdown.open {
+      opacity: 1; transform: translateY(0) scale(1); pointer-events: auto;
+    }
+    .section-item {
+      display: flex; align-items: center;
+      padding: 9px 18px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem; font-weight: 300;
+      letter-spacing: 0.04em;
+      color: rgba(255,255,255,0.55);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      user-select: none; -webkit-user-select: none;
+    }
+    .section-item:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.9); }
+    .section-item.active { color: #fff; font-weight: 400; }
+    .section-item.active::before {
+      content: ""; display: inline-block;
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #fff; margin-right: 10px; flex-shrink: 0;
+    }
+    .section-item:not(.active)::before {
+      content: ""; display: inline-block;
+      width: 5px; height: 5px; margin-right: 10px; flex-shrink: 0;
+    }
+    .section-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 14px; }
+
+    /* ── Mini map ─────────────────────────────────────────── */
+    #minimap {
+      position: fixed;
+      bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+      right: calc(24px + env(safe-area-inset-right, 0px));
+      z-index: 50;
+      width: 140px; height: 85px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+    #minimap.visible { opacity: 1; }
+    .map-svg {
+      position: absolute; bottom: 0; right: 0;
+      height: auto;
+      transition: opacity 1.2s ease;
+    }
+    .map-svg.hidden { opacity: 0; }
+    #map-us { width: 110px; }
+    #map-world { width: 140px; }
+    .map-land {
+      fill: rgba(255,255,255,0.05);
+      stroke: rgba(255,255,255,0.18);
+      stroke-width: 0.6;
+      stroke-linejoin: round;
+    }
+    .map-dot { fill: rgba(255,255,255,0.9); }
+    .map-dot-glow {
+      fill: rgba(255,255,255,0.25);
+      animation: map-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes map-pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 0; }
+    }
+
+    @media (orientation: portrait) {
+      #minimap { display: none; }
+      #section-btn { width: 32px; height: 32px; }
+    }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #minimap {
+        width: 100px; height: 60px;
+        bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      }
+      #map-us { width: 80px; }
+      #map-world { width: 100px; }
+    }
   </style>
 </head>
 <body>
@@ -267,6 +389,12 @@
 <div id="dots"></div>
 <div id="hint">← &nbsp;&nbsp; → &nbsp; to navigate</div>
 <div id="bar-track"><div id="bar"></div></div>
+
+<button id="section-btn" aria-label="Sections">
+  <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+</button>
+<div id="section-dropdown"></div>
+<div id="minimap"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -872,6 +1000,7 @@ function goTo(index, opts) {
     setTimeout(() => {
       caption.textContent = VIDEOS[current].caption;
       caption.classList.remove("fade");
+      updateMiniMap();
     }, CROSSFADE_MS / 2);
 
     setTimeout(() => {
@@ -930,6 +1059,209 @@ window.frontVid    = frontVid;
 attachVideoAnalytics(vidA);
 attachVideoAnalytics(vidB);
 
+// ═══════════════════════════════════════════════════════════
+//  SECTIONS & MINI MAP
+// ═══════════════════════════════════════════════════════════
+
+const SECTIONS = [
+  { id: "coastal",   name: "Coastal" },
+  { id: "mountains", name: "Mountains" },
+  { id: "desert",    name: "Desert" },
+  { id: "cities",    name: "Cities" },
+];
+
+const VIDEO_META = {
+  // ── Coastal ──────────────────────────────────────────────
+  "video-04.mp4": { section: "coastal",   lat: 36.55,  lng: -121.92 },  // Carmel Waves at Dusk
+  "video-15.mp4": { section: "coastal",   lat: 20.69,  lng: -156.44 },  // Wailea, Maui
+  "video-16.mp4": { section: "coastal",   lat: 43.17,  lng: 16.44  },   // Hvar, Croatia
+  "video-19.mp4": { section: "coastal",   lat: 36.55,  lng: -121.95 },  // Waves
+  "video-24.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
+  "video-33.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
+  "video-35.mp4": { section: "coastal",   lat: 36.27,  lng: -121.81 },  // Big Sur Hills
+  "video-36.mp4": { section: "coastal",   lat: 37.72,  lng: -122.50 },  // Fort Funston
+  "video-37.mp4": { section: "coastal",   lat: 37.72,  lng: -122.50 },  // Fort Funston & Golden Gate
+  "video-39.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
+  "video-43.mp4": { section: "coastal",   lat: 39.57,  lng: 2.65   },   // Balearic Islands
+  "video-44.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
+  "video-45.mp4": { section: "coastal",   lat: 36.60,  lng: -121.90 },  // Drifting Away
+  "video-48.mp4": { section: "coastal",   lat: 20.93,  lng: -156.69 },  // Ka'anapali Surf, Maui
+  "video-49.mp4": { section: "coastal",   lat: -22.97, lng: -43.18 },   // Copacabana, Brazil
+  "video-53.mp4": { section: "coastal",   lat: 36.55,  lng: -121.92 },  // Carmel-by-the-Sea
+  "video-54.mp4": { section: "coastal",   lat: 36.47,  lng: -121.92 },  // Garrapata State Park
+  "video-56.mp4": { section: "coastal",   lat: 20.67,  lng: -156.44 },  // Wailea South, Maui
+  // ── Mountains ────────────────────────────────────────────
+  "video-03.mp4": { section: "mountains", lat: 39.10,  lng: -120.04 },  // Snowy Tahoe Treetops
+  "video-11.mp4": { section: "mountains", lat: 38.59,  lng: -122.60 },  // Sterling Vineyard
+  "video-27.mp4": { section: "mountains", lat: 40.65,  lng: -111.50 },  // Park City Morning, Utah
+  "video-30.mp4": { section: "mountains", lat: 37.78,  lng: -119.35 },  // Vogelsang Lake, Yosemite
+  "video-31.mp4": { section: "mountains", lat: 47.50,  lng: 13.50  },   // Austria
+  "video-40.mp4": { section: "mountains", lat: 47.56,  lng: 10.75  },   // Neuschwanstein Castle
+  "video-41.mp4": { section: "mountains", lat: 40.65,  lng: -111.50 },  // Park City, Utah
+  "video-46.mp4": { section: "mountains", lat: -49.33, lng: -72.99 },   // Laguna de los Tres, Patagonia
+  "video-51.mp4": { section: "mountains", lat: 47.80,  lng: 13.29  },   // Fuschl am See, Austria
+  // ── Desert ───────────────────────────────────────────────
+  "video-23.mp4": { section: "desert",    lat: 38.73,  lng: -109.59 },  // Arches National Park
+  "video-29.mp4": { section: "desert",    lat: 38.33,  lng: -109.88 },  // Canyonlands National Park
+  "video-47.mp4": { section: "desert",    lat: 38.33,  lng: -109.88 },  // Canyonlands
+  "video-52.mp4": { section: "desert",    lat: 38.57,  lng: -109.55 },  // Moab, Utah
+  "video-55.mp4": { section: "desert",    lat: 38.73,  lng: -109.59 },  // Arches National Park
+  "video-57.mp4": { section: "desert",    lat: 39.67,  lng: -105.20 },  // Red Rocks
+  "video-58.mp4": { section: "desert",    lat: 40.77,  lng: -113.85 },  // Bonneville Salt Flats
+  // ── Cities ───────────────────────────────────────────────
+  "video-02.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Good Morning Stanford
+  "video-05.mp4": { section: "cities",    lat: 37.79,  lng: -122.40 },  // Financial District
+  "video-06.mp4": { section: "cities",    lat: 37.44,  lng: -122.14 },  // Heavenly Palo Alto
+  "video-07.mp4": { section: "cities",    lat: 37.80,  lng: -122.41 },  // Telegraph Hill
+  "video-08.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Sunset
+  "video-09.mp4": { section: "cities",    lat: 37.78,  lng: -122.40 },  // Above SoMa
+  "video-10.mp4": { section: "cities",    lat: 37.38,  lng: -122.14 },  // Los Altos Hills
+  "video-12.mp4": { section: "cities",    lat: 37.80,  lng: -122.41 },  // Washington Square
+  "video-13.mp4": { section: "cities",    lat: 37.40,  lng: -122.11 },  // New Office Site
+  "video-14.mp4": { section: "cities",    lat: 37.77,  lng: -122.45 },  // Bay to Breakers
+  "video-17.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley
+  "video-18.mp4": { section: "cities",    lat: 37.40,  lng: -122.12 },  // Villa Collina
+  "video-20.mp4": { section: "cities",    lat: 33.98,  lng: -118.47 },  // Venice Canals
+  "video-21.mp4": { section: "cities",    lat: 37.78,  lng: -122.45 },  // University of San Francisco
+  "video-22.mp4": { section: "cities",    lat: 39.47,  lng: -0.38  },   // Old Valencia, Spain
+  "video-26.mp4": { section: "cities",    lat: 47.80,  lng: 13.04  },   // Salzburg, Austria
+  "video-32.mp4": { section: "cities",    lat: 37.24,  lng: -121.86 },  // Almaden Green
+  "video-34.mp4": { section: "cities",    lat: 37.79,  lng: -122.41 },  // SF Lunar New Year
+  "video-38.mp4": { section: "cities",    lat: 34.05,  lng: -118.24 },  // LA Suburbs
+  "video-42.mp4": { section: "cities",    lat: 37.82,  lng: -122.48 },  // Golden Gate Bridge
+  "video-50.mp4": { section: "cities",    lat: 39.57,  lng: 2.65   },   // Palma, Mallorca
+  "video-59.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // UC Berkeley Campus
+  "video-60.mp4": { section: "cities",    lat: 37.80,  lng: -122.40 },  // SF Embarcadero
+  "video-61.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Main Quad
+  "video-62.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley
+};
+
+// Enrich VIDEOS with section + coordinates
+VIDEOS.forEach(v => { const m = VIDEO_META[v.file]; if (m) Object.assign(v, m); });
+
+// Master copy for reordering (shuffle mutates VIDEOS in-place)
+const MASTER_VIDEOS = VIDEOS.map(v => ({...v}));
+
+let playbackMode = "shuffle";
+let sectionMenuOpen = false;
+let currentMapType = null;
+
+const sectionBtn      = document.getElementById("section-btn");
+const sectionDropdown = document.getElementById("section-dropdown");
+const minimapEl       = document.getElementById("minimap");
+
+// ── Section selector ─────────────────────────────────────
+
+function buildSectionMenu() {
+  sectionDropdown.innerHTML = "";
+  SECTIONS.forEach(sec => {
+    const el = document.createElement("div");
+    el.className = "section-item" + (playbackMode === sec.id ? " active" : "");
+    el.textContent = sec.name;
+    el.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode(sec.id); closeSectionMenu(); });
+    sectionDropdown.appendChild(el);
+  });
+  const divider = document.createElement("div");
+  divider.className = "section-divider";
+  sectionDropdown.appendChild(divider);
+  const shuf = document.createElement("div");
+  shuf.className = "section-item" + (playbackMode === "shuffle" ? " active" : "");
+  shuf.textContent = "Shuffle All";
+  shuf.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode("shuffle"); closeSectionMenu(); });
+  sectionDropdown.appendChild(shuf);
+}
+
+function openSectionMenu()  { sectionMenuOpen = true;  buildSectionMenu(); sectionDropdown.classList.add("open"); sectionBtn.classList.add("active"); }
+function closeSectionMenu() { sectionMenuOpen = false; sectionDropdown.classList.remove("open"); sectionBtn.classList.remove("active"); }
+function toggleSectionMenu() { sectionMenuOpen ? closeSectionMenu() : openSectionMenu(); }
+
+sectionBtn.addEventListener("click", e => { e.stopPropagation(); toggleSectionMenu(); });
+document.addEventListener("click", () => { if (sectionMenuOpen) closeSectionMenu(); });
+
+// Prevent section UI touches from triggering video navigation
+[sectionBtn, sectionDropdown].forEach(el => {
+  el.addEventListener("touchstart", e => e.stopPropagation());
+  el.addEventListener("touchend",   e => e.stopPropagation());
+});
+
+function setPlaybackMode(mode) {
+  playbackMode = mode;
+  let newOrder;
+  if (mode === "shuffle") {
+    newOrder = MASTER_VIDEOS.map(v => ({...v}));
+    for (let i = newOrder.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newOrder[i], newOrder[j]] = [newOrder[j], newOrder[i]];
+    }
+  } else {
+    const idx = SECTIONS.findIndex(s => s.id === mode);
+    const ordered = [...SECTIONS.slice(idx), ...SECTIONS.slice(0, idx)];
+    newOrder = [];
+    ordered.forEach(sec => MASTER_VIDEOS.filter(v => v.section === sec.id).forEach(v => newOrder.push({...v})));
+  }
+  VIDEOS.length = 0;
+  newOrder.forEach(v => VIDEOS.push(v));
+  clearGoToLoad();
+  transitioning = false;
+  current = 0;
+  buildDots();
+  goTo(0, { force: true });
+}
+
+// ── Mini map ─────────────────────────────────────────────
+
+// Simplified SVG paths — continental US outline
+const US_PATH = "M7,5 L1,8 3,40 3,48 9,61 15,78 26,87 35,88 54,94 63,91 75,103 94,120 102,103 120,105 132,98 139,103 146,120 151,125 153,118 149,98 149,90 168,75 171,55 180,45 186,40 197,25 197,15 180,25 163,33 153,40 141,43 129,40 119,15 102,5 71,5 31,5Z";
+const HAWAII_PATH = "M18,112 L22,110 26,112 24,115 20,115Z M28,108 L33,106 37,109 33,112 28,111Z";
+
+// World continent outlines (equirectangular)
+const WORLD_PATHS = [
+  "M30,33 L42,38 55,50 58,60 62,70 68,80 78,93 90,107 96,107 100,87 106,67 113,53 110,43 100,35 88,27 72,25 55,28 40,30Z",
+  "M100,113 L108,115 118,120 130,125 140,132 142,145 137,155 128,165 120,175 112,188 107,182 103,168 100,150 100,135 100,122Z",
+  "M165,35 L170,42 170,50 172,57 175,65 178,70 184,67 192,63 198,55 200,45 196,37 190,34 180,33Z",
+  "M172,73 L168,82 170,97 175,112 182,128 190,145 196,158 200,165 206,155 212,138 216,120 214,105 210,92 208,82 202,75 195,72Z",
+  "M208,55 L218,52 228,58 238,55 255,48 272,40 288,33 305,30 318,35 332,42 342,50 345,58 338,63 325,70 310,77 295,83 280,90 268,97 258,105 252,95 242,82 232,72 222,65 213,60Z",
+  "M295,142 L305,137 318,138 328,145 332,155 328,164 318,170 308,168 298,163 293,152Z",
+  "M128,22 L140,20 148,25 148,33 142,40 132,38 126,30Z",
+];
+
+function isContigUS(lat, lng) { return lat >= 24.5 && lat <= 49.5 && lng >= -125 && lng <= -66; }
+function projectUS(lat, lng) { return { x: ((lng + 125) / 59) * 200, y: ((50 - lat) / 26) * 130 }; }
+function projectWorld(lat, lng) { return { x: ((lng + 180) / 360) * 360, y: ((90 - lat) / 150) * 200 }; }
+
+function initMiniMap() {
+  minimapEl.innerHTML =
+    '<svg id="map-us" class="map-svg" viewBox="-2 -2 204 134" preserveAspectRatio="xMidYMid meet">' +
+      '<path d="' + US_PATH + '" class="map-land"/>' +
+      '<path d="' + HAWAII_PATH + '" class="map-land"/>' +
+      '<circle class="map-dot-glow" cx="0" cy="0" r="6"/>' +
+      '<circle class="map-dot" cx="0" cy="0" r="2.5"/>' +
+    '</svg>' +
+    '<svg id="map-world" class="map-svg hidden" viewBox="-2 -2 364 204" preserveAspectRatio="xMidYMid meet">' +
+      WORLD_PATHS.map(p => '<path d="' + p + '" class="map-land"/>').join("") +
+      '<circle class="map-dot-glow" cx="0" cy="0" r="7"/>' +
+      '<circle class="map-dot" cx="0" cy="0" r="3"/>' +
+    '</svg>';
+}
+
+function updateMiniMap() {
+  const v = VIDEOS[current];
+  if (!v || v.lat == null) return;
+  const showUS = isContigUS(v.lat, v.lng);
+  const mapType = showUS ? "us" : "world";
+  if (mapType !== currentMapType) {
+    currentMapType = mapType;
+    document.getElementById("map-us").classList.toggle("hidden", !showUS);
+    document.getElementById("map-world").classList.toggle("hidden", showUS);
+  }
+  const svg = document.getElementById(showUS ? "map-us" : "map-world");
+  const pos = showUS ? projectUS(v.lat, v.lng) : projectWorld(v.lat, v.lng);
+  svg.querySelectorAll(".map-dot, .map-dot-glow").forEach(d => {
+    d.setAttribute("cx", pos.x);
+    d.setAttribute("cy", pos.y);
+  });
+}
+
 // ── keyboard / swipe ──────────────────────────────────────
 // ── Welcome overlay toggle ────────────────────────────────
 let welcomeDocked = false;
@@ -939,8 +1271,9 @@ function toggleWelcome() {
 }
 
 document.addEventListener("keydown", e => {
-  if (e.key === "ArrowRight") { dismissHint(); next(); }
-  if (e.key === "ArrowLeft")  { dismissHint(); prev(); }
+  if (e.key === "Escape" && sectionMenuOpen) { closeSectionMenu(); return; }
+  if (e.key === "ArrowRight") { dismissHint(); closeSectionMenu(); next(); }
+  if (e.key === "ArrowLeft")  { dismissHint(); closeSectionMenu(); prev(); }
   if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); toggleWelcome(); }
 });
 
@@ -970,16 +1303,18 @@ function dismissHint() {
 }
 setTimeout(dismissHint, 5000);
 
-// ── shuffle ───────────────────────────────────────────────
+// ── shuffle (default mode) ────────────────────────────────
 (function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 })(VIDEOS);
+playbackMode = "shuffle";
 
 // ── init ──────────────────────────────────────────────────
 function init() {
+  initMiniMap();
   buildDots();
 
   // Set up first video on layer A
@@ -997,9 +1332,11 @@ function init() {
     allowErrorRecovery = true;
     started = true;
     spinner.classList.add("gone");
+    setTimeout(() => { sectionBtn.classList.add("visible"); minimapEl.classList.add("visible"); }, 1500);
     layerA.classList.add("active");
     safePlay(vidA, "init_begin");
     caption.textContent = VIDEOS[0].caption;
+    updateMiniMap();
     vidA.ontimeupdate = () => {
       updateBar(vidA);
       if (vidA.duration && (vidA.duration - vidA.currentTime) < 8) preloadNext();
