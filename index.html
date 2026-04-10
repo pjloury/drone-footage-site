@@ -318,6 +318,11 @@
       width: 5px; height: 5px; margin-right: 10px; flex-shrink: 0;
     }
     .section-divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 14px; }
+    .shuffle-icon {
+      width: 13px; height: 13px; margin-right: 8px; flex-shrink: 0;
+      stroke: currentColor; stroke-width: 2; stroke-linecap: round;
+      stroke-linejoin: round; fill: none; vertical-align: -1px;
+    }
 
     /* ── Mini map ─────────────────────────────────────────── */
     #minimap {
@@ -1064,10 +1069,10 @@ attachVideoAnalytics(vidB);
 // ═══════════════════════════════════════════════════════════
 
 const SECTIONS = [
+  { id: "cities",    name: "Cities" },
   { id: "coastal",   name: "Coastal" },
   { id: "mountains", name: "Mountains" },
   { id: "desert",    name: "Desert" },
-  { id: "cities",    name: "Cities" },
 ];
 
 const VIDEO_META = {
@@ -1166,7 +1171,7 @@ function buildSectionMenu() {
   sectionDropdown.appendChild(divider);
   const shuf = document.createElement("div");
   shuf.className = "section-item" + (playbackMode === "shuffle" ? " active" : "");
-  shuf.textContent = "Shuffle All";
+  shuf.innerHTML = '<svg class="shuffle-icon" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Shuffle All';
   shuf.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode("shuffle"); closeSectionMenu(); });
   sectionDropdown.appendChild(shuf);
 }
@@ -1184,20 +1189,29 @@ document.addEventListener("click", () => { if (sectionMenuOpen) closeSectionMenu
   el.addEventListener("touchend",   e => e.stopPropagation());
 });
 
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 function setPlaybackMode(mode) {
   playbackMode = mode;
   let newOrder;
   if (mode === "shuffle") {
-    newOrder = MASTER_VIDEOS.map(v => ({...v}));
-    for (let i = newOrder.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newOrder[i], newOrder[j]] = [newOrder[j], newOrder[i]];
-    }
+    newOrder = shuffleArray(MASTER_VIDEOS.map(v => ({...v})));
   } else {
+    // Start from selected section, rotate through all, randomize within each
     const idx = SECTIONS.findIndex(s => s.id === mode);
     const ordered = [...SECTIONS.slice(idx), ...SECTIONS.slice(0, idx)];
     newOrder = [];
-    ordered.forEach(sec => MASTER_VIDEOS.filter(v => v.section === sec.id).forEach(v => newOrder.push({...v})));
+    ordered.forEach(sec => {
+      const group = MASTER_VIDEOS.filter(v => v.section === sec.id).map(v => ({...v}));
+      shuffleArray(group);
+      group.forEach(v => newOrder.push(v));
+    });
   }
   VIDEOS.length = 0;
   newOrder.forEach(v => VIDEOS.push(v));
@@ -1304,12 +1318,7 @@ function dismissHint() {
 setTimeout(dismissHint, 5000);
 
 // ── shuffle (default mode) ────────────────────────────────
-(function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-})(VIDEOS);
+shuffleArray(VIDEOS);
 playbackMode = "shuffle";
 
 // ── init ──────────────────────────────────────────────────
