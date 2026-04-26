@@ -1,10 +1,18 @@
 {
   "framework": null,
   "outputDirectory": ".",
-  "rewrites": [
+  "headers": [
     {
-      "source": "/videos/:path*",
-      "destination": "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev/:path*"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    },
+    {
+      "source": "/og-image.(jpg|png)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
     }
   ]
 }

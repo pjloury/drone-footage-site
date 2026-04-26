@@ -406,9 +406,18 @@
 //  CONFIGURATION
 // ═══════════════════════════════════════════════════════════
 
-// Base URL of your Cloudflare R2 public bucket
-// e.g. "https://pub-abc123.r2.dev"  (no trailing slash)
-const BASE_URL = "/videos";
+// Base URL of your Cloudflare R2 public bucket.
+//
+// Going direct to R2 (not the old Vercel rewrite) bypasses Vercel's
+// bandwidth cap. R2 egress is free forever and the pub URL is already
+// served by Cloudflare's global network.
+//
+// The big repeat-visit win is `Cache-Control: public, max-age=31536000,
+// immutable` on the R2 objects themselves — that lets the BROWSER cache
+// each video on disk, so reloading the site is a zero-network experience
+// for everything that's been seen before. (See encode_and_upload.sh and
+// the --backfill-cache flag for how that header gets set.)
+const BASE_URL = "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev";
 
 // PostHog project token — safe to be public (write-only client key)
 const POSTHOG_KEY  = "phc_701yGTQYGk4qFNHVrtD7OkkRUTKC430N7psMw524Rl3";
@@ -677,6 +686,22 @@ function videoFilename(i) {
   return (IS_MOBILE || degradedClips.has(i)) ? file.replace(".mp4", "-mobile.mp4") : file;
 }
 
+// Poster JPG (first frame at mobile res) — shown while the mp4 buffers.
+// Eliminates black-screen perception on slow networks.
+function posterUrl(i) {
+  const file = VIDEOS[i].file;
+  return `${BASE_URL}/${file.replace(".mp4", "-poster.jpg")}`;
+}
+
+// Set both poster and src so the user always sees the right image while
+// bytes are still in flight. Safe to call repeatedly.
+function setVideoSrc(v, i) {
+  v.poster = posterUrl(i);
+  v.src = url(i);
+  v.preload = "auto";
+  v.load();
+}
+
 /** Parse UA once for PostHog device context ($browser / $os / $device_type). */
 function getDeviceContext() {
   if (typeof navigator === "undefined") return {};
@@ -760,9 +785,7 @@ function preloadNext() {
   bv.ontimeupdate = null;
   bv.onended = null;
   bv.dataset.clipIndex = String(nextIdx);
-  bv.src = url(nextIdx);
-  bv.preload = "auto";
-  bv.load();
+  setVideoSrc(bv, nextIdx);
 }
 function preloadPrev() {
   const prevIdx = (current - 1 + VIDEOS.length) % VIDEOS.length;
@@ -771,9 +794,7 @@ function preloadPrev() {
   bv.ontimeupdate = null;
   bv.onended = null;
   bv.dataset.clipIndex = String(prevIdx);
-  bv.src = url(prevIdx);
-  bv.preload = "auto";
-  bv.load();
+  setVideoSrc(bv, prevIdx);
 }
 
 function safePlay(video, context) {
@@ -940,9 +961,7 @@ function goTo(index, opts) {
   incoming.dataset.clipIndex = String(current);
   // Load if not already preloaded at the correct quality level
   if (!incoming.src.includes(videoFilename(current))) {
-    incoming.src     = url(current);
-    incoming.preload = "auto";
-    incoming.load();
+    setVideoSrc(incoming, current);
   }
 
   // Flip front/back tracking
@@ -968,9 +987,8 @@ function goTo(index, opts) {
       rootHint: "buffering_or_throughput",
       ...clipPayloadFromVideo(incoming),
     });
-    incoming.src = url(current); // url() now returns mobile URL for this index
-    incoming.preload = "auto";
-    incoming.load();
+    // url() / posterUrl() now return mobile URLs for this index
+    setVideoSrc(incoming, current);
     // Reset watchdog so mobile version gets its own full 5s window
     clearTimeout(activeGoToWatchdog);
     activeGoToWatchdog = setTimeout(() => {
@@ -1328,11 +1346,9 @@ function init() {
 
   // Set up first video on layer A
   vidA.dataset.clipIndex = "0";
-  vidA.src = url(0);
   vidA.muted = true;
   vidA.playsInline = true;
-  vidA.preload = "auto";
-  vidA.load();
+  setVideoSrc(vidA, 0);
 
   let started = false;
   function begin() {
