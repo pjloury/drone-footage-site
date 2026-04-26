@@ -77,7 +77,6 @@
         font-size: clamp(1rem, 5vw, 1.4rem);
         bottom: calc(44px + env(safe-area-inset-bottom, 0px));
       }
-      #hint { display: none; }
     }
 
     /* Landscape mobile: compact caption, respect safe areas */
@@ -105,18 +104,58 @@
     }
     .dot.active { background: rgba(255,255,255,.85); transform: scale(1.4); }
 
-    /* ── Arrow hint ───────────────────────────────────────── */
-    #hint {
+    /* ── Edge nav arrows (liquid glass) ───────────────────── */
+    .nav-arrow {
       position: fixed;
-      bottom: calc(44px + env(safe-area-inset-bottom, 0px));
-      right: calc(44px + env(safe-area-inset-right, 0px));
-      z-index: 50;
-      color: rgba(255,255,255,.35);
-      font-size: clamp(.6rem, 1.1vw, .8rem); letter-spacing: .14em;
-      pointer-events: none;
-      transition: opacity 1.2s ease;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 60;
+      width: 56px;
+      height: 50vh;
+      max-height: 420px;
+      min-height: 220px;
+      border: none;
+      padding: 0;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px) saturate(1.6);
+      -webkit-backdrop-filter: blur(20px) saturate(1.6);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      opacity: 1;
+      transition: opacity 1.2s ease, background 0.3s ease;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.18),
+        0 12px 36px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.22);
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
     }
-    #hint.hidden { opacity: 0; }
+    /* Tapered inner edge — outer edge flush to the screen */
+    #nav-left  { left: 0;  clip-path: polygon(0 0, 100% 15%, 100% 85%, 0 100%); }
+    #nav-right { right: 0; clip-path: polygon(0 15%, 100% 0, 100% 100%, 0 85%); }
+    .nav-arrow:hover, .nav-arrow:active {
+      background: rgba(255,255,255,0.16);
+    }
+    .nav-arrow.hidden { opacity: 0; pointer-events: none; }
+    .nav-arrow svg {
+      width: 28px; height: 28px;
+      stroke: rgba(255,255,255,0.9);
+      stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+      fill: none;
+      filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
+    }
+    /* Slight inward bias so the chevron sits closer to the screen edge,
+       making the visual weight feel anchored to the edge of the device */
+    #nav-left  svg { transform: translateX(-4px); }
+    #nav-right svg { transform: translateX(4px); }
+
+    @media (orientation: portrait) {
+      .nav-arrow { width: 44px; height: 42vh; min-height: 180px; }
+      .nav-arrow svg { width: 22px; height: 22px; }
+    }
+    @media (orientation: landscape) and (max-height: 500px) {
+      .nav-arrow { height: 70vh; min-height: 140px; max-height: none; }
+    }
 
 
     /* ── Progress bar ─────────────────────────────────────── */
@@ -330,34 +369,57 @@
       bottom: calc(44px + env(safe-area-inset-bottom, 0px));
       right: calc(24px + env(safe-area-inset-right, 0px));
       z-index: 50;
-      width: 140px; height: 85px;
+      width: 152px; height: 96px;
       pointer-events: none;
       opacity: 0;
       transition: opacity 1.2s ease;
+      /* Glass plate so the map reads against any background frame */
+      background: rgba(0,0,0,0.42);
+      backdrop-filter: blur(16px) saturate(1.5);
+      -webkit-backdrop-filter: blur(16px) saturate(1.5);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 10px;
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 8px 24px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      overflow: hidden;
     }
     #minimap.visible { opacity: 1; }
     .map-svg {
-      position: absolute; bottom: 0; right: 0;
+      position: absolute; bottom: 4px; right: 4px;
       height: auto;
       transition: opacity 1.2s ease;
+      overflow: visible;
     }
     .map-svg.hidden { opacity: 0; }
     #map-us { width: 110px; }
     #map-world { width: 140px; }
+    /* Land — bumped contrast so the outline is actually legible */
     .map-land {
-      fill: rgba(255,255,255,0.05);
-      stroke: rgba(255,255,255,0.18);
-      stroke-width: 0.6;
+      fill: rgba(255,255,255,0.18);
+      stroke: rgba(255,255,255,0.55);
+      stroke-width: 0.7;
       stroke-linejoin: round;
     }
-    .map-dot { fill: rgba(255,255,255,0.9); }
-    .map-dot-glow {
-      fill: rgba(255,255,255,0.25);
-      animation: map-pulse 2.5s ease-in-out infinite;
+    /* GPS dot (Apple Maps blue + white ring + cyan glow) */
+    .map-dot {
+      fill: #4a9eff;
+      stroke: rgba(255,255,255,0.98);
+      stroke-width: 0.8;
+      filter: drop-shadow(0 0 4px rgba(74,158,255,0.7));
     }
-    @keyframes map-pulse {
-      0%, 100% { opacity: 0.6; }
-      50% { opacity: 0; }
+    /* Expanding pulse ring */
+    .map-dot-glow {
+      fill: #4a9eff;
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: gps-pulse 1.8s ease-out infinite;
+    }
+    @keyframes gps-pulse {
+      0%   { opacity: 0.55; transform: scale(1);   }
+      70%  { opacity: 0;    transform: scale(2.8); }
+      100% { opacity: 0;    transform: scale(2.8); }
     }
 
     @media (orientation: portrait) {
@@ -366,7 +428,7 @@
     }
     @media (orientation: landscape) and (max-height: 500px) {
       #minimap {
-        width: 100px; height: 60px;
+        width: 110px; height: 68px;
         bottom: calc(28px + env(safe-area-inset-bottom, 0px));
       }
       #map-us { width: 80px; }
@@ -392,7 +454,12 @@
 
 <div id="caption"></div>
 <div id="dots"></div>
-<div id="hint">← &nbsp;&nbsp; → &nbsp; to navigate</div>
+<button id="nav-left" class="nav-arrow" aria-label="Previous video">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 5 8 12 15 19"/></svg>
+</button>
+<button id="nav-right" class="nav-arrow" aria-label="Next video">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 5 16 12 9 19"/></svg>
+</button>
 <div id="bar-track"><div id="bar"></div></div>
 
 <button id="section-btn" aria-label="Sections">
@@ -481,7 +548,7 @@ const VIDEOS = [
   { file: "video-55.mp4", caption: "Arches National Park"               },
   { file: "video-56.mp4", caption: "Wailea South, Maui"                 },
   { file: "video-57.mp4", caption: "Red Rocks"                          },
-  { file: "video-58.mp4", caption: "Bonneville Salt Flats"              },
+  { file: "video-58.mp4", caption: "Alviso Salt Marsh"                  },
   { file: "video-59.mp4", caption: "UC Berkeley Campus"                 },
   { file: "video-60.mp4", caption: "SF Embarcadero"                     },
   { file: "video-61.mp4", caption: "Stanford Main Quad"                 },
@@ -634,7 +701,8 @@ const vidA     = document.getElementById("vidA");
 const vidB     = document.getElementById("vidB");
 const caption  = document.getElementById("caption");
 const dotsEl   = document.getElementById("dots");
-const hintEl   = document.getElementById("hint");
+const navLeft  = document.getElementById("nav-left");
+const navRight = document.getElementById("nav-right");
 const barEl    = document.getElementById("bar");
 const spinner  = document.getElementById("spinner");
 
@@ -674,10 +742,17 @@ const IS_MOBILE = typeof navigator !== "undefined" &&
 // Tracks clips that have been downgraded from full-res to mobile quality due to slow loading
 const degradedClips = new Set();
 
+// Bump this whenever the mobile encode params change so browsers (and
+// Cloudflare's edge) re-fetch instead of serving the immutably-cached
+// previous bytes. Only mobile uses it — desktop is stream-copied from
+// the original source and changes much less often.
+const MOBILE_VERSION = 2;
+
 function url(i) {
   const file = VIDEOS[i].file;
   const useLowRes = IS_MOBILE || degradedClips.has(i);
-  return `${BASE_URL}/${useLowRes ? file.replace(".mp4", "-mobile.mp4") : file}`;
+  const name = useLowRes ? file.replace(".mp4", "-mobile.mp4") : file;
+  return `${BASE_URL}/${name}${useLowRes ? `?v=${MOBILE_VERSION}` : ""}`;
 }
 
 // Returns the filename segment actually being used for a given index (accounting for degradation)
@@ -1130,7 +1205,7 @@ const VIDEO_META = {
   "video-52.mp4": { section: "desert",    lat: 38.57,  lng: -109.55 },  // Moab, Utah
   "video-55.mp4": { section: "desert",    lat: 38.73,  lng: -109.59 },  // Arches National Park
   "video-57.mp4": { section: "desert",    lat: 39.67,  lng: -105.20 },  // Red Rocks
-  "video-58.mp4": { section: "desert",    lat: 40.77,  lng: -113.85 },  // Bonneville Salt Flats
+  "video-58.mp4": { section: "desert",    lat: 37.43,  lng: -121.97 },  // Alviso Salt Marsh
   // ── Cities ───────────────────────────────────────────────
   "video-02.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Good Morning Stanford
   "video-05.mp4": { section: "cities",    lat: 37.79,  lng: -122.40 },  // Financial District
@@ -1331,9 +1406,23 @@ document.addEventListener("touchend", e => {
 }, { passive: true });
 
 function dismissHint() {
-  if (!hintDismissed) { hintDismissed = true; hintEl.classList.add("hidden"); }
+  if (!hintDismissed) {
+    hintDismissed = true;
+    navLeft.classList.add("hidden");
+    navRight.classList.add("hidden");
+  }
 }
-setTimeout(dismissHint, 5000);
+// Nav arrows fade 5s after the first video starts (timer set in begin()).
+// Setting the timer at parse time would let it fire while the spinner is
+// still up on slow connections, before the user has even seen them.
+
+navLeft.addEventListener("click", e => { e.stopPropagation(); dismissHint(); prev(); });
+navRight.addEventListener("click", e => { e.stopPropagation(); dismissHint(); next(); });
+[navLeft, navRight].forEach(el => {
+  // Stop touches from also triggering the global swipe handler
+  el.addEventListener("touchstart", e => e.stopPropagation(), { passive: true });
+  el.addEventListener("touchend",   e => e.stopPropagation(), { passive: true });
+});
 
 // ── shuffle (default mode) ────────────────────────────────
 shuffleArray(VIDEOS);
@@ -1367,6 +1456,7 @@ function init() {
       if (vidA.duration && (vidA.duration - vidA.currentTime) < 8) preloadNext();
     };
     vidA.onended = () => goTo(current + 1);
+    setTimeout(dismissHint, 5000);
   }
 
   vidA.addEventListener("canplay", begin, { once: true });

@@ -208,17 +208,23 @@ for i in "${!NUMS[@]}"; do
     fi
   fi
 
-  # ── Step 1: Encode mobile (H.264 720p @ ~2 Mbps + faststart) ─────────────
+  # ── Step 1: Encode mobile (H.264 720p30 @ ~2 Mbps + faststart) ───────────
   # 720p is indistinguishable from 1080p on a phone fullscreen for drone
-  # footage, and roughly halves the bytes vs. the previous 1080p@5M.
+  # footage. The fps=30 filter caps cadence at 30 — drops frames if the
+  # source is 60fps (about 22% of the catalog is) so the encoder doesn't
+  # have to spread 2 Mbps across 60 frames/sec, which causes peaky VBR
+  # bursts that overflow the decode buffer on cellular and produce that
+  # "play half a second / pause / play half a second" lurching pattern
+  # (most visible on high-motion 60fps clips like Bay to Breakers).
+  # Desktop encode below stays `-c copy`, so full-res keeps original fps.
   if [[ -f "$MOBILE_OUT" ]]; then
     log "  mobile: already encoded locally, skipping ffmpeg"
   else
-    log "  mobile: encoding H.264 720p @ 2 Mbps..."
+    log "  mobile: encoding H.264 720p30 @ 2 Mbps..."
     if ffmpeg -i "$SRC" \
       -c:v libx264 -profile:v main -level 4.0 \
-      -vf "scale=-2:720" \
-      -b:v 2M -maxrate 3M -bufsize 4M \
+      -vf "scale=-2:720,fps=30" \
+      -b:v 2M -maxrate 3.5M -bufsize 5M \
       -c:a aac -b:a 96k \
       -movflags +faststart \
       -y "$MOBILE_OUT" \

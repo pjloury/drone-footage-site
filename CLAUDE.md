@@ -53,6 +53,27 @@ fine.
    `video-09` line in `index.html`'s `VIDEOS` array.
 5. Commit + push.
 
+## Encoding gotchas
+
+### 60 fps source clips need `fps=30` on the mobile encode
+About 22% of the catalog is shot at 59.94 fps (drone slow-mo / cinematic).
+At 720p with a 2 Mbps target, x264 has to spread bits across 60 frames/s,
+producing peaky VBR bursts that overflow the decode buffer on cellular —
+the symptom is a "play half a second / pause / play half a second"
+lurching pattern, most visible on high-motion 60 fps clips.
+
+`encode_and_upload.sh`'s mobile filter therefore includes `,fps=30`. The
+filter drops frames if source is >30; it's a no-op for 30 fps sources.
+The desktop encode is `-c copy`, so full-res keeps original 60 fps.
+
+If a NEW clip ever lurches in production: probe its R2 mobile file with
+`ffprobe -show_entries stream=r_frame_rate`. If it reports `60000/1001`,
+re-run `encode_and_upload.sh --force-mobile` for that clip — the current
+script handles 60 fps correctly.
+
+Currently-known 60 fps clips (all already re-encoded with the fix):
+`06 14 16 23 26 29 30 35 38 42 45 46 47`.
+
 ## Conventions
 
 - Commits: short imperative subject prefixed with `feat:`, `fix:`, or
