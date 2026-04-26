@@ -268,6 +268,37 @@
       white-space: nowrap;
     }
 
+    /* ── Debug HUD (toggled with ?debug=1) ──────────────────
+       Shows realtime playback metrics so you can verify smooth
+       buffering / catch stalls in the wild. Visible on phone too —
+       open https://drones.pjloury.com/?debug=1 from any device. */
+    #debug-hud {
+      position: fixed;
+      top: calc(16px + env(safe-area-inset-top, 0px));
+      left: calc(16px + env(safe-area-inset-left, 0px));
+      z-index: 250;
+      display: none;
+      max-width: calc(100vw - 32px);
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(14px) saturate(1.3);
+      -webkit-backdrop-filter: blur(14px) saturate(1.3);
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.92);
+      font-family: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.55;
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      white-space: pre;
+      tab-size: 2;
+    }
+    #debug-hud.visible { display: block; }
+    #debug-hud .ok    { color: #6ee7b7; }
+    #debug-hud .warn  { color: #fcd34d; }
+    #debug-hud .bad   { color: #f87171; }
+
     /* ── Loading spinner (shown while first video buffers) ── */
     #spinner {
       position: fixed; inset: 0; z-index: 200;
@@ -452,6 +483,7 @@
 </div>
 
 <div id="spinner"><div class="ring"></div></div>
+<div id="debug-hud"></div>
 
 <div id="stage">
   <div class="layer" id="layerA"><video id="vidA" playsinline muted preload="auto"></video></div>
@@ -752,6 +784,9 @@ const degradedClips = new Set();
 // Cloudflare's edge) re-fetch instead of serving the immutably-cached
 // previous bytes. Only mobile uses it — desktop is stream-copied from
 // the original source and changes much less often.
+//   v1 → original 1080p @ 5 Mbps
+//   v2 → 720p30 @ 2 Mbps (lurch fix; turned out grainy)
+//   v3 → back to 1080p @ 5 Mbps — bump only after R2 has been re-encoded
 const MOBILE_VERSION = 2;
 
 function url(i) {
@@ -1164,6 +1199,109 @@ attachVideoAnalytics(vidA);
 attachVideoAnalytics(vidB);
 
 // ═══════════════════════════════════════════════════════════
+//  Debug HUD — visible playback metrics for stutter-hunting
+//  Toggle by appending ?debug=1 to the URL.
+// ═══════════════════════════════════════════════════════════
+const DEBUG_MODE = (typeof location !== "undefined") &&
+                   new URLSearchParams(location.search).has("debug");
+let stallCount = 0, waitingCount = 0, qualityFallbackCount = 0;
+let bytesAtSample = 0, lastBytesSample = 0, lastBytesSampleTime = 0, instantBps = 0;
+
+if (DEBUG_MODE) {
+  const hudEl = document.getElementById("debug-hud");
+  hudEl.classList.add("visible");
+
+  // Tally stall + buffering events on both video elements
+  for (const v of [vidA, vidB]) {
+    v.addEventListener("stalled", () => { stallCount++; },   { passive: true });
+    v.addEventListener("waiting", () => { waitingCount++; }, { passive: true });
+  }
+
+  // Track instantaneous download throughput from the most recent video
+  // resource entry (PerformanceObserver lets us see each range request).
+  if ("PerformanceObserver" in window) {
+    try {
+      const po = new PerformanceObserver(entries => {
+        for (const e of entries.getEntries()) {
+          if (e.initiatorType === "video" || /\.mp4(\?|$)/.test(e.name)) {
+            bytesAtSample += e.transferSize || e.encodedBodySize || 0;
+          }
+        }
+      });
+      po.observe({ type: "resource", buffered: true });
+    } catch (_) {}
+  }
+
+  // Hook the existing quality_fallback telemetry path
+  const _origQueueTelemetry = queueTelemetry;
+  queueTelemetry = function(ev) {
+    if (ev && ev.name === "quality_fallback") qualityFallbackCount++;
+    return _origQueueTelemetry(ev);
+  };
+
+  function fmtBufRanges(v) {
+    const out = [];
+    for (let i = 0; i < v.buffered.length; i++) {
+      out.push(`${v.buffered.start(i).toFixed(1)}–${v.buffered.end(i).toFixed(1)}`);
+    }
+    return out.join(",  ") || "empty";
+  }
+
+  function cushionFor(v) {
+    if (v.buffered.length === 0) return null;
+    const end = v.buffered.end(v.buffered.length - 1);
+    return Math.max(0, end - v.currentTime);
+  }
+
+  function classifyCushion(c) {
+    if (c == null) return "bad";
+    if (c >= 4) return "ok";
+    if (c >= 1.5) return "warn";
+    return "bad";
+  }
+
+  function updateHUD() {
+    const v = frontVid();
+    if (!v || !v.dataset.clipIndex) {
+      hudEl.textContent = "waiting for first clip…";
+      return;
+    }
+    // Throughput: bytes since last tick, divided by elapsed
+    const now = performance.now();
+    if (lastBytesSampleTime > 0) {
+      const dt = (now - lastBytesSampleTime) / 1000;
+      if (dt > 0) instantBps = (bytesAtSample - lastBytesSample) / dt;
+    }
+    lastBytesSample = bytesAtSample;
+    lastBytesSampleTime = now;
+
+    const idx = parseInt(v.dataset.clipIndex, 10);
+    const file = (VIDEOS[idx] && VIDEOS[idx].file) || "?";
+    const useLowRes = IS_MOBILE || degradedClips.has(idx);
+    const quality = useLowRes ? "mobile" : "desktop";
+    const dim = (v.videoWidth && v.videoHeight) ? `${v.videoWidth}×${v.videoHeight}` : "—";
+    const cushion = cushionFor(v);
+    const cClass = classifyCushion(cushion);
+    const conn = navigator.connection || {};
+    const bps = instantBps > 0 ? `${(instantBps * 8 / 1e6).toFixed(1)} Mbps` : "—";
+
+    hudEl.innerHTML =
+      `clip   ${file} (${quality})\n` +
+      `dim    ${dim}  @ ${(v.duration||0).toFixed(1)}s\n` +
+      `time   ${v.currentTime.toFixed(1)}s\n` +
+      `state  ready=${v.readyState}  net=${v.networkState}\n` +
+      `buffer ${fmtBufRanges(v)}\n` +
+      `cushion <span class="${cClass}">${cushion == null ? "—" : cushion.toFixed(1) + "s"}</span>\n` +
+      `stalls <span class="${stallCount + waitingCount > 0 ? "warn" : "ok"}">${stallCount} stalled · ${waitingCount} waiting · ${qualityFallbackCount} fallbacks</span>\n` +
+      `dl     ${bps}\n` +
+      (conn.effectiveType ? `net    ${conn.effectiveType} · ${conn.downlink || "?"} Mbps · ${conn.rtt || "?"}ms\n` : "");
+  }
+
+  setInterval(updateHUD, 250);
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════════
 //  SECTIONS & MINI MAP
 // ═══════════════════════════════════════════════════════════
 
@@ -1407,8 +1545,27 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); toggleWelcome(); }
 });
 
+// Tap/click anywhere on the left or right half of the screen → prev/next.
+// `goTo()` already debounces via the `transitioning` flag, so spamming
+// taps just gets silently dropped instead of stacking transitions.
+// The list of selectors below is explicit so we don't accidentally trigger
+// nav when the user meant to interact with one of the on-screen UI bits.
+const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud";
+document.addEventListener("click", (e) => {
+  if (e.target.closest(NAV_TAP_IGNORE)) return;
+  // If a swipe just happened, the touchend handler will have fired
+  // next()/prev() already — but click also fires on tap. Distinguish via
+  // the same dx threshold: touchstart→touchend with |dx|>35 = swipe;
+  // anything else falling through to here is a tap.
+  if (lastSwipeAt && Date.now() - lastSwipeAt < 400) return;
+  dismissHint();
+  closeSectionMenu();
+  if (e.clientX < window.innerWidth / 2) prev(); else next();
+});
+
 let touchX = null;
 let touchY = null;
+let lastSwipeAt = 0;
 document.addEventListener("touchstart", e => {
   touchX = e.touches[0].clientX;
   touchY = e.touches[0].clientY;
@@ -1419,8 +1576,10 @@ document.addEventListener("touchend", e => {
   const dy = e.changedTouches[0].clientY - touchY;
   if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 35) {
     // vertical swipe — toggle welcome overlay
+    lastSwipeAt = Date.now();
     toggleWelcome();
   } else if (Math.abs(dx) > 35) {
+    lastSwipeAt = Date.now();
     dismissHint();
     dx < 0 ? next() : prev();
   }
