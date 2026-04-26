@@ -373,16 +373,15 @@
       pointer-events: none;
       opacity: 0;
       transition: opacity 1.2s ease;
-      /* Glass plate so the map reads against any background frame */
-      background: rgba(0,0,0,0.42);
-      backdrop-filter: blur(16px) saturate(1.5);
-      -webkit-backdrop-filter: blur(16px) saturate(1.5);
-      border: 1px solid rgba(255,255,255,0.22);
-      border-radius: 10px;
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,0.06),
-        0 8px 24px rgba(0,0,0,0.35),
-        inset 0 1px 0 rgba(255,255,255,0.08);
+      /* Soft tint + blur: lets the underlying video bleed through so the
+         map blends into the frame rather than sitting on top of it. No
+         hard border or drop shadow — just a faint inset highlight. */
+      background: rgba(0,0,0,0.16);
+      backdrop-filter: blur(20px) saturate(1.3);
+      -webkit-backdrop-filter: blur(20px) saturate(1.3);
+      border: none;
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10);
       overflow: hidden;
     }
     #minimap.visible { opacity: 1; }
@@ -395,13 +394,18 @@
     .map-svg.hidden { opacity: 0; }
     #map-us { width: 110px; }
     #map-world { width: 140px; }
-    /* Land — bumped contrast so the outline is actually legible */
+    /* Land + state/country borders. fill/stroke cascade from the <g>
+       wrapper to its <path> children; vector-effect keeps stroke width
+       constant (in px) regardless of the SVG viewBox, so the new
+       higher-resolution US map (viewBox 585×255) renders legibly at
+       the small thumbnail size. */
     .map-land {
-      fill: rgba(255,255,255,0.18);
-      stroke: rgba(255,255,255,0.55);
-      stroke-width: 0.7;
+      fill: rgba(255,255,255,0.13);
+      stroke: rgba(255,255,255,0.58);
+      stroke-width: 0.6;
       stroke-linejoin: round;
     }
+    .map-land path { vector-effect: non-scaling-stroke; }
     /* GPS dot (Apple Maps blue + white ring + cyan glow) */
     .map-dot {
       fill: #4a9eff;
@@ -528,7 +532,7 @@ const VIDEOS = [
   { file: "video-35.mp4", caption: "Big Sur Hills"                      },
   { file: "video-36.mp4", caption: "Fort Funston"                       },
   { file: "video-37.mp4", caption: "Fort Funston & Golden Gate"         },
-  { file: "video-38.mp4", caption: "LA Suburbs"                         },
+  // { file: "video-38.mp4", caption: "LA Suburbs"                         }, // removed — not aesthetic enough
   { file: "video-39.mp4", caption: "Mont Saint-Michel"                  },
   { file: "video-40.mp4", caption: "Neuschwanstein Castle, Germany"     },
   { file: "video-41.mp4", caption: "Park City, Utah"                    },
@@ -1316,52 +1320,69 @@ function setPlaybackMode(mode) {
 }
 
 // ── Mini map ─────────────────────────────────────────────
-
-// Simplified SVG paths — continental US outline
-const US_PATH = "M7,5 L1,8 3,40 3,48 9,61 15,78 26,87 35,88 54,94 63,91 75,103 94,120 102,103 120,105 132,98 139,103 146,120 151,125 153,118 149,98 149,90 168,75 171,55 180,45 186,40 197,25 197,15 180,25 163,33 153,40 141,43 129,40 119,15 102,5 71,5 31,5Z";
-const HAWAII_PATH = "M18,112 L22,110 26,112 24,115 20,115Z M28,108 L33,106 37,109 33,112 28,111Z";
-
-// World continent outlines (equirectangular)
-const WORLD_PATHS = [
-  "M30,33 L42,38 55,50 58,60 62,70 68,80 78,93 90,107 96,107 100,87 106,67 113,53 110,43 100,35 88,27 72,25 55,28 40,30Z",
-  "M100,113 L108,115 118,120 130,125 140,132 142,145 137,155 128,165 120,175 112,188 107,182 103,168 100,150 100,135 100,122Z",
-  "M165,35 L170,42 170,50 172,57 175,65 178,70 184,67 192,63 198,55 200,45 196,37 190,34 180,33Z",
-  "M172,73 L168,82 170,97 175,112 182,128 190,145 196,158 200,165 206,155 212,138 216,120 214,105 210,92 208,82 202,75 195,72Z",
-  "M208,55 L218,52 228,58 238,55 255,48 272,40 288,33 305,30 318,35 332,42 342,50 345,58 338,63 325,70 310,77 295,83 280,90 268,97 258,105 252,95 242,82 232,72 222,65 213,60Z",
-  "M295,142 L305,137 318,138 328,145 332,155 328,164 318,170 308,168 298,163 293,152Z",
-  "M128,22 L140,20 148,25 148,33 142,40 132,38 126,30Z",
-];
+//
+// Maps live as static SVG files (`/maps/us.svg`, `/maps/world.svg`)
+// generated from Natural Earth GeoJSON in equirectangular projection
+// so dot positioning is just linear lat/lng → x/y math.
+//   us.svg    viewBox 0 0 585 255  (lng -125…-66.5  ×  lat 49.5…24)
+//   world.svg viewBox 0 0 360 180  (lng -180…180    ×  lat  90…-90)
+// Both contain a single <g class="map-land"> with one <path> per
+// state/country; no dot. We fetch them once at init and inject two
+// <circle> elements (glow + dot) before the closing </svg> so the
+// dot inherits the SVG's coordinate system and updateMiniMap() stays
+// a one-line projection.
 
 function isContigUS(lat, lng) { return lat >= 24.5 && lat <= 49.5 && lng >= -125 && lng <= -66; }
-function projectUS(lat, lng) { return { x: ((lng + 125) / 59) * 200, y: ((50 - lat) / 26) * 130 }; }
-function projectWorld(lat, lng) { return { x: ((lng + 180) / 360) * 360, y: ((90 - lat) / 150) * 200 }; }
+function projectUS(lat, lng)    { return { x: (lng - (-125.0)) * 10.0, y: (49.5 - lat) * 10.0 }; }
+function projectWorld(lat, lng) { return { x: lng + 180,                y: 90 - lat }; }
 
-function initMiniMap() {
-  minimapEl.innerHTML =
-    '<svg id="map-us" class="map-svg" viewBox="-2 -2 204 134" preserveAspectRatio="xMidYMid meet">' +
-      '<path d="' + US_PATH + '" class="map-land"/>' +
-      '<path d="' + HAWAII_PATH + '" class="map-land"/>' +
-      '<circle class="map-dot-glow" cx="0" cy="0" r="6"/>' +
-      '<circle class="map-dot" cx="0" cy="0" r="2.5"/>' +
-    '</svg>' +
-    '<svg id="map-world" class="map-svg hidden" viewBox="-2 -2 364 204" preserveAspectRatio="xMidYMid meet">' +
-      WORLD_PATHS.map(p => '<path d="' + p + '" class="map-land"/>').join("") +
-      '<circle class="map-dot-glow" cx="0" cy="0" r="7"/>' +
-      '<circle class="map-dot" cx="0" cy="0" r="3"/>' +
-    '</svg>';
+// Dot/glow radii tuned for each viewBox so the rendered dot is ~5–6px
+// at the displayed map size on desktop.
+const MAP_DOT_RADIUS = { us: { glow: 13, dot: 5.5 }, world: { glow: 6, dot: 2.6 } };
+
+async function initMiniMap() {
+  function buildSVG(svgText, kind) {
+    const r = MAP_DOT_RADIUS[kind];
+    const dots =
+      `<circle class="map-dot-glow" cx="0" cy="0" r="${r.glow}"/>` +
+      `<circle class="map-dot"      cx="0" cy="0" r="${r.dot}"/>`;
+    // Inject the dot circles right before </svg>. Also stamp the id we
+    // need so the page CSS / JS can target each map.
+    return svgText
+      .replace("<svg ", `<svg id="map-${kind}" class="map-svg${kind === "world" ? " hidden" : ""}" `)
+      .replace("</svg>", dots + "</svg>");
+  }
+
+  try {
+    const [usText, worldText] = await Promise.all([
+      fetch("/maps/us.svg").then(r => r.text()),
+      fetch("/maps/world.svg").then(r => r.text()),
+    ]);
+    minimapEl.innerHTML = buildSVG(usText, "us") + buildSVG(worldText, "world");
+    // Maps may have arrived after the first updateMiniMap() call
+    // (which silently no-ops when the SVGs aren't there yet) — re-run it
+    // now so the dot snaps to the current clip's location.
+    updateMiniMap();
+  } catch (err) {
+    queueTelemetry({ name: "minimap_load_failed", message: String(err) });
+  }
 }
 
 function updateMiniMap() {
   const v = VIDEOS[current];
   if (!v || v.lat == null) return;
+  const usEl    = document.getElementById("map-us");
+  const worldEl = document.getElementById("map-world");
+  if (!usEl || !worldEl) return;  // SVGs still loading
+
   const showUS = isContigUS(v.lat, v.lng);
   const mapType = showUS ? "us" : "world";
   if (mapType !== currentMapType) {
     currentMapType = mapType;
-    document.getElementById("map-us").classList.toggle("hidden", !showUS);
-    document.getElementById("map-world").classList.toggle("hidden", showUS);
+    usEl.classList.toggle("hidden", !showUS);
+    worldEl.classList.toggle("hidden", showUS);
   }
-  const svg = document.getElementById(showUS ? "map-us" : "map-world");
+  const svg = showUS ? usEl : worldEl;
   const pos = showUS ? projectUS(v.lat, v.lng) : projectWorld(v.lat, v.lng);
   svg.querySelectorAll(".map-dot, .map-dot-glow").forEach(d => {
     d.setAttribute("cx", pos.x);
