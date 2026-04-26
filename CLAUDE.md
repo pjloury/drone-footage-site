@@ -53,6 +53,100 @@ fine.
    `video-09` line in `index.html`'s `VIDEOS` array.
 5. Commit + push.
 
+### 🛠 Latent: re-encode high-bitrate desktop clips (deferred)
+**Status:** Not currently exhibiting issues. Documented here in case
+desktop playback starts lurching again.
+
+**What was observed (2026-04-26):** After the Vercel `/videos/*` rewrite
+was removed and desktop bytes started flowing direct from R2's pub URL,
+some desktop clips lurched (~half-second of playback then a pause loop).
+Pre-removal, Vercel's edge cache was smoothing this out; the R2 pub URL
+doesn't get the same aggressive Cloudflare edge caching (no
+`cf-cache-status` header is returned, consistent with Cloudflare's
+"intended for development" warning on `pub-*.r2.dev` URLs).
+
+User reported lurching on Villa Collina (18) and Fort Funston (36);
+smooth on Telegraph Hill (7), USF (21), SF Embarcadero (60), Park City
+(27/41).
+
+**Diagnosis:** Two distinct causes overlap.
+1. **High file bitrate** — 8 desktop clips have average bitrates
+   ≥40 Mbps (one as high as 130 Mbps). Even on home wifi, peak
+   instantaneous demand during motion-heavy scenes outpaces
+   throughput → underbuffer → lurch.
+2. **CDN variability** — some 20-Mbps clips (e.g. video-36) also
+   lurch, even though they shouldn't on bitrate alone. This is
+   Cloudflare's R2 pub URL not aggressively edge-caching less-popular
+   files. Re-encoding won't help these — only Option B (custom domain
+   on R2 + Cache Rules) or accepting cold-cache hits will.
+
+**The 8 Tier-1 candidates (>40 Mbps avg) — re-encode these first if
+issues return:**
+
+| video | caption                          | dur  | size  | avg Mbps |
+| ----- | -------------------------------- | ---- | ----- | -------- |
+| 30    | Vogelsang Lake, Yosemite         | 27s  | 422MB | **130**  |
+| 18    | Villa Collina                    | 7s   | 74MB  | **90**   |
+| 19    | Waves                            | 12s  | 125MB | **90**   |
+| 37    | Fort Funston & Golden Gate       | 14s  | 148MB | **90**   |
+| 50    | Palma, Mallorca                  | 7s   | 41MB  | 52       |
+| 62    | Sather Tower, Berkeley           | 41s  | 250MB | 51       |
+| 22    | Old Valencia, Spain              | 69s  | 416MB | 50       |
+| 32    | Almaden Green                    | 89s  | 534MB | 50       |
+
+**Tier-2 candidates (30–40 Mbps, all 60-fps clips that should
+probably also drop):** 06, 14, 16, 23, 26, 29, 35, 42, 45, 46, 47, 51.
+
+**Plan when triggered:**
+1. Pick a target bitrate. Defaults discussed:
+   - **15 Mbps** (YouTube-grade) — small files, ~95% confident lurching
+     stops; minor quality drop only visible on a 4K monitor at full screen
+   - **25 Mbps** (gallery-grade) — slightly bigger files, near-original
+     quality, still solves all observed peaks
+2. For each Tier-1 number, run from local source (sources are in
+   `/Users/Shared/Aerial Local/...` — see `encode_and_upload.sh`
+   FILES array for the exact filename per number):
+
+   ```bash
+   ffmpeg -i "$SRC" \
+     -c:v libx265 -tag:v hvc1 -preset medium \
+     -b:v 15M -maxrate 20M -bufsize 30M \
+     -c:a aac -b:a 128k \
+     -movflags +faststart \
+     -y "$DESKTOP_OUT"
+   ```
+
+   `-tag:v hvc1` is required so Apple/Safari recognize the HEVC
+   stream. Use `videotoolbox` instead of `libx265` for faster
+   hardware encode on M-series Macs:
+   `-c:v hevc_videotoolbox -b:v 15M -tag:v hvc1`.
+
+3. Upload with the standard cache header:
+   ```bash
+   aws s3 cp "$DESKTOP_OUT" "s3://drone-footage/video-${N}.mp4" \
+     --profile r2 \
+     --endpoint-url "https://73fc4c58d8b8e9d05a8410bde37ff80d.r2.cloudflarestorage.com" \
+     --content-type "video/mp4" \
+     --cache-control "public, max-age=31536000, immutable"
+   ```
+4. **Cache-bust** for desktop URLs. Add a `DESKTOP_VERSION` constant
+   in `index.html` (mirroring the existing `MOBILE_VERSION`) and
+   append `?v=${DESKTOP_VERSION}` to non-mobile URLs in `url(i)`. Bump
+   it whenever desktop bitrate changes so browsers re-fetch.
+
+**Probe to re-confirm before acting (some files may have been
+replaced since this was written):**
+```bash
+for n in 18 19 22 30 32 37 50 62; do
+  size=$(curl -sI "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev/video-${n}.mp4" \
+    | awk -F': ' '/[Cc]ontent-[Ll]ength/ {print $2}' | tr -d '\r')
+  curl -sSL -r 0-262143 -o /tmp/probe.mp4 \
+    "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev/video-${n}.mp4" 2>/dev/null
+  dur=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 /tmp/probe.mp4)
+  python3 -c "print(f'video-${n}: {round($size*8/$dur/1e6,1)} Mbps')"
+done
+```
+
 ## Encoding gotchas
 
 ### 60 fps source clips need `fps=30` on the mobile encode
