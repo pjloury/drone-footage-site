@@ -1,0 +1,25 @@
+# Build outputs
+app/build/
+build/
+.gradle/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local environment
+local.properties
+
+# Signing — DO NOT COMMIT KEYSTORES OR PASSWORDS
+keystore.properties
+*.jks
+*.keystore
+release.key
+
+# OS
+.DS_Store
+*~
+
+# Captures
+captures/

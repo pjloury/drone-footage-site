@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Privacy Policy — PJ Loury Drone Videography</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; line-height: 1.6; color: #222; background: #fff; }
+  h1 { font-family: Georgia, serif; font-weight: 300; letter-spacing: 0.04em; }
+  h2 { margin-top: 2em; }
+  code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+  .muted { color: #666; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>Privacy Policy</h1>
+<p class="muted">Last updated: 2026-04-29</p>
+
+<p>This privacy policy applies to <strong>PJ Loury — Drone Videography</strong> (the "App") and the website it loads, <a href="https://drones.pjloury.com">drones.pjloury.com</a> (the "Site"). The App is a thin wrapper around the Site for Google TV / Android TV.</p>
+
+<h2>What we collect</h2>
+
+<p><strong>The App itself collects nothing.</strong> It has no login, no account, no settings, no in-app purchases, no advertising SDKs, and no device identifiers are read by the App's own code. It requests two Android permissions:</p>
+<ul>
+  <li><code>INTERNET</code> — to load the Site and stream the video clips.</li>
+  <li><code>ACCESS_NETWORK_STATE</code> — to detect whether the network is online before attempting to load.</li>
+</ul>
+
+<p><strong>The Site uses PostHog</strong> (<a href="https://posthog.com/privacy">posthog.com/privacy</a>) for anonymous, aggregated playback diagnostics. Specifically:</p>
+<ul>
+  <li>An anonymous random session identifier is generated in the browser at page load (no persistent user ID; not tied to your Google account or device).</li>
+  <li>Playback events such as which clip was playing, video buffering or stalling events, autoplay rejections, and broad device context (browser family, OS family, mobile/tablet/desktop) are sent to PostHog so I can diagnose video-playback issues.</li>
+  <li>Standard request metadata that any web server receives is logged by Cloudflare (which serves the video files) and Vercel (which hosts the Site): IP address, user-agent string, request URL, response status. This is used for spam/abuse mitigation and infrastructure operations.</li>
+</ul>
+
+<p>No personal information — name, email, location, contact list, photos, microphone, or camera — is collected, requested, or transmitted.</p>
+
+<h2>What we don't collect</h2>
+<ul>
+  <li>No account information (there are no accounts).</li>
+  <li>No advertising identifiers (no ads).</li>
+  <li>No location data.</li>
+  <li>No microphone, camera, photo library, or contacts access.</li>
+  <li>Nothing is sold or shared with third parties for advertising or marketing.</li>
+</ul>
+
+<h2>Children's privacy</h2>
+<p>The App is suitable for all ages. We do not knowingly collect any personal information from anyone, children included.</p>
+
+<h2>Third-party services used by the Site</h2>
+<ul>
+  <li><strong>Vercel</strong> (web hosting) — <a href="https://vercel.com/legal/privacy-policy">privacy policy</a></li>
+  <li><strong>Cloudflare R2</strong> (video file storage and delivery) — <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a></li>
+  <li><strong>PostHog</strong> (anonymous playback analytics) — <a href="https://posthog.com/privacy">privacy policy</a></li>
+</ul>
+
+<h2>Data retention</h2>
+<p>Anonymous PostHog events are retained for up to 12 months and then automatically purged. Server-side request logs at Vercel and Cloudflare follow each provider's standard retention schedule (typically a few weeks).</p>
+
+<h2>Your choices</h2>
+<p>You can stop all data collection at any time by uninstalling the App or closing the website. Because no persistent identifier is set on your device by the App, there is nothing to delete on uninstall — closing the App removes you from any further data collection.</p>
+
+<h2>Changes to this policy</h2>
+<p>If this policy changes, the updated version will be posted at the URL where you found this document, with an updated "Last updated" date at the top.</p>
+
+<h2>Contact</h2>
+<p>Questions: <a href="mailto:pjloury@gmail.com">pjloury@gmail.com</a></p>
+</body>
+</html>
