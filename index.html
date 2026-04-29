@@ -137,6 +137,20 @@
       background: rgba(255,255,255,0.16);
     }
     .nav-arrow.hidden { opacity: 0; pointer-events: none; }
+
+    /* Gesture-feedback flash. When the user taps an edge / hits an
+       arrow key / swipes / presses a D-pad direction, the matching
+       arrow plays this animation: quick fade-in (240ms) → hold
+       through the load + start of crossfade → soft fade-out (~1s).
+       Animation values override the static .hidden opacity:0 only
+       while running, so onboarding state is preserved afterwards. */
+    @keyframes nav-flash {
+      0%   { opacity: 0; }
+      10%  { opacity: 1; }
+      55%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .nav-arrow.flash { animation: nav-flash 2400ms ease-out; }
     .nav-arrow svg {
       width: 28px; height: 28px;
       stroke: rgba(255,255,255,0.9);
@@ -1186,8 +1200,31 @@ function goTo(index, opts) {
   }
 }
 
-function next() { goTo(current + 1); }
-function prev() { goTo(current - 1); }
+// Brief gesture-acknowledgement flash on the matching nav arrow — gives
+// the user a visual receipt that the tap/swipe/key was registered while
+// the next clip is loading. The CSS keyframe handles fade-in / hold /
+// fade-out timing; we just (re)attach the .flash class.
+function flashArrow(direction) {
+  const el = direction > 0 ? navRight : navLeft;
+  el.classList.remove("flash");
+  // Force a reflow so removing+re-adding restarts the animation
+  // (otherwise rapid presses wouldn't re-trigger the keyframes).
+  void el.offsetWidth;
+  el.classList.add("flash");
+}
+
+function next() {
+  // Match goTo()'s debounce so a spam-tap during a crossfade doesn't
+  // produce a phantom flash with no actual navigation behind it.
+  if (transitioning) return;
+  flashArrow(1);
+  goTo(current + 1);
+}
+function prev() {
+  if (transitioning) return;
+  flashArrow(-1);
+  goTo(current - 1);
+}
 
 // Expose engine functions for tests
 window.goTo        = goTo;
