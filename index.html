@@ -430,8 +430,30 @@
       border-radius: 12px;
       box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
       overflow: hidden;
+      /* Animate the shape change when switching between US (rounded
+         rectangle) and World (ellipse — looks like a globe). */
+      transition: opacity 1.2s ease, border-radius 1.0s ease;
     }
     #minimap.visible { opacity: 1; }
+
+    /* The plate's shape changes per active map. World becomes an
+       ellipse (globe-ish), US and California become contoured masks
+       so the liquid-glass blur traces the actual landmass outline
+       instead of a generic rectangle. mask-image is alpha-driven —
+       white SVG paths reveal the plate, transparent areas hide it. */
+    #minimap.world {
+      border-radius: 50%;
+    }
+    #minimap.us {
+      border-radius: 0;
+      mask: url(/maps/us-mask.svg) center / contain no-repeat;
+      -webkit-mask: url(/maps/us-mask.svg) center / contain no-repeat;
+    }
+    #minimap.ca {
+      border-radius: 0;
+      mask: url(/maps/ca-mask.svg) center / contain no-repeat;
+      -webkit-mask: url(/maps/ca-mask.svg) center / contain no-repeat;
+    }
     .map-svg {
       position: absolute;
       top: 50%;
@@ -442,8 +464,12 @@
       overflow: visible;
     }
     .map-svg.hidden { opacity: 0; }
-    #map-us { width: 110px; }
-    #map-world { width: 140px; }
+    /* Sized to fill the matching contour with minimal padding inside
+       the 152×96 plate. Heights are auto so each viewBox keeps its
+       aspect ratio. */
+    #map-us    { width: 152px; }
+    #map-world { width: 152px; }
+    #map-ca    { width: 92px;  }   /* ~96% of plate height (95 viewBox h × ratio) */
     /* Land + state/country borders. fill/stroke cascade from the <g>
        wrapper to its <path> children; vector-effect keeps stroke width
        constant (in px) regardless of the SVG viewBox, so the new
@@ -1513,13 +1539,25 @@ function setPlaybackMode(mode) {
 // dot inherits the SVG's coordinate system and updateMiniMap() stays
 // a one-line projection.
 
+function isInCalifornia(lat, lng) {
+  // Continental California bounding box. Catches everything in the
+  // current catalog without bleeding too far into NV/AZ/OR.
+  return lat >= 32.5 && lat <= 42.0 && lng >= -124.5 && lng <= -114.0;
+}
 function isContigUS(lat, lng) { return lat >= 24.5 && lat <= 49.5 && lng >= -125 && lng <= -66; }
+
+function projectCA(lat, lng)    { return { x: (lng - (-124.5)) * 10.0, y: (42.0 - lat) * 10.0 }; }
 function projectUS(lat, lng)    { return { x: (lng - (-125.0)) * 10.0, y: (49.5 - lat) * 10.0 }; }
 function projectWorld(lat, lng) { return { x: lng + 180,                y: 90 - lat }; }
 
-// Dot/glow radii tuned for each viewBox so the rendered dot is ~5–6px
-// at the displayed map size on desktop.
-const MAP_DOT_RADIUS = { us: { glow: 13, dot: 5.5 }, world: { glow: 6, dot: 2.6 } };
+// Dot/glow radii tuned per viewBox so the rendered dot is ~5–6px at
+// the displayed map size. CA is the smallest viewBox (105 wide) so
+// the dot needs the tightest radii to stay proportional.
+const MAP_DOT_RADIUS = {
+  us:    { glow: 13, dot: 5.5 },
+  world: { glow: 6,  dot: 2.6 },
+  ca:    { glow: 4,  dot: 1.8 },
+};
 
 async function initMiniMap() {
   function buildSVG(svgText, kind) {
@@ -1527,19 +1565,24 @@ async function initMiniMap() {
     const dots =
       `<circle class="map-dot-glow" cx="0" cy="0" r="${r.glow}"/>` +
       `<circle class="map-dot"      cx="0" cy="0" r="${r.dot}"/>`;
-    // Inject the dot circles right before </svg>. Also stamp the id we
-    // need so the page CSS / JS can target each map.
+    // Inject the dot circles right before </svg>. All maps start
+    // hidden; updateMiniMap() reveals the one matching the current
+    // clip's region after the first frame.
     return svgText
-      .replace("<svg ", `<svg id="map-${kind}" class="map-svg${kind === "world" ? " hidden" : ""}" `)
+      .replace("<svg ", `<svg id="map-${kind}" class="map-svg hidden" `)
       .replace("</svg>", dots + "</svg>");
   }
 
   try {
-    const [usText, worldText] = await Promise.all([
+    const [usText, worldText, caText] = await Promise.all([
       fetch("/maps/us.svg").then(r => r.text()),
       fetch("/maps/world.svg").then(r => r.text()),
+      fetch("/maps/ca.svg").then(r => r.text()),
     ]);
-    minimapEl.innerHTML = buildSVG(usText, "us") + buildSVG(worldText, "world");
+    minimapEl.innerHTML =
+      buildSVG(caText, "ca") +     // CA first → on top of US in source order
+      buildSVG(usText, "us") +
+      buildSVG(worldText, "world");
     // Maps may have arrived after the first updateMiniMap() call
     // (which silently no-ops when the SVGs aren't there yet) — re-run it
     // now so the dot snaps to the current clip's location.
@@ -1552,20 +1595,39 @@ async function initMiniMap() {
 function updateMiniMap() {
   const v = VIDEOS[current];
   if (!v || v.lat == null) return;
-  const usEl    = document.getElementById("map-us");
-  const worldEl = document.getElementById("map-world");
-  if (!usEl || !worldEl) return;  // SVGs still loading
+  const els = {
+    ca:    document.getElementById("map-ca"),
+    us:    document.getElementById("map-us"),
+    world: document.getElementById("map-world"),
+  };
+  if (!els.ca || !els.us || !els.world) return; // SVGs still loading
 
-  const showUS = isContigUS(v.lat, v.lng);
-  const mapType = showUS ? "us" : "world";
+  // Three-tier zoom: CA for clips inside California, US for other
+  // continental US clips, World for everything else. CA is checked
+  // first because it's strictly inside the US bounding box.
+  const mapType = isInCalifornia(v.lat, v.lng) ? "ca"
+                : isContigUS(v.lat, v.lng)     ? "us"
+                : "world";
+
   if (mapType !== currentMapType) {
     currentMapType = mapType;
-    usEl.classList.toggle("hidden", !showUS);
-    worldEl.classList.toggle("hidden", showUS);
+    // Show only the active SVG, hide the other two
+    for (const k of ["ca", "us", "world"]) {
+      els[k].classList.toggle("hidden", k !== mapType);
+    }
+    // Match the plate's shape to the active map (mask-image for ca/us,
+    // border-radius:50% for world). Each class is mutually exclusive.
+    minimapEl.classList.toggle("ca",    mapType === "ca");
+    minimapEl.classList.toggle("us",    mapType === "us");
+    minimapEl.classList.toggle("world", mapType === "world");
   }
-  const svg = showUS ? usEl : worldEl;
-  const pos = showUS ? projectUS(v.lat, v.lng) : projectWorld(v.lat, v.lng);
-  svg.querySelectorAll(".map-dot, .map-dot-glow").forEach(d => {
+
+  const project =
+    mapType === "ca" ? projectCA :
+    mapType === "us" ? projectUS :
+    projectWorld;
+  const pos = project(v.lat, v.lng);
+  els[mapType].querySelectorAll(".map-dot, .map-dot-glow").forEach(d => {
     d.setAttribute("cx", pos.x);
     d.setAttribute("cy", pos.y);
   });
