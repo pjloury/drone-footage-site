@@ -433,7 +433,10 @@
     }
     #minimap.visible { opacity: 1; }
     .map-svg {
-      position: absolute; bottom: 4px; right: 4px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       height: auto;
       transition: opacity 1.2s ease;
       overflow: visible;
@@ -1323,6 +1326,7 @@ if (DEBUG_MODE) {
     const bps = instantBps > 0 ? `${(instantBps * 8 / 1e6).toFixed(1)} Mbps` : "—";
 
     hudEl.innerHTML =
+      `mode   ${playbackMode}  (${idx + 1}/${VIDEOS.length})\n` +
       `clip   ${file} (${quality})\n` +
       `dim    ${dim}  @ ${(v.duration||0).toFixed(1)}s\n` +
       `time   ${v.currentTime.toFixed(1)}s\n` +
