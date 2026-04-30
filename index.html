@@ -454,6 +454,11 @@
       mask: url(/maps/ca-mask.svg) center / contain no-repeat;
       -webkit-mask: url(/maps/ca-mask.svg) center / contain no-repeat;
     }
+    #minimap.bay {
+      border-radius: 0;
+      mask: url(/maps/bay-mask.svg) center / contain no-repeat;
+      -webkit-mask: url(/maps/bay-mask.svg) center / contain no-repeat;
+    }
     .map-svg {
       position: absolute;
       top: 50%;
@@ -469,7 +474,8 @@
        aspect ratio. */
     #map-us    { width: 152px; }
     #map-world { width: 152px; }
-    #map-ca    { width: 92px;  }   /* ~96% of plate height (95 viewBox h × ratio) */
+    #map-ca    { width: 92px;  }   /* ~96% of plate height */
+    #map-bay   { width: 113px; }   /* height-bound to plate (Bay aspect ~1.18) */
     /* Land + state/country borders. fill/stroke cascade from the <g>
        wrapper to its <path> children; vector-effect keeps stroke width
        constant (in px) regardless of the SVG viewBox, so the new
@@ -1539,6 +1545,11 @@ function setPlaybackMode(mode) {
 // dot inherits the SVG's coordinate system and updateMiniMap() stays
 // a one-line projection.
 
+function isInBayArea(lat, lng) {
+  // Tight bbox around the 9 Bay Area counties. Excludes Tahoe, Yosemite,
+  // Carmel/Big Sur (those still trigger isInCalifornia → CA view).
+  return lat >= 36.90 && lat <= 38.86 && lng >= -123.55 && lng <= -121.20;
+}
 function isInCalifornia(lat, lng) {
   // Continental California bounding box. Catches everything in the
   // current catalog without bleeding too far into NV/AZ/OR.
@@ -1546,17 +1557,22 @@ function isInCalifornia(lat, lng) {
 }
 function isContigUS(lat, lng) { return lat >= 24.5 && lat <= 49.5 && lng >= -125 && lng <= -66; }
 
-function projectCA(lat, lng)    { return { x: (lng - (-124.5)) * 10.0, y: (42.0 - lat) * 10.0 }; }
-function projectUS(lat, lng)    { return { x: (lng - (-125.0)) * 10.0, y: (49.5 - lat) * 10.0 }; }
-function projectWorld(lat, lng) { return { x: lng + 180,                y: 90 - lat }; }
+// Projections — all equirectangular at varying scales. Each maps the
+// region's bounding-box lng/lat to the SVG's viewBox 0..W, 0..H.
+function projectBay(lat, lng)   { return { x: (lng - (-123.533665)) * 100.0, y: (38.864245 - lat) * 100.0 }; }
+function projectCA(lat, lng)    { return { x: (lng - (-124.5))      * 10.0,  y: (42.0       - lat) * 10.0  }; }
+function projectUS(lat, lng)    { return { x: (lng - (-125.0))      * 10.0,  y: (49.5       - lat) * 10.0  }; }
+function projectWorld(lat, lng) { return { x: lng + 180,                      y: 90 - lat                  }; }
 
 // Dot/glow radii tuned per viewBox so the rendered dot is ~5–6px at
-// the displayed map size. CA is the smallest viewBox (105 wide) so
-// the dot needs the tightest radii to stay proportional.
+// the displayed map size. Bay viewBox is largest in absolute units
+// (×100 scale vs the others' ×10) so its radii are bigger; world is
+// the smallest viewBox so its radii are tightest.
 const MAP_DOT_RADIUS = {
+  bay:   { glow: 26, dot: 11 },
+  ca:    { glow: 4,  dot: 1.8 },
   us:    { glow: 13, dot: 5.5 },
   world: { glow: 6,  dot: 2.6 },
-  ca:    { glow: 4,  dot: 1.8 },
 };
 
 async function initMiniMap() {
@@ -1574,13 +1590,15 @@ async function initMiniMap() {
   }
 
   try {
-    const [usText, worldText, caText] = await Promise.all([
+    const [usText, worldText, caText, bayText] = await Promise.all([
       fetch("/maps/us.svg").then(r => r.text()),
       fetch("/maps/world.svg").then(r => r.text()),
       fetch("/maps/ca.svg").then(r => r.text()),
+      fetch("/maps/bay.svg").then(r => r.text()),
     ]);
     minimapEl.innerHTML =
-      buildSVG(caText, "ca") +     // CA first → on top of US in source order
+      buildSVG(bayText, "bay") +   // Most-zoomed first in source order
+      buildSVG(caText, "ca") +
       buildSVG(usText, "us") +
       buildSVG(worldText, "world");
     // Maps may have arrived after the first updateMiniMap() call
@@ -1592,40 +1610,39 @@ async function initMiniMap() {
   }
 }
 
+const MAP_TYPES = ["bay", "ca", "us", "world"];
+
 function updateMiniMap() {
   const v = VIDEOS[current];
   if (!v || v.lat == null) return;
-  const els = {
-    ca:    document.getElementById("map-ca"),
-    us:    document.getElementById("map-us"),
-    world: document.getElementById("map-world"),
-  };
-  if (!els.ca || !els.us || !els.world) return; // SVGs still loading
+  const els = Object.fromEntries(MAP_TYPES.map(k => [k, document.getElementById("map-" + k)]));
+  if (MAP_TYPES.some(k => !els[k])) return; // SVGs still loading
 
-  // Three-tier zoom: CA for clips inside California, US for other
-  // continental US clips, World for everything else. CA is checked
-  // first because it's strictly inside the US bounding box.
-  const mapType = isInCalifornia(v.lat, v.lng) ? "ca"
-                : isContigUS(v.lat, v.lng)     ? "us"
-                : "world";
+  // Four-tier zoom cascade. Each predicate is checked from most to
+  // least zoomed, so a Bay Area clip resolves to "bay" before
+  // "ca"/"us" can match it.
+  const mapType =
+    isInBayArea(v.lat, v.lng)     ? "bay"   :
+    isInCalifornia(v.lat, v.lng)  ? "ca"    :
+    isContigUS(v.lat, v.lng)      ? "us"    :
+                                    "world";
 
   if (mapType !== currentMapType) {
     currentMapType = mapType;
-    // Show only the active SVG, hide the other two
-    for (const k of ["ca", "us", "world"]) {
+    // Reveal only the active SVG; hide all others.
+    for (const k of MAP_TYPES) {
       els[k].classList.toggle("hidden", k !== mapType);
+      // Match the plate's contour to the active map type — mutually
+      // exclusive classes drive the matching mask-image / border-radius.
+      minimapEl.classList.toggle(k, k === mapType);
     }
-    // Match the plate's shape to the active map (mask-image for ca/us,
-    // border-radius:50% for world). Each class is mutually exclusive.
-    minimapEl.classList.toggle("ca",    mapType === "ca");
-    minimapEl.classList.toggle("us",    mapType === "us");
-    minimapEl.classList.toggle("world", mapType === "world");
   }
 
   const project =
-    mapType === "ca" ? projectCA :
-    mapType === "us" ? projectUS :
-    projectWorld;
+    mapType === "bay" ? projectBay :
+    mapType === "ca"  ? projectCA  :
+    mapType === "us"  ? projectUS  :
+                        projectWorld;
   const pos = project(v.lat, v.lng);
   els[mapType].querySelectorAll(".map-dot, .map-dot-glow").forEach(d => {
     d.setAttribute("cx", pos.x);
