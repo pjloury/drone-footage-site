@@ -209,20 +209,34 @@ for i in "${!NUMS[@]}"; do
   fi
 
   # ── Step 1: Encode mobile (H.264 1080p @ 5 Mbps + faststart) ─────────────
-  # Restored to the original quality after the 720p@2M encode produced
-  # visible graininess on phones. 5 Mbps with maxrate 7M / bufsize 10M
-  # gives enough headroom that 60 fps motion clips don't overflow the
-  # decode buffer the way they did at 2M. (See CLAUDE.md "60 fps source"
-  # note for the original lurch diagnosis — the diagnosis was correct,
-  # but the fix is "more bits" rather than "fewer frames".) Desktop
-  # encode below stays `-c copy`, so full-res keeps original fps.
+  # Target: 1080p H.264 @ 5 Mbps (maxrate 7M / bufsize 10M), faststart.
+  #
+  # 60 fps handling: at 5 Mbps / 1080p a 60 fps clip gets only ~83 kbps per
+  # frame. Motion-heavy scenes spike past maxrate and underrun the browser's
+  # decode buffer mid-playback, causing the brief freeze-thaw lurch. Auto-
+  # detect the source fps and cap at 30 fps for 60 fps sources — halves the
+  # per-frame budget without touching quality for 24/30 fps sources.
+  #
+  # After re-encoding 60 fps clips, bump MOBILE_VERSION to 4 in index.html.
   if [[ -f "$MOBILE_OUT" ]]; then
     log "  mobile: already encoded locally, skipping ffmpeg"
   else
+    # Probe source frame rate (r_frame_rate is the container-reported fps).
+    SRC_FPS=$(ffprobe -v error -select_streams v:0 \
+      -show_entries stream=r_frame_rate \
+      -of csv=p=0 "$SRC" 2>/dev/null | \
+      awk -F'/' '{ if ($2+0 > 0) printf "%d", $1/$2; else print "0" }')
+    if [[ "${SRC_FPS:-0}" -gt 35 ]]; then
+      VF_FILTER="scale=-2:1080,fps=30"
+      log "  mobile: 60 fps source detected (${SRC_FPS} fps) — capping at 30 fps"
+    else
+      VF_FILTER="scale=-2:1080"
+    fi
+
     log "  mobile: encoding H.264 1080p @ 5 Mbps..."
     if ffmpeg -i "$SRC" \
       -c:v libx264 -profile:v high -level 4.0 \
-      -vf "scale=-2:1080" \
+      -vf "$VF_FILTER" \
       -b:v 5M -maxrate 7M -bufsize 10M \
       -c:a aac -b:a 128k \
       -movflags +faststart \

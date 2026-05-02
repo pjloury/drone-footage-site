@@ -877,6 +877,9 @@ const degradedClips = new Set();
 //   v1 → original 1080p @ 5 Mbps
 //   v2 → 720p30 @ 2 Mbps (lurch fix; turned out grainy)
 //   v3 → back to 1080p @ 5 Mbps (R2 confirmed re-encoded 2026-04-26)
+//   v4 → 1080p @ 5 Mbps with fps=30 cap on 60 fps sources (pending re-encode)
+//        Run: bash encode_and_upload.sh --force-mobile
+//        Then bump this constant to 4.
 const MOBILE_VERSION = 3;
 
 function url(i) {
@@ -1123,6 +1126,54 @@ function onWaiting(e) {
     resourceTiming: rt,
     resourceHttpStatus: rt && rt.responseStatus,
   });
+
+  // Mid-playback quality fallback — if the front video stalls after the
+  // first second of playback (past the initial-load zone covered by the
+  // 2.5 s timer inside goTo()), silently swap to the mobile-quality encode
+  // from the same timestamp.  Catches two separate root causes:
+  //   • CDN cold-cache misses: pub-*.r2.dev has no guaranteed edge warming;
+  //     on a first request the byte stream from R2 origin may be slower than
+  //     the clip's bitrate, exhausting the initial buffer mid-way through.
+  //   • 60 fps VBR spikes: 60 fps source clips encoded at 5 Mbps can hit the
+  //     maxrate ceiling mid-scene, causing the decoder to starve briefly.
+  // In both cases the mobile encode (H.264 1080p @ 5 Mbps, lower overhead)
+  // resumes from the same position without the user having to navigate away.
+  if (!transitioning && !IS_MOBILE && !degradedClips.has(current) && v.currentTime > 1.0) {
+    const clipIdx   = current;       // stable closure — current may change during async ops
+    const savedTime = v.currentTime;
+    degradedClips.add(clipIdx);
+
+    queueTelemetry({
+      name: "quality_fallback_midplay",
+      rootHint: "buffering_or_throughput",
+      savedTime,
+      ...clipPayloadFromVideo(v),
+    });
+
+    // Preserve live playback handlers; restore them after the seek lands.
+    const savedOntimeupdate = v.ontimeupdate;
+    const savedOnended      = v.onended;
+    v.ontimeupdate = null;
+    v.onended      = null;
+
+    // Swap source — url() now returns the mobile URL because clipIdx ∈ degradedClips.
+    v.src = url(clipIdx);
+    v.load();
+
+    // Seek to the saved position once the new file's metadata is ready.
+    v.addEventListener("loadedmetadata", () => {
+      if (v.duration && savedTime < v.duration) v.currentTime = savedTime;
+    }, { once: true });
+
+    // After the seek completes, restore handlers and resume playback.
+    v.addEventListener("seeked", () => {
+      // Guard: user may have navigated away while the mobile file was loading.
+      if (v !== frontVid() || transitioning) return;
+      v.ontimeupdate = savedOntimeupdate;
+      v.onended      = savedOnended;
+      safePlay(v, "midplay_fallback");
+    }, { once: true });
+  }
 }
 
 function attachVideoAnalytics(v) {
@@ -1348,7 +1399,7 @@ if (DEBUG_MODE) {
   // Hook the existing quality_fallback telemetry path
   const _origQueueTelemetry = queueTelemetry;
   queueTelemetry = function(ev) {
-    if (ev && ev.name === "quality_fallback") qualityFallbackCount++;
+    if (ev && (ev.name === "quality_fallback" || ev.name === "quality_fallback_midplay")) qualityFallbackCount++;
     return _origQueueTelemetry(ev);
   };
 
