@@ -1403,6 +1403,65 @@ if (DEBUG_MODE) {
     return _origQueueTelemetry(ev);
   };
 
+  // ── Freeze detector ─────────────────────────────────────────────────────
+  // Polls currentTime every HUD tick (250 ms). If currentTime hasn't
+  // advanced while the video is supposed to be playing, that's a freeze.
+  // Counts events, total frozen ms, and longest single freeze — resets per
+  // clip so numbers are always "for this clip only".
+  //
+  // Complementary: getVideoPlaybackQuality() (Chrome/Edge) reports frames
+  // the GPU decoder dropped — a non-zero drop rate means the decoder is
+  // struggling, not just the network.
+  let freezeCount = 0, totalFreezeMs = 0, longestFreezeMs = 0;
+  let inFreeze = false, freezeStartTime = null;
+  let lastCT = null, lastCTAt = null, lastHudIdx = null;
+
+  function resetFreezeStats() {
+    freezeCount = 0; totalFreezeMs = 0; longestFreezeMs = 0;
+    inFreeze = false; freezeStartTime = null;
+    lastCT = null; lastCTAt = null;
+  }
+
+  function updateFreezeStats(v, now) {
+    // Reset when clip changes
+    const idx = parseInt(v.dataset.clipIndex, 10);
+    if (idx !== lastHudIdx) {
+      resetFreezeStats();
+      lastHudIdx = idx;
+    }
+
+    // Only measure when video should be actively playing
+    if (v.paused || v.ended || v.readyState < 2 || v.currentTime < 0.5) {
+      lastCT = v.currentTime;
+      lastCTAt = now;
+      return;
+    }
+
+    if (lastCT !== null && lastCTAt !== null) {
+      const elapsed = now - lastCTAt;      // ms since last tick
+      const advanced = v.currentTime - lastCT;   // seconds advanced
+
+      // "Frozen" = more than 200 ms passed but currentTime barely moved
+      if (elapsed > 200 && advanced < 0.05) {
+        if (!inFreeze) { inFreeze = true; freezeStartTime = lastCTAt; }
+      } else {
+        if (inFreeze) {
+          inFreeze = false;
+          const dur = Math.round(now - freezeStartTime);
+          // Ignore sub-100 ms micro-pauses (seek repositions, etc.)
+          if (dur >= 100) {
+            freezeCount++;
+            totalFreezeMs += dur;
+            longestFreezeMs = Math.max(longestFreezeMs, dur);
+          }
+        }
+      }
+    }
+
+    lastCT  = v.currentTime;
+    lastCTAt = now;
+  }
+
   function fmtBufRanges(v) {
     const out = [];
     for (let i = 0; i < v.buffered.length; i++) {
@@ -1430,6 +1489,7 @@ if (DEBUG_MODE) {
       hudEl.textContent = "waiting for first clip…";
       return;
     }
+
     // Throughput: bytes since last tick, divided by elapsed
     const now = performance.now();
     if (lastBytesSampleTime > 0) {
@@ -1438,6 +1498,9 @@ if (DEBUG_MODE) {
     }
     lastBytesSample = bytesAtSample;
     lastBytesSampleTime = now;
+
+    // Freeze detection (updates per-clip stats)
+    updateFreezeStats(v, now);
 
     const idx = parseInt(v.dataset.clipIndex, 10);
     const file = (VIDEOS[idx] && VIDEOS[idx].file) || "?";
@@ -1449,6 +1512,22 @@ if (DEBUG_MODE) {
     const conn = navigator.connection || {};
     const bps = instantBps > 0 ? `${(instantBps * 8 / 1e6).toFixed(1)} Mbps` : "—";
 
+    // Freeze summary for this clip
+    const freezeClass = (freezeCount > 0 || inFreeze) ? "warn" : "ok";
+    const freezeLine = freezeCount === 0 && !inFreeze
+      ? "none"
+      : `${freezeCount} event${freezeCount !== 1 ? "s" : ""} · ${totalFreezeMs}ms total` +
+        (freezeCount > 1 ? ` · avg ${Math.round(totalFreezeMs / freezeCount)}ms · max ${longestFreezeMs}ms` : "") +
+        (inFreeze ? " · <span class='warn'>FROZEN NOW</span>" : "");
+
+    // Dropped-frame stats (Chrome/Edge: getVideoPlaybackQuality)
+    const pq = v.getVideoPlaybackQuality ? v.getVideoPlaybackQuality() : null;
+    const frameClass = pq && pq.totalVideoFrames > 0 && pq.droppedVideoFrames > 0 ? "warn" : "ok";
+    const frameLine = pq && pq.totalVideoFrames > 0
+      ? `<span class="${frameClass}">${pq.droppedVideoFrames} dropped / ${pq.totalVideoFrames} total` +
+        ` (${(pq.droppedVideoFrames / pq.totalVideoFrames * 100).toFixed(1)}%)</span>`
+      : "— (API unavailable)";
+
     hudEl.innerHTML =
       `mode   ${playbackMode}  (${idx + 1}/${VIDEOS.length})\n` +
       `clip   ${file} (${quality})\n` +
@@ -1457,6 +1536,8 @@ if (DEBUG_MODE) {
       `state  ready=${v.readyState}  net=${v.networkState}\n` +
       `buffer ${fmtBufRanges(v)}\n` +
       `cushion <span class="${cClass}">${cushion == null ? "—" : cushion.toFixed(1) + "s"}</span>\n` +
+      `freeze <span class="${freezeClass}">${freezeLine}</span>\n` +
+      `frames ${frameLine}\n` +
       `stalls <span class="${stallCount + waitingCount > 0 ? "warn" : "ok"}">${stallCount} stalled · ${waitingCount} waiting · ${qualityFallbackCount} fallbacks</span>\n` +
       `dl     ${bps}\n` +
       (conn.effectiveType ? `net    ${conn.effectiveType} · ${conn.downlink || "?"} Mbps · ${conn.rtt || "?"}ms\n` : "");
