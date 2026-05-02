@@ -877,10 +877,10 @@ const degradedClips = new Set();
 //   v1 → original 1080p @ 5 Mbps
 //   v2 → 720p30 @ 2 Mbps (lurch fix; turned out grainy)
 //   v3 → back to 1080p @ 5 Mbps (R2 confirmed re-encoded 2026-04-26)
-//   v4 → 1080p @ 5 Mbps with fps=30 cap on 60 fps sources (pending re-encode)
-//        Run: bash encode_and_upload.sh --force-mobile
-//        Then bump this constant to 4.
-const MOBILE_VERSION = 3;
+//   v4 → 720p @ 2.5 Mbps, maxrate 3.5M, fps=30 for 60fps sources
+//        (halves peak bandwidth; works on hotel/weak WiFi ~5 Mbps)
+//        Run: bash encode_and_upload.sh --force-mobile  (all 57 clips)
+const MOBILE_VERSION = 4;
 
 function url(i) {
   const file = VIDEOS[i].file;

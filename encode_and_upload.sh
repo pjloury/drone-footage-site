@@ -208,16 +208,24 @@ for i in "${!NUMS[@]}"; do
     fi
   fi
 
-  # ── Step 1: Encode mobile (H.264 1080p @ 5 Mbps + faststart) ─────────────
-  # Target: 1080p H.264 @ 5 Mbps (maxrate 7M / bufsize 10M), faststart.
+  # ── Step 1: Encode mobile (H.264 720p @ 2.5 Mbps + faststart) ───────────
+  # Target: 720p H.264 @ 2.5 Mbps (maxrate 3.5M / bufsize 7M), faststart.
   #
-  # 60 fps handling: at 5 Mbps / 1080p a 60 fps clip gets only ~83 kbps per
-  # frame. Motion-heavy scenes spike past maxrate and underrun the browser's
-  # decode buffer mid-playback, causing the brief freeze-thaw lurch. Auto-
-  # detect the source fps and cap at 30 fps for 60 fps sources — halves the
-  # per-frame budget without touching quality for 24/30 fps sources.
+  # Bitrate history:
+  #   v1/v3  1080p @ 5 Mbps   — too heavy; freezes on hotel/weak WiFi (7 Mbps)
+  #   v2     720p  @ 2 Mbps   — light enough but visibly grainy
+  #   v4     720p  @ 2.5 Mbps — 25% more bits than v2, noticeably less grainy,
+  #                              and peak (3.5 Mbps) stays well below 5 Mbps
+  #                              connections leaving headroom for TCP/overhead.
   #
-  # After re-encoding 60 fps clips, bump MOBILE_VERSION to 4 in index.html.
+  # Why 720p instead of 1080p: at equal bitrate, 720p gives more bits-per-
+  # pixel → less compression noise. 720p@2.5M ≈ 2.7 bits/px/frame vs
+  # 1080p@2.5M ≈ 0.8 bits/px/frame. The quality difference is visible.
+  #
+  # 60 fps handling: auto-detect fps, cap at 30 for 60 fps sources. At
+  # 2.5 Mbps / 720p, 60 fps gives only ~41 kbps/frame — too low for motion.
+  # 30 fps doubles the per-frame budget without visible stuttering at this
+  # playback speed (ambient/screensaver use case, slow camera movement).
   if [[ -f "$MOBILE_OUT" ]]; then
     log "  mobile: already encoded locally, skipping ffmpeg"
   else
@@ -227,17 +235,17 @@ for i in "${!NUMS[@]}"; do
       -of csv=p=0 "$SRC" 2>/dev/null | \
       awk -F'/' '{ if ($2+0 > 0) printf "%d", $1/$2; else print "0" }')
     if [[ "${SRC_FPS:-0}" -gt 35 ]]; then
-      VF_FILTER="scale=-2:1080,fps=30"
+      VF_FILTER="scale=-2:720,fps=30"
       log "  mobile: 60 fps source detected (${SRC_FPS} fps) — capping at 30 fps"
     else
-      VF_FILTER="scale=-2:1080"
+      VF_FILTER="scale=-2:720"
     fi
 
-    log "  mobile: encoding H.264 1080p @ 5 Mbps..."
+    log "  mobile: encoding H.264 720p @ 2.5 Mbps..."
     if ffmpeg -i "$SRC" \
       -c:v libx264 -profile:v high -level 4.0 \
       -vf "$VF_FILTER" \
-      -b:v 5M -maxrate 7M -bufsize 10M \
+      -b:v 2.5M -maxrate 3.5M -bufsize 7M \
       -c:a aac -b:a 128k \
       -movflags +faststart \
       -y "$MOBILE_OUT" \
