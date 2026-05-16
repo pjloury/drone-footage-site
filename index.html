@@ -1848,14 +1848,10 @@ function applyPlaybackMode(mode) {
   if (mode === "shuffle") {
     newOrder = shuffleArray(MASTER_VIDEOS.map(v => ({...v})));
   } else {
-    const idx = SECTIONS.findIndex(s => s.id === mode);
-    const ordered = [...SECTIONS.slice(idx), ...SECTIONS.slice(0, idx)];
-    newOrder = [];
-    ordered.forEach(sec => {
-      const group = MASTER_VIDEOS.filter(v => v.section === sec.id).map(v => ({...v}));
-      shuffleArray(group);
-      group.forEach(v => newOrder.push(v));
-    });
+    // Section mode: only this section's videos, shuffled, looping within section
+    newOrder = shuffleArray(
+      MASTER_VIDEOS.filter(v => v.section === mode).map(v => ({...v}))
+    );
   }
   VIDEOS.length = 0;
   newOrder.forEach(v => VIDEOS.push(v));
