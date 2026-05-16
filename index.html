@@ -548,9 +548,9 @@
       animation: gps-pulse 1.8s ease-out infinite;
     }
     @keyframes gps-pulse {
-      0%   { opacity: 0.55; transform: scale(1);   }
-      70%  { opacity: 0;    transform: scale(2.8); }
-      100% { opacity: 0;    transform: scale(2.8); }
+      0%   { opacity: 0.6;  transform: scale(1);   }
+      70%  { opacity: 0;    transform: scale(4.0); }
+      100% { opacity: 0;    transform: scale(4.0); }
     }
 
     @media (orientation: portrait) {
@@ -1291,6 +1291,8 @@ function goTo(index, opts) {
   // START THE VISUAL TRANSITION IMMEDIATELY (feels responsive)
   // Outgoing starts fading out right away regardless of load state
   caption.classList.add("fade");
+  minimapEl.classList.remove("visible");
+  minimapDotsEl.classList.remove("visible");
   updateDots();
   setTimeout(() => outgoingLayer.classList.remove("active"), 50);
 
@@ -1340,11 +1342,13 @@ function goTo(index, opts) {
     safePlay(incoming, "goTo_crossfade");
     incomingLayer.classList.add("active");
 
-    // Caption fades in halfway through
+    // Caption + minimap fade in halfway through the crossfade
     setTimeout(() => {
       caption.textContent = VIDEOS[current].caption;
       caption.classList.remove("fade");
       updateMiniMap();
+      minimapEl.classList.add("visible");
+      minimapDotsEl.classList.add("visible");
     }, CROSSFADE_MS / 2);
 
     setTimeout(() => {
@@ -1809,10 +1813,10 @@ function projectWorld(lat, lng) { return { x: lng + 180,                      y:
 // (×100 scale vs the others' ×10) so its radii are bigger; world is
 // the smallest viewBox so its radii are tightest.
 const MAP_DOT_RADIUS = {
-  bay:   { glow: 26, dot: 11 },
-  ca:    { glow: 4,  dot: 1.8 },
-  us:    { glow: 13, dot: 5.5 },
-  world: { glow: 10, dot: 4.5 },
+  bay:   { glow: 34, dot: 14 },
+  ca:    { glow: 5.5, dot: 2.5 },
+  us:    { glow: 18, dot: 7.5 },
+  world: { glow: 15, dot: 6.5 },
 };
 
 async function initMiniMap() {
