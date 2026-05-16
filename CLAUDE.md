@@ -14,11 +14,11 @@ serve from browser disk cache.
   pub URL. The `VIDEOS` array is the playlist; commented-out entries are
   permanently excluded. `setVideoSrc()` is the single chokepoint that sets
   both `video.src` and `video.poster` — route any new src writes through it.
-- `encode_and_upload.sh` — three-step pipeline per clip: 720p@2M H.264
-  mobile, faststart-muxed desktop, 720p poster JPG. Uploads all three to R2
-  with the long cache header. Flags:
+- `encode_and_upload.sh` — three-step pipeline per clip: H.264 1080p@3Mbps
+  mobile (faststart, fixed 2s keyframes), faststart-muxed desktop, 720p
+  poster JPG. Uploads all three to R2 with the long cache header. Flags:
     - `--force-mobile` — re-encode mobile even if already in R2 (use after
-      changing the bitrate ladder)
+      changing the encode settings)
     - `--backfill-cache` — metadata-only update of existing R2 objects, no
       encoding
     - `--skip-desktop-upload` — skip re-uploading the desktop re-mux
@@ -148,6 +148,52 @@ done
 ```
 
 ## Encoding gotchas
+
+### Long-GOP decoder stalls on mobile (fixed 2026-05-16)
+
+**Symptom:** Video completely freezes mid-playback on mobile. The blue GPS
+dot keeps pulsing (CSS animations are compositor-thread, unaffected) but
+`currentTime` stops advancing. The browser never fires `waiting` because
+the network buffer is full — the GPU decoder itself is stuck. The existing
+8s auto-skip (which is armed by `waiting`) therefore never triggers.
+
+**Root cause:** x264's default keyframe placement uses scene-detection. Slow
+drone pans have almost no scene changes, so x264 can go 8–15+ seconds
+between keyframes. With a long GOP the hardware decoder must maintain
+reference-frame state for the entire interval. Under memory or thermal
+pressure this can cause the decoder to stall mid-GOP, and recovery requires
+waiting for the next keyframe — up to 8 seconds away.
+
+**Diagnosed by probing keyframe spacing:**
+```bash
+curl -sSL -r 0-4194303 -o /tmp/probe.mp4 \
+  "https://pub-abee44b9f56049338f38452f0835b88f.r2.dev/video-49-mobile.mp4"
+ffprobe -v error -select_streams v:0 \
+  -show_entries packet=pts_time,flags \
+  -of csv=p=0 /tmp/probe.mp4 | awk -F',' '$2~/K/ {print "keyframe at " $1 "s"}'
+# Before fix: keyframe at 0s, next at 8.34s
+# After fix:  keyframe at 0s, 2s, 4s, 6s, 8s, 10s ...
+```
+
+**Fix (already in `encode_and_upload.sh`):**
+```
+-g 60 -keyint_min 60   # force keyframe every 60 frames = every 2s at 30fps
+-bf 2                  # cap B-frames at 2, reduces decoder memory pressure
+```
+This was applied to the entire catalog on 2026-05-16 via
+`bash encode_and_upload.sh --force-mobile --skip-desktop-upload`.
+
+**When to re-run:** Any time new clips are added, the script already
+includes these flags — just run normally. If a specific clip is suspected
+of stalling, probe its keyframe spacing with the snippet above before
+re-encoding.
+
+**Playback-side defense:** `index.html` also has a `setInterval` watchdog
+(every 2s) that detects `currentTime` not advancing on an active video,
+emits `video_stall_watchdog` to PostHog, and arms the mobile auto-skip
+timer. This catches stalls that slip through even with 2s keyframes (thermal
+throttle, etc.). Look for `video_stall_watchdog` events in PostHog if
+freezes recur.
 
 ### 60 fps source clips need `fps=30` on the mobile encode
 About 22% of the catalog is shot at 59.94 fps (drone slow-mo / cinematic).
