@@ -562,10 +562,10 @@
     }
 
     @media (orientation: portrait) {
-      /* Map sits above the caption — bottom offset clears 2 lines of caption text */
+      /* Map sits just above the caption — minimal gap */
       #minimap, #minimap-dots {
         width: 120px; height: 76px;
-        bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
       }
       #map-us,  #dot-us  { width: 120px; }
       #map-ca,  #dot-ca  { width: 72px; }
