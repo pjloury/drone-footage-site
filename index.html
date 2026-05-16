@@ -842,6 +842,10 @@ let front         = "A"; // which layer is currently showing
 let activeGoToAbort    = null;
 let activeGoToWatchdog = null;
 
+// Freeze tracking — always-on, feeds both PostHog telemetry and mobile auto-skip
+let freezeStartMs      = null;  // Date.now() when current freeze began (null = not frozen)
+let mobileAutoSkipTimer = null; // fires goTo(next) if mobile video stays stuck too long
+
 // Expose testability globals — read/write surface for unit and DOM tests
 window.VIDEOS       = VIDEOS;
 window.CROSSFADE_MS = CROSSFADE_MS;
@@ -984,6 +988,11 @@ function clearGoToLoad() {
     clearTimeout(activeGoToWatchdog);
     activeGoToWatchdog = null;
   }
+  if (mobileAutoSkipTimer != null) {
+    clearTimeout(mobileAutoSkipTimer);
+    mobileAutoSkipTimer = null;
+  }
+  freezeStartMs = null;
 }
 
 // Pre-buffer next video into back layer quietly
@@ -1127,6 +1136,26 @@ function onWaiting(e) {
     resourceHttpStatus: rt && rt.responseStatus,
   });
 
+  // Track freeze start (used by the playing handler to measure duration)
+  if (!freezeStartMs) freezeStartMs = Date.now();
+
+  // Mobile: already at lowest quality tier — no encode to fall back to.
+  // If the video stays frozen for 8 s, skip to the next clip rather than
+  // leaving the user staring at a stuck frame indefinitely.
+  if (IS_MOBILE && !mobileAutoSkipTimer && !transitioning && v.currentTime > 1.0) {
+    const frozeAt = freezeStartMs;
+    mobileAutoSkipTimer = setTimeout(() => {
+      mobileAutoSkipTimer = null;
+      if (v !== frontVid() || transitioning) return;
+      queueTelemetry({
+        name: "video_freeze_skip",
+        durationMs: Math.round(Date.now() - frozeAt),
+        ...clipPayloadFromVideo(v),
+      });
+      goTo(current + 1);
+    }, 8000);
+  }
+
   // Mid-playback quality fallback — if the front video stalls after the
   // first second of playback (past the initial-load zone covered by the
   // 2.5 s timer inside goTo()), silently swap to the mobile-quality encode
@@ -1184,6 +1213,22 @@ function attachVideoAnalytics(v) {
     "playing",
     () => {
       consecutiveAutoSkips = 0;
+      // Video recovered from freeze — cancel mobile auto-skip and emit telemetry
+      if (mobileAutoSkipTimer) {
+        clearTimeout(mobileAutoSkipTimer);
+        mobileAutoSkipTimer = null;
+      }
+      if (freezeStartMs) {
+        const durationMs = Math.round(Date.now() - freezeStartMs);
+        freezeStartMs = null;
+        if (durationMs >= 1500) {
+          queueTelemetry({
+            name: "video_freeze",
+            durationMs,
+            ...clipPayloadFromVideo(v),
+          });
+        }
+      }
     },
     { passive: true }
   );
