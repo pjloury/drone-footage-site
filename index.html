@@ -542,6 +542,12 @@
     }
     .map-land path { vector-effect: non-scaling-stroke; }
     /* GPS dot (Apple Maps blue + white ring + cyan glow) */
+    .map-pin {
+      fill: rgba(255,255,255,0.45);
+      cursor: pointer;
+      transition: fill 0.15s;
+    }
+    .map-pin:hover { fill: rgba(255,255,255,0.85); }
     .map-dot {
       fill: #4a9eff;
       stroke: rgba(255,255,255,0.98);
@@ -1850,6 +1856,8 @@ function applyPlaybackMode(mode) {
   }
   VIDEOS.length = 0;
   newOrder.forEach(v => VIDEOS.push(v));
+  // Rebuild pin index map — indices change whenever VIDEOS order changes
+  if (mapPinData) buildMapPinData();
 }
 
 const SHUFFLE_SVG = '<svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>';
@@ -1938,6 +1946,29 @@ const MAP_DOT_RADIUS = {
   world: { glow: 15, dot: 6.5 },
 };
 
+// Radius of gray neighbor-video pins — ~55% of the main dot
+const MAP_PIN_RADIUS = { bay: 8, ca: 1.4, us: 4.5, world: 3.5 };
+
+// {bay:[{idx,x,y}], ca:[...], us:[...], world:[...]} — built once after VIDEO_META is merged
+let mapPinData = null;
+
+function buildMapPinData() {
+  mapPinData = { bay: [], ca: [], us: [], world: [] };
+  VIDEOS.forEach((v, idx) => {
+    if (v.lat == null || v.lng == null) return;
+    const type =
+      isInBayArea(v.lat, v.lng)    ? "bay"   :
+      isInCalifornia(v.lat, v.lng) ? "ca"    :
+      isContigUS(v.lat, v.lng)     ? "us"    : "world";
+    const project =
+      type === "bay" ? projectBay :
+      type === "ca"  ? projectCA  :
+      type === "us"  ? projectUS  : projectWorld;
+    const { x, y } = project(v.lat, v.lng);
+    mapPinData[type].push({ idx, x, y });
+  });
+}
+
 async function initMiniMap() {
   // Pull viewBox out of each fetched SVG so the matching dot-overlay
   // SVG inherits the same coordinate system — guarantees the dot's
@@ -1959,6 +1990,7 @@ async function initMiniMap() {
     const r = MAP_DOT_RADIUS[kind];
     return `<svg id="dot-${kind}" class="dot-svg hidden" `
          + `viewBox="${getViewBox(svgText)}" preserveAspectRatio="xMidYMid meet">`
+         + `<g class="map-pins"></g>`
          + `<circle class="map-dot-glow" cx="0" cy="0" r="${r.glow}"/>`
          + `<circle class="map-dot"      cx="0" cy="0" r="${r.dot}"/>`
          + `</svg>`;
@@ -1981,6 +2013,9 @@ async function initMiniMap() {
       buildDots(caText,    "ca") +
       buildDots(usText,    "us") +
       buildDots(worldText, "world");
+    // Build pin position lookup now that both VIDEOS metadata and SVG
+    // coordinate systems are available.
+    buildMapPinData();
     // Maps may have arrived after the first updateMiniMap() call
     // (which silently no-ops when the SVGs aren't there yet) — re-run it
     // now so the dot snaps to the current clip's location.
@@ -2033,6 +2068,25 @@ function updateMiniMap() {
     d.setAttribute("cx", pos.x);
     d.setAttribute("cy", pos.y);
   });
+
+  // Render gray tappable pins for all other videos in the same zoom level
+  if (mapPinData) {
+    const pinsGroup = dotEls[mapType].querySelector(".map-pins");
+    if (pinsGroup) {
+      pinsGroup.innerHTML = "";
+      const r = MAP_PIN_RADIUS[mapType];
+      mapPinData[mapType].forEach(({ idx: pinIdx, x, y }) => {
+        if (pinIdx === current) return; // blue dot already marks current
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", x);
+        c.setAttribute("cy", y);
+        c.setAttribute("r", r);
+        c.classList.add("map-pin");
+        c.addEventListener("click", e => { e.stopPropagation(); goTo(pinIdx); });
+        pinsGroup.appendChild(c);
+      });
+    }
+  }
 }
 
 // ── keyboard / swipe ──────────────────────────────────────
@@ -2055,7 +2109,7 @@ document.addEventListener("keydown", e => {
 // taps just gets silently dropped instead of stacking transitions.
 // The list of selectors below is explicit so we don't accidentally trigger
 // nav when the user meant to interact with one of the on-screen UI bits.
-const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud";
+const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud, .map-pin";
 document.addEventListener("click", (e) => {
   if (e.target.closest(NAV_TAP_IGNORE)) return;
   // If a swipe just happened, the touchend handler will have fired
