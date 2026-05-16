@@ -1722,7 +1722,7 @@ const VIDEO_META = {
   "video-04.mp4": { section: "coastal",   lat: 36.55,  lng: -121.92 },  // Carmel Waves at Dusk
   "video-15.mp4": { section: "coastal",   lat: 20.69,  lng: -156.44 },  // Wailea, Maui
   "video-16.mp4": { section: "coastal",   lat: 43.17,  lng: 16.44  },   // Hvar, Croatia
-  "video-19.mp4": { section: "coastal",   lat: 36.55,  lng: -121.95 },  // Waves
+  "video-19.mp4": { section: "coastal",   lat: 36.55,  lng: -121.95, noPin: true },  // Waves — generic title, location uncertain
   "video-24.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
   "video-33.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
   "video-35.mp4": { section: "coastal",   lat: 36.27,  lng: -121.81 },  // Big Sur Hills
@@ -1731,7 +1731,7 @@ const VIDEO_META = {
   "video-39.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
   "video-43.mp4": { section: "coastal",   lat: 39.57,  lng: 2.65   },   // Balearic Islands
   "video-44.mp4": { section: "coastal",   lat: 48.64,  lng: -1.51  },   // Mont Saint-Michel
-  "video-45.mp4": { section: "coastal",   lat: 36.60,  lng: -121.90 },  // Drifting Away
+  "video-45.mp4": { section: "coastal",   lat: 36.60,  lng: -121.90, noPin: true },  // Drifting Away — generic title, location uncertain
   "video-48.mp4": { section: "coastal",   lat: 20.93,  lng: -156.69 },  // Ka'anapali Surf, Maui
   "video-49.mp4": { section: "coastal",   lat: -22.97, lng: -43.18 },   // Copacabana, Brazil
   "video-53.mp4": { section: "coastal",   lat: 36.55,  lng: -121.92 },  // Carmel-by-the-Sea
@@ -1754,7 +1754,7 @@ const VIDEO_META = {
   "video-52.mp4": { section: "desert",    lat: 38.57,  lng: -109.55 },  // Moab, Utah
   "video-55.mp4": { section: "desert",    lat: 38.73,  lng: -109.59 },  // Arches National Park
   "video-57.mp4": { section: "desert",    lat: 39.67,  lng: -105.20 },  // Red Rocks
-  "video-58.mp4": { section: "desert",    lat: 37.43,  lng: -121.97 },  // Alviso Salt Marsh
+  "video-58.mp4": { section: "desert",    lat: 37.43,  lng: -121.97, noPin: true },  // Salt Flats — coordinates are wrong (Bay Area, not Bonneville)
   // ── Cities ───────────────────────────────────────────────
   "video-02.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Good Morning Stanford
   "video-05.mp4": { section: "cities",    lat: 37.79,  lng: -122.40 },  // Financial District
@@ -1764,7 +1764,7 @@ const VIDEO_META = {
   "video-09.mp4": { section: "cities",    lat: 37.78,  lng: -122.40 },  // Above SoMa
   "video-10.mp4": { section: "cities",    lat: 37.38,  lng: -122.14 },  // Los Altos Hills
   "video-12.mp4": { section: "cities",    lat: 37.80,  lng: -122.41 },  // Washington Square
-  "video-13.mp4": { section: "cities",    lat: 37.40,  lng: -122.11 },  // New Office Site
+  "video-13.mp4": { section: "cities",    lat: 37.40,  lng: -122.11, noPin: true },  // New Office Site — vague, exact location unknown
   "video-14.mp4": { section: "cities",    lat: 37.77,  lng: -122.45 },  // Bay to Breakers
   "video-17.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley
   "video-18.mp4": { section: "cities",    lat: 37.40,  lng: -122.12 },  // Villa Collina
@@ -1958,7 +1958,7 @@ let mapPinData = null;
 function buildMapPinData() {
   mapPinData = { bay: [], ca: [], us: [], world: [] };
   VIDEOS.forEach((v, idx) => {
-    if (v.lat == null || v.lng == null) return;
+    if (v.lat == null || v.lng == null || v.noPin) return;
     const type =
       isInBayArea(v.lat, v.lng)    ? "bay"   :
       isInCalifornia(v.lat, v.lng) ? "ca"    :
@@ -2112,7 +2112,7 @@ document.addEventListener("keydown", e => {
 // taps just gets silently dropped instead of stacking transitions.
 // The list of selectors below is explicit so we don't accidentally trigger
 // nav when the user meant to interact with one of the on-screen UI bits.
-const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud, .map-pin";
+const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud, #minimap, #minimap *, #minimap-dots, #minimap-dots *";
 document.addEventListener("click", (e) => {
   if (e.target.closest(NAV_TAP_IGNORE)) return;
   // If a swipe just happened, the touchend handler will have fired
