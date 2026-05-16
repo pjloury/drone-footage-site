@@ -1349,6 +1349,7 @@ function goTo(index, opts) {
       updateMiniMap();
       minimapEl.classList.add("visible");
       minimapDotsEl.classList.add("visible");
+      pushUrlState();
     }, CROSSFADE_MS / 2);
 
     setTimeout(() => {
@@ -1749,13 +1750,14 @@ function shuffleArray(arr) {
   return arr;
 }
 
-function setPlaybackMode(mode) {
+// Reorders VIDEOS + sets playbackMode — does NOT start playback.
+// Used by both setPlaybackMode (runtime) and the startup URL-restore path.
+function applyPlaybackMode(mode) {
   playbackMode = mode;
   let newOrder;
   if (mode === "shuffle") {
     newOrder = shuffleArray(MASTER_VIDEOS.map(v => ({...v})));
   } else {
-    // Start from selected section, rotate through all, randomize within each
     const idx = SECTIONS.findIndex(s => s.id === mode);
     const ordered = [...SECTIONS.slice(idx), ...SECTIONS.slice(0, idx)];
     newOrder = [];
@@ -1767,11 +1769,28 @@ function setPlaybackMode(mode) {
   }
   VIDEOS.length = 0;
   newOrder.forEach(v => VIDEOS.push(v));
+}
+
+function setPlaybackMode(mode) {
+  applyPlaybackMode(mode);
   clearGoToLoad();
   transitioning = false;
   current = 0;
   buildDots();
   goTo(0, { force: true });
+}
+
+// Write current playback state into the URL so it can be shared.
+// Preserves any other query params (e.g. ?debug=1).
+function pushUrlState() {
+  const params = new URLSearchParams(location.search);
+  const file = VIDEOS[current] ? VIDEOS[current].file.replace(".mp4", "") : null;
+  if (playbackMode !== "shuffle") params.set("s", playbackMode);
+  else params.delete("s");
+  if (file) params.set("v", file);
+  else params.delete("v");
+  const qs = params.toString();
+  history.replaceState(null, "", qs ? "?" + qs : location.pathname);
 }
 
 // ── Mini map ─────────────────────────────────────────────
@@ -1992,20 +2011,34 @@ navRight.addEventListener("click", e => { e.stopPropagation(); dismissHint(); ne
   el.addEventListener("touchend",   e => e.stopPropagation(), { passive: true });
 });
 
-// ── shuffle (default mode) ────────────────────────────────
-shuffleArray(VIDEOS);
-playbackMode = "shuffle";
+// ── Apply URL state → mode + starting video ───────────────
+// Params: ?s=<section|shuffle>  ?v=<file-stem>  (e.g. ?s=cities&v=video-07)
+// Unrecognised ?s falls back to shuffle. ?v works in any mode.
+const _urlParams  = new URLSearchParams(location.search);
+const _urlSection = _urlParams.get("s") || "shuffle";
+const _urlVideo   = _urlParams.get("v");  // e.g. "video-07" (no .mp4 needed)
+
+const _initMode = SECTIONS.some(s => s.id === _urlSection) ? _urlSection : "shuffle";
+applyPlaybackMode(_initMode);
+
+const _startIdx = (() => {
+  if (!_urlVideo) return 0;
+  const file = _urlVideo.endsWith(".mp4") ? _urlVideo : _urlVideo + ".mp4";
+  const idx = VIDEOS.findIndex(v => v.file === file);
+  return idx >= 0 ? idx : 0;
+})();
 
 // ── init ──────────────────────────────────────────────────
 function init() {
   initMiniMap();
   buildDots();
 
-  // Set up first video on layer A
-  vidA.dataset.clipIndex = "0";
+  // Set up first video on layer A (may be non-zero when restoring from URL)
+  current = _startIdx;
+  vidA.dataset.clipIndex = String(_startIdx);
   vidA.muted = true;
   vidA.playsInline = true;
-  setVideoSrc(vidA, 0);
+  setVideoSrc(vidA, _startIdx);
 
   let started = false;
   function begin() {
@@ -2021,8 +2054,9 @@ function init() {
     }, 1500);
     layerA.classList.add("active");
     safePlay(vidA, "init_begin");
-    caption.textContent = VIDEOS[0].caption;
+    caption.textContent = VIDEOS[current].caption;
     updateMiniMap();
+    pushUrlState();
     vidA.ontimeupdate = () => {
       updateBar(vidA);
       if (vidA.duration && (vidA.duration - vidA.currentTime) < 8) preloadNext();
