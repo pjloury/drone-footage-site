@@ -2122,7 +2122,10 @@ document.addEventListener("click", (e) => {
   if (lastSwipeAt && Date.now() - lastSwipeAt < 400) return;
   dismissHint();
   closeSectionMenu();
-  if (e.clientX < window.innerWidth / 2) prev(); else next();
+  // Only the outer 22% of each side triggers nav — centre taps do nothing
+  const x = e.clientX, w = window.innerWidth;
+  if (x < w * 0.22) prev();
+  else if (x > w * 0.78) next();
 });
 
 let touchX = null;
