@@ -498,6 +498,9 @@
       opacity: 0;
       transition: opacity 1.2s ease;
     }
+    /* Allow clicks through to map pins only — must override on both SVG and circle */
+    #minimap-dots .dot-svg { pointer-events: none; }
+    #minimap-dots .map-pin { pointer-events: auto; }
     #minimap-dots.visible { opacity: 1; }
     .dot-svg {
       position: absolute;
