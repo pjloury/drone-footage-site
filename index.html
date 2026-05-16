@@ -423,7 +423,7 @@
       right: calc(24px + env(safe-area-inset-right, 0px));
       z-index: 50;
       width: 176px; height: 112px;
-      pointer-events: none;
+      pointer-events: auto; /* absorbs clicks so they don't fall through to nav */
       opacity: 0;
       transition: opacity 1.2s ease;
       /* Frosted-glass tint, very light: the blur does most of the work
@@ -1824,6 +1824,12 @@ const sectionBtn      = document.getElementById("section-btn");
 const sectionDropdown = document.getElementById("section-dropdown");
 const minimapEl       = document.getElementById("minimap");
 const minimapDotsEl   = document.getElementById("minimap-dots");
+
+// Swallow all clicks on the map plate so they never reach the nav handler
+minimapEl.addEventListener("click",      e => e.stopPropagation());
+minimapEl.addEventListener("touchend",   e => e.stopPropagation());
+minimapDotsEl.addEventListener("click",  e => e.stopPropagation());
+minimapDotsEl.addEventListener("touchend", e => e.stopPropagation());
 
 // ── Section selector ─────────────────────────────────────
 
