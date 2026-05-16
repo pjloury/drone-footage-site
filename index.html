@@ -546,11 +546,11 @@
     .map-land path { vector-effect: non-scaling-stroke; }
     /* GPS dot (Apple Maps blue + white ring + cyan glow) */
     .map-pin {
-      fill: rgba(255,255,255,0.45);
+      fill: rgba(255,255,255,0.88);
       cursor: pointer;
       transition: fill 0.15s;
     }
-    .map-pin:hover { fill: rgba(255,255,255,0.85); }
+    .map-pin:hover { fill: #fff; }
     /* Pins and tooltips are desktop-only — no hover on touch devices */
     @media (hover: none) { .map-pin { display: none; } }
     /* Map pin tooltip */
@@ -656,6 +656,7 @@
 <div id="section-dropdown"></div>
 <div id="minimap"></div>
 <div id="minimap-dots"></div>
+<div id="map-tooltip"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -2292,6 +2293,5 @@ function hideMapTooltip() {
   tooltipHideTimer = setTimeout(() => mapTooltip.classList.remove("visible"), 80);
 }
 </script>
-<div id="map-tooltip"></div>
 </body>
 </html>
