@@ -217,6 +217,10 @@ for i in "${!NUMS[@]}"; do
   #   v4     720p  @ 2.5 Mbps — still visibly grainy on phone screens
   #   v5     1080p @ 3 Mbps   — peak 4.5 Mbps = 63% of 7 Mbps hotel WiFi,
   #                              restores full resolution without freezing
+  #   v6     same bitrate + -g 60 -keyint_min 60 -bf 2 — fixed 2s keyframe
+  #                              interval prevents long-GOP decoder stalls on
+  #                              mobile hardware (slow drone pans triggered
+  #                              8-15s GOP with scene-detection default)
   #
   # 60 fps handling: auto-detect fps, cap at 30 for 60 fps sources.
   if [[ -f "$MOBILE_OUT" ]]; then
@@ -239,6 +243,8 @@ for i in "${!NUMS[@]}"; do
       -c:v libx264 -profile:v high -level 4.0 \
       -vf "$VF_FILTER" \
       -b:v 3M -maxrate 4.5M -bufsize 9M \
+      -g 60 -keyint_min 60 \
+      -bf 2 \
       -c:a aac -b:a 128k \
       -movflags +faststart \
       -y "$MOBILE_OUT" \

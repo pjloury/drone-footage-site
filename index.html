@@ -871,6 +871,10 @@ let activeGoToWatchdog = null;
 let freezeStartMs      = null;  // Date.now() when current freeze began (null = not frozen)
 let mobileAutoSkipTimer = null; // fires goTo(next) if mobile video stays stuck too long
 
+// Decoder-stall watchdog — catches freezes that never emit 'waiting'
+// (e.g. GPU decoder stops advancing currentTime while buffer is full)
+const _wd = { lastCT: null, lastAt: null, frozenSince: null };
+
 // Expose testability globals — read/write surface for unit and DOM tests
 window.VIDEOS       = VIDEOS;
 window.CROSSFADE_MS = CROSSFADE_MS;
@@ -1018,6 +1022,9 @@ function clearGoToLoad() {
     mobileAutoSkipTimer = null;
   }
   freezeStartMs = null;
+  _wd.lastCT       = null;
+  _wd.frozenSince  = null;
+  _wd.telemetrySent = false;
 }
 
 // Pre-buffer next video into back layer quietly
@@ -1436,6 +1443,74 @@ window.frontVid    = frontVid;
 
 attachVideoAnalytics(vidA);
 attachVideoAnalytics(vidB);
+
+// ── Decoder-stall watchdog ────────────────────────────────────────────────────
+// The browser's `waiting` event only fires when the *network* buffer runs dry.
+// A different failure mode — the GPU decoder freezes mid-frame — leaves the
+// buffer full but currentTime stopped advancing.  `waiting` never fires, so
+// the existing 8s auto-skip doesn't trigger.  This poll catches that case.
+//
+// Every 2 s we compare currentTime against the previous sample.  If the video
+// is supposed to be playing but currentTime hasn't moved in 3+ seconds we
+// treat it as a stall, emit `video_stall_watchdog` telemetry, and (on mobile)
+// arm the same mobileAutoSkipTimer path as the network-buffer case.
+setInterval(() => {
+  const v = frontVid();
+  // Only watch a video that is actively supposed to be playing
+  if (!v || v.paused || v.ended || v.readyState < 2 || v.currentTime < 0.5 || transitioning) {
+    _wd.lastCT = null;
+    _wd.frozenSince = null;
+    return;
+  }
+
+  const now = Date.now();
+  const ct  = v.currentTime;
+
+  // "stuck" = time elapsed since last sample is >1.5 s but currentTime barely moved
+  const stuck = (_wd.lastCT !== null) &&
+                (now - _wd.lastAt) > 1500 &&
+                (ct - _wd.lastCT) < 0.05;
+
+  if (stuck) {
+    if (!_wd.frozenSince) _wd.frozenSince = now;
+
+    // Ensure freezeStartMs is set so the playing handler can emit video_freeze
+    if (!freezeStartMs) freezeStartMs = _wd.frozenSince;
+
+    // Emit watchdog-specific telemetry once per stall episode
+    if (!_wd.telemetrySent) {
+      _wd.telemetrySent = true;
+      queueTelemetry({
+        name: "video_stall_watchdog",
+        durationMs: Math.round(now - _wd.frozenSince),
+        rootHint: "decoder_stall",
+        ...clipPayloadFromVideo(v),
+      });
+    }
+
+    // On mobile, arm the auto-skip timer (same mechanism as onWaiting)
+    if (IS_MOBILE && !mobileAutoSkipTimer && !transitioning) {
+      const frozeAt = _wd.frozenSince;
+      mobileAutoSkipTimer = setTimeout(() => {
+        mobileAutoSkipTimer = null;
+        if (v !== frontVid() || transitioning) return;
+        queueTelemetry({
+          name: "video_freeze_skip",
+          durationMs: Math.round(Date.now() - frozeAt),
+          rootHint: "watchdog_decoder_stall",
+          ...clipPayloadFromVideo(frontVid()),
+        });
+        goTo(current + 1);
+      }, 5000);
+    }
+  } else {
+    _wd.frozenSince    = null;
+    _wd.telemetrySent  = false;
+  }
+
+  _wd.lastCT = ct;
+  _wd.lastAt = now;
+}, 2000);
 
 // ═══════════════════════════════════════════════════════════
 //  Debug HUD — visible playback metrics for stutter-hunting
