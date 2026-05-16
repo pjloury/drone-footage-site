@@ -551,6 +551,33 @@
       transition: fill 0.15s;
     }
     .map-pin:hover { fill: rgba(255,255,255,0.85); }
+    /* Pins and tooltips are desktop-only — no hover on touch devices */
+    @media (hover: none) { .map-pin { display: none; } }
+    /* Map pin tooltip */
+    #map-tooltip {
+      position: fixed;
+      z-index: 200;
+      pointer-events: none;
+      padding: 5px 10px;
+      border-radius: 10px;
+      background: rgba(30,30,40,0.55);
+      backdrop-filter: blur(14px) saturate(1.6);
+      -webkit-backdrop-filter: blur(14px) saturate(1.6);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #fff;
+      font-family: 'Inter', 'SF Pro Display', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    #map-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
     .map-dot {
       fill: #4a9eff;
       stroke: rgba(255,255,255,0.98);
@@ -1756,31 +1783,31 @@ const VIDEO_META = {
   "video-57.mp4": { section: "desert",    lat: 39.67,  lng: -105.20 },  // Red Rocks
   "video-58.mp4": { section: "desert",    lat: 37.43,  lng: -121.97, noPin: true },  // Salt Flats — coordinates are wrong (Bay Area, not Bonneville)
   // ── Cities ───────────────────────────────────────────────
-  "video-02.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Good Morning Stanford
-  "video-05.mp4": { section: "cities",    lat: 37.79,  lng: -122.40 },  // Financial District
-  "video-06.mp4": { section: "cities",    lat: 37.44,  lng: -122.14 },  // Heavenly Palo Alto
-  "video-07.mp4": { section: "cities",    lat: 37.80,  lng: -122.41 },  // Telegraph Hill
-  "video-08.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Sunset
+  "video-02.mp4": { section: "cities",    lat: 37.43,  lng: -122.17, noPin: true },  // Good Morning Stanford (Stanford Main Quad covers this location)
+  "video-05.mp4": { section: "cities",    lat: 37.79,  lng: -122.40 },  // Financial District ✓ pin
+  "video-06.mp4": { section: "cities",    lat: 37.44,  lng: -122.14, noPin: true },  // Heavenly Palo Alto
+  "video-07.mp4": { section: "cities",    lat: 37.80,  lng: -122.41, noPin: true },  // Telegraph Hill (Embarcadero covers SF)
+  "video-08.mp4": { section: "cities",    lat: 37.43,  lng: -122.17, noPin: true },  // Stanford Sunset (Stanford Main Quad covers this)
   "video-09.mp4": { section: "cities",    lat: 37.78,  lng: -122.40 },  // Above SoMa
-  "video-10.mp4": { section: "cities",    lat: 37.38,  lng: -122.14 },  // Los Altos Hills
-  "video-12.mp4": { section: "cities",    lat: 37.80,  lng: -122.41 },  // Washington Square
+  "video-10.mp4": { section: "cities",    lat: 37.38,  lng: -122.14, noPin: true },  // Los Altos Hills
+  "video-12.mp4": { section: "cities",    lat: 37.80,  lng: -122.41, noPin: true },  // Washington Square (Embarcadero covers SF)
   "video-13.mp4": { section: "cities",    lat: 37.40,  lng: -122.11, noPin: true },  // New Office Site — vague, exact location unknown
-  "video-14.mp4": { section: "cities",    lat: 37.77,  lng: -122.45 },  // Bay to Breakers
-  "video-17.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley
-  "video-18.mp4": { section: "cities",    lat: 37.40,  lng: -122.12 },  // Villa Collina
+  "video-14.mp4": { section: "cities",    lat: 37.77,  lng: -122.45, noPin: true },  // Bay to Breakers
+  "video-17.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley ✓ pin
+  "video-18.mp4": { section: "cities",    lat: 37.40,  lng: -122.12, noPin: true },  // Villa Collina
   "video-20.mp4": { section: "cities",    lat: 33.98,  lng: -118.47 },  // Venice Canals
-  "video-21.mp4": { section: "cities",    lat: 37.78,  lng: -122.45 },  // University of San Francisco
+  "video-21.mp4": { section: "cities",    lat: 37.78,  lng: -122.45, noPin: true },  // University of San Francisco
   "video-22.mp4": { section: "cities",    lat: 39.47,  lng: -0.38  },   // Old Valencia, Spain
   "video-26.mp4": { section: "cities",    lat: 47.80,  lng: 13.04  },   // Salzburg, Austria
-  "video-32.mp4": { section: "cities",    lat: 37.24,  lng: -121.86 },  // Almaden Green
-  "video-34.mp4": { section: "cities",    lat: 37.79,  lng: -122.41 },  // SF Lunar New Year
+  "video-32.mp4": { section: "cities",    lat: 37.24,  lng: -121.86, noPin: true },  // Almaden Green
+  "video-34.mp4": { section: "cities",    lat: 37.79,  lng: -122.41, noPin: true },  // SF Lunar New Year (Financial District covers this)
   "video-38.mp4": { section: "cities",    lat: 34.05,  lng: -118.24 },  // LA Suburbs
-  "video-42.mp4": { section: "cities",    lat: 37.82,  lng: -122.48 },  // Golden Gate Bridge
+  "video-42.mp4": { section: "cities",    lat: 37.82,  lng: -122.48, noPin: true },  // Golden Gate Bridge
   "video-50.mp4": { section: "cities",    lat: 39.57,  lng: 2.65   },   // Palma, Mallorca
-  "video-59.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // UC Berkeley Campus
-  "video-60.mp4": { section: "cities",    lat: 37.80,  lng: -122.40 },  // SF Embarcadero
-  "video-61.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Main Quad
-  "video-62.mp4": { section: "cities",    lat: 37.87,  lng: -122.26 },  // Sather Tower, Berkeley
+  "video-59.mp4": { section: "cities",    lat: 37.87,  lng: -122.26, noPin: true },  // UC Berkeley Campus (Sather Tower covers Berkeley)
+  "video-60.mp4": { section: "cities",    lat: 37.80,  lng: -122.40 },  // SF Embarcadero ✓ pin
+  "video-61.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Main Quad ✓ pin
+  "video-62.mp4": { section: "cities",    lat: 37.87,  lng: -122.26, noPin: true },  // Sather Tower duplicate (video-17 is the pin)
 };
 
 // Enrich VIDEOS with section + coordinates
@@ -2082,6 +2109,8 @@ function updateMiniMap() {
         c.setAttribute("r", r);
         c.classList.add("map-pin");
         c.addEventListener("click", e => { e.stopPropagation(); goTo(pinIdx); });
+        c.addEventListener("mouseenter", e => showMapTooltip(VIDEOS[pinIdx].caption, e.clientX, e.clientY));
+        c.addEventListener("mouseleave", hideMapTooltip);
         pinsGroup.appendChild(c);
       });
     }
@@ -2235,6 +2264,28 @@ setTimeout(() => {
   welcomeDocked = true;
   welcomeEl.classList.add("docked");
 }, 30000);
+// ── Map pin tooltip ───────────────────────────────────────
+const mapTooltip = document.getElementById("map-tooltip");
+let tooltipHideTimer = null;
+
+document.addEventListener("mousemove", e => {
+  if (mapTooltip.classList.contains("visible")) {
+    mapTooltip.style.left = (e.clientX + 14) + "px";
+    mapTooltip.style.top  = (e.clientY - 28) + "px";
+  }
+});
+
+function showMapTooltip(caption, x, y) {
+  clearTimeout(tooltipHideTimer);
+  mapTooltip.textContent = caption;
+  mapTooltip.style.left = (x + 14) + "px";
+  mapTooltip.style.top  = (y - 28) + "px";
+  mapTooltip.classList.add("visible");
+}
+function hideMapTooltip() {
+  tooltipHideTimer = setTimeout(() => mapTooltip.classList.remove("visible"), 80);
+}
 </script>
+<div id="map-tooltip"></div>
 </body>
 </html>
