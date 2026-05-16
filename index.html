@@ -548,7 +548,19 @@
     }
 
     @media (orientation: portrait) {
-      #minimap { display: none; }
+      /* Scale map down so it fits beside the caption at phone width */
+      #minimap, #minimap-dots {
+        width: 120px; height: 76px;
+      }
+      #map-us,  #dot-us  { width: 120px; }
+      #map-world, #dot-world { width: 120px; }
+      #map-ca,  #dot-ca  { width: 72px; }
+      #map-bay, #dot-bay { width: 90px; }
+      /* Shrink caption slightly and cap its width so it can't run under the map */
+      #caption {
+        font-size: clamp(0.85rem, 4vw, 1.1rem);
+        max-width: calc(100% - 175px);
+      }
       #section-btn { width: 32px; height: 32px; }
     }
     @media (orientation: landscape) and (max-height: 500px) {
