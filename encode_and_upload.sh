@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # encode_and_upload.sh
 # Encodes each active video into:
-#   1. video-XX-mobile.mp4   — H.264 720p @ ~2 Mbps, faststart (mobile/fallback)
+#   1. video-XX-mobile.mp4   — H.264 1080p @ 3 Mbps, faststart (mobile/fallback)
 #   2. video-XX.mp4          — original re-muxed with faststart (desktop full-res)
 #   3. video-XX-poster.jpg   — 720p still (~3s in) shown while the mp4 buffers
 # Then uploads all three to R2 with long cache-control headers.
@@ -208,24 +208,17 @@ for i in "${!NUMS[@]}"; do
     fi
   fi
 
-  # ── Step 1: Encode mobile (H.264 720p @ 2.5 Mbps + faststart) ───────────
-  # Target: 720p H.264 @ 2.5 Mbps (maxrate 3.5M / bufsize 7M), faststart.
+  # ── Step 1: Encode mobile (H.264 1080p @ 3 Mbps + faststart) ────────────
+  # Target: 1080p H.264 @ 3 Mbps (maxrate 4.5M / bufsize 9M), faststart.
   #
   # Bitrate history:
   #   v1/v3  1080p @ 5 Mbps   — too heavy; freezes on hotel/weak WiFi (7 Mbps)
   #   v2     720p  @ 2 Mbps   — light enough but visibly grainy
-  #   v4     720p  @ 2.5 Mbps — 25% more bits than v2, noticeably less grainy,
-  #                              and peak (3.5 Mbps) stays well below 5 Mbps
-  #                              connections leaving headroom for TCP/overhead.
+  #   v4     720p  @ 2.5 Mbps — still visibly grainy on phone screens
+  #   v5     1080p @ 3 Mbps   — peak 4.5 Mbps = 63% of 7 Mbps hotel WiFi,
+  #                              restores full resolution without freezing
   #
-  # Why 720p instead of 1080p: at equal bitrate, 720p gives more bits-per-
-  # pixel → less compression noise. 720p@2.5M ≈ 2.7 bits/px/frame vs
-  # 1080p@2.5M ≈ 0.8 bits/px/frame. The quality difference is visible.
-  #
-  # 60 fps handling: auto-detect fps, cap at 30 for 60 fps sources. At
-  # 2.5 Mbps / 720p, 60 fps gives only ~41 kbps/frame — too low for motion.
-  # 30 fps doubles the per-frame budget without visible stuttering at this
-  # playback speed (ambient/screensaver use case, slow camera movement).
+  # 60 fps handling: auto-detect fps, cap at 30 for 60 fps sources.
   if [[ -f "$MOBILE_OUT" ]]; then
     log "  mobile: already encoded locally, skipping ffmpeg"
   else
@@ -235,17 +228,17 @@ for i in "${!NUMS[@]}"; do
       -of csv=p=0 "$SRC" 2>/dev/null | \
       awk -F'/' '{ if ($2+0 > 0) printf "%d", $1/$2; else print "0" }')
     if [[ "${SRC_FPS:-0}" -gt 35 ]]; then
-      VF_FILTER="scale=-2:720,fps=30"
+      VF_FILTER="scale=-2:1080,fps=30"
       log "  mobile: 60 fps source detected (${SRC_FPS} fps) — capping at 30 fps"
     else
-      VF_FILTER="scale=-2:720"
+      VF_FILTER="scale=-2:1080"
     fi
 
-    log "  mobile: encoding H.264 720p @ 2.5 Mbps..."
+    log "  mobile: encoding H.264 1080p @ 3 Mbps..."
     if ffmpeg -i "$SRC" \
       -c:v libx264 -profile:v high -level 4.0 \
       -vf "$VF_FILTER" \
-      -b:v 2.5M -maxrate 3.5M -bufsize 7M \
+      -b:v 3M -maxrate 4.5M -bufsize 9M \
       -c:a aac -b:a 128k \
       -movflags +faststart \
       -y "$MOBILE_OUT" \
