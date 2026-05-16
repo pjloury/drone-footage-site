@@ -336,16 +336,23 @@
       top: calc(20px + env(safe-area-inset-top, 0px));
       right: calc(20px + env(safe-area-inset-right, 0px));
       z-index: 100;
-      width: 36px; height: 36px;
+      height: 36px;
+      min-width: 36px;
+      padding: 0 10px;
       border: 1px solid rgba(255,255,255,0.3);
       background: rgba(255,255,255,0.06);
       backdrop-filter: blur(12px) saturate(1.4);
       -webkit-backdrop-filter: blur(12px) saturate(1.4);
       border-radius: 8px;
       cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      transition: background 0.3s, border-color 0.3s, opacity 0.6s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 0.3s, border-color 0.3s, opacity 0.5s;
       opacity: 0; pointer-events: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem; font-weight: 300;
+      letter-spacing: 0.07em;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
     }
     #section-btn.visible { opacity: 1; pointer-events: auto; }
     #section-btn:hover, #section-btn.active {
@@ -356,6 +363,7 @@
       width: 16px; height: 16px;
       stroke: rgba(255,255,255,0.7);
       stroke-width: 2; stroke-linecap: round; fill: none;
+      flex-shrink: 0;
     }
 
     #section-dropdown {
@@ -565,7 +573,7 @@
       /* World: fit exact aspect ratio at portrait scale */
       #minimap.world, #minimap-dots.world { width: 178px; height: 69px; }
       #map-world, #dot-world              { width: 178px; }
-      #section-btn { width: 32px; height: 32px; }
+      #section-btn { min-width: 32px; height: 32px; font-size: 0.68rem; }
     }
     @media (orientation: landscape) and (max-height: 500px) {
       #minimap, #minimap-dots {
@@ -608,9 +616,7 @@
 </button>
 <div id="bar-track"><div id="bar"></div></div>
 
-<button id="section-btn" aria-label="Sections">
-  <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-</button>
+<button id="section-btn" aria-label="Sections"></button>
 <div id="section-dropdown"></div>
 <div id="minimap"></div>
 <div id="minimap-dots"></div>
@@ -1771,6 +1777,19 @@ function applyPlaybackMode(mode) {
   newOrder.forEach(v => VIDEOS.push(v));
 }
 
+const SHUFFLE_SVG = '<svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>';
+
+function updateSectionBtn() {
+  if (playbackMode === "shuffle") {
+    sectionBtn.innerHTML = SHUFFLE_SVG;
+    sectionBtn.setAttribute("aria-label", "Shuffle All");
+  } else {
+    const sec = SECTIONS.find(s => s.id === playbackMode);
+    sectionBtn.innerHTML = sec ? sec.name : "";
+    sectionBtn.setAttribute("aria-label", sec ? sec.name : "Sections");
+  }
+}
+
 function setPlaybackMode(mode) {
   applyPlaybackMode(mode);
   clearGoToLoad();
@@ -1778,6 +1797,12 @@ function setPlaybackMode(mode) {
   current = 0;
   buildDots();
   goTo(0, { force: true });
+  // Fade label out, swap content, fade back in
+  sectionBtn.style.opacity = "0";
+  setTimeout(() => {
+    updateSectionBtn();
+    sectionBtn.style.removeProperty("opacity");
+  }, 280);
 }
 
 // Write current playback state into the URL so it can be shared.
@@ -2048,6 +2073,7 @@ function init() {
     started = true;
     spinner.classList.add("gone");
     setTimeout(() => {
+      updateSectionBtn();
       sectionBtn.classList.add("visible");
       minimapEl.classList.add("visible");
       minimapDotsEl.classList.add("visible");
