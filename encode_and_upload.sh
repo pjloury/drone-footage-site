@@ -60,6 +60,9 @@ NUMS=(
   41 42 43 44 45 46 47 48 49 50
   51 52 53 54 55 56 57 58 59 60
   61 62
+  63 64 65 66 67 68 69 70 71 72
+  73 74 75 76 77 78 79 80 81 82
+  83 84 85
 )
 
 FILES=(
@@ -122,6 +125,29 @@ FILES=(
   "SF Embarcadero.mov"
   "Stanford Main Quad.mov"
   "Sather Tower.mp4"
+  "Albanian Alps 2.mov"
+  "City of Kotor, Montenegro.mov"
+  "Deer Valley 2026.mov"
+  "Denver Golden Plains.mov"
+  "Dubrovnik, Croatia.mov"
+  "Grand Baths, Budapest, Hungary.mov"
+  "Ho'okipa Beach Surfing.mov"
+  "Kotor, Montenegro.mov"
+  "Lands End Rotate.mov"
+  "Maui Lava Rocks.mov"
+  "Ocean Beach, San Francisco.mov"
+  "Old Town Dubrovnik.mov"
+  "Port Novi, Montenegro.mov"
+  "Schoebrun Palace, Vienna, Austria.mov"
+  "Theth Sunset.mov"
+  "Theth, Albania Summit Daytime.mov"
+  "Theth, Albania Sunrise.mov"
+  "Tivat, Montenegro.mov"
+  "Walled City of Dubrovnik.mov"
+  "West Maui Coastline.mov"
+  "Yosemite Falls.mov"
+  "Yosemite Valley Twilight.mov"
+  "Yosemite Valley.mov"
 )
 
 TOTAL=${#NUMS[@]}
@@ -240,7 +266,9 @@ for i in "${!NUMS[@]}"; do
 
     log "  mobile: encoding H.264 1080p @ 3 Mbps..."
     if ffmpeg -i "$SRC" \
+      -map 0:v:0 -map 0:a? \
       -c:v libx264 -profile:v high -level 4.0 \
+      -pix_fmt yuv420p \
       -vf "$VF_FILTER" \
       -b:v 3M -maxrate 4.5M -bufsize 9M \
       -g 60 -keyint_min 60 \
@@ -263,6 +291,7 @@ for i in "${!NUMS[@]}"; do
   else
     log "  desktop: re-muxing with faststart..."
     if ffmpeg -i "$SRC" \
+      -map 0:v:0 -map 0:a? \
       -c copy \
       -movflags +faststart \
       -y "$DESKTOP_OUT" \
@@ -283,6 +312,7 @@ for i in "${!NUMS[@]}"; do
   else
     log "  poster: extracting frame at 00:00:03..."
     if ffmpeg -ss 00:00:03 -i "$SRC" \
+      -map 0:v:0 \
       -vf "scale=-2:720" \
       -frames:v 1 -q:v 4 \
       -y "$POSTER_OUT" \

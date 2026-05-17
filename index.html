@@ -743,6 +743,29 @@ const VIDEOS = [
   { file: "video-60.mp4", caption: "SF Embarcadero"                     },
   { file: "video-61.mp4", caption: "Stanford Main Quad"                 },
   { file: "video-62.mp4", caption: "Sather Tower, Berkeley"             },
+  { file: "video-63.mp4", caption: "Albanian Alps"                      },
+  { file: "video-64.mp4", caption: "Kotor, Montenegro"                  },
+  { file: "video-65.mp4", caption: "Deer Valley, Utah"                  },
+  { file: "video-66.mp4", caption: "Denver, Colorado"                   },
+  { file: "video-67.mp4", caption: "Dubrovnik, Croatia"                 },
+  { file: "video-68.mp4", caption: "Grand Baths, Budapest"              },
+  { file: "video-69.mp4", caption: "Hoʻokipa Beach, Maui"          },
+  { file: "video-70.mp4", caption: "Bay of Kotor, Montenegro"           },
+  { file: "video-71.mp4", caption: "Lands End, San Francisco"           },
+  { file: "video-72.mp4", caption: "Maui Lava Coast"                    },
+  { file: "video-73.mp4", caption: "Ocean Beach, San Francisco"         },
+  { file: "video-74.mp4", caption: "Old Town Dubrovnik"                 },
+  { file: "video-75.mp4", caption: "Port Novi, Montenegro"              },
+  { file: "video-76.mp4", caption: "Schönbrunn Palace, Vienna"     },
+  { file: "video-77.mp4", caption: "Theth, Albania at Sunset"           },
+  { file: "video-78.mp4", caption: "Theth Summit, Albania"              },
+  { file: "video-79.mp4", caption: "Theth Sunrise, Albania"             },
+  { file: "video-80.mp4", caption: "Tivat, Montenegro"                  },
+  { file: "video-81.mp4", caption: "Walled City of Dubrovnik"           },
+  { file: "video-82.mp4", caption: "West Maui Coastline"                },
+  { file: "video-83.mp4", caption: "Yosemite Falls"                     },
+  { file: "video-84.mp4", caption: "Yosemite Valley at Twilight"        },
+  { file: "video-85.mp4", caption: "Yosemite Valley"                    },
 ];
 
 const CROSSFADE_MS = 4000;
@@ -1809,6 +1832,30 @@ const VIDEO_META = {
   "video-60.mp4": { section: "cities",    lat: 37.85,  lng: -122.38 },  // SF Embarcadero ✓ pin (nudged NE for pin separation)
   "video-61.mp4": { section: "cities",    lat: 37.43,  lng: -122.17 },  // Stanford Main Quad ✓ pin
   "video-62.mp4": { section: "cities",    lat: 37.87,  lng: -122.26, noPin: true },  // Sather Tower duplicate (video-17 is the pin)
+  // ── New additions (63–85) ─────────────────────────────────
+  "video-63.mp4": { section: "mountains", lat: 42.41,  lng: 19.79,  noPin: true },  // Albanian Alps — location covered by Theth pins
+  "video-64.mp4": { section: "coastal",   lat: 42.43,  lng: 18.77  },  // Kotor, Montenegro ✓ pin
+  "video-65.mp4": { section: "mountains", lat: 40.63,  lng: -111.48 },  // Deer Valley, Utah ✓ pin
+  "video-66.mp4": { section: "cities",    lat: 39.74,  lng: -104.98 },  // Denver, Colorado ✓ pin
+  "video-67.mp4": { section: "coastal",   lat: 42.65,  lng: 18.09  },  // Dubrovnik, Croatia ✓ pin
+  "video-68.mp4": { section: "cities",    lat: 47.51,  lng: 19.05  },  // Grand Baths, Budapest ✓ pin
+  "video-69.mp4": { section: "coastal",   lat: 20.94,  lng: -156.34 },  // Hoʻokipa Beach, Maui ✓ pin
+  "video-70.mp4": { section: "coastal",   lat: 42.43,  lng: 18.77,  noPin: true },  // Bay of Kotor — video-64 is the Kotor pin
+  "video-71.mp4": { section: "coastal",   lat: 37.78,  lng: -122.51, noPin: true },  // Lands End — Ocean Beach pin covers SF coast
+  "video-72.mp4": { section: "coastal",   lat: 20.80,  lng: -156.50, noPin: true },  // Maui Lava Coast — West Maui pin covers this area
+  "video-73.mp4": { section: "coastal",   lat: 37.76,  lng: -122.51 },  // Ocean Beach, San Francisco ✓ pin
+  "video-74.mp4": { section: "cities",    lat: 42.65,  lng: 18.09,  noPin: true },  // Old Town Dubrovnik — video-67 is the Dubrovnik pin
+  "video-75.mp4": { section: "coastal",   lat: 42.45,  lng: 18.68  },  // Port Novi, Montenegro ✓ pin
+  "video-76.mp4": { section: "cities",    lat: 48.18,  lng: 16.31  },  // Schönbrunn Palace, Vienna ✓ pin
+  "video-77.mp4": { section: "mountains", lat: 42.41,  lng: 19.79,  noPin: true },  // Theth Sunset — video-78 is the Theth pin
+  "video-78.mp4": { section: "mountains", lat: 42.45,  lng: 19.85  },  // Theth Summit, Albania ✓ pin
+  "video-79.mp4": { section: "mountains", lat: 42.41,  lng: 19.79,  noPin: true },  // Theth Sunrise — video-78 is the Theth pin
+  "video-80.mp4": { section: "coastal",   lat: 42.44,  lng: 18.70,  noPin: true },  // Tivat — near Kotor (video-64) pin
+  "video-81.mp4": { section: "cities",    lat: 42.64,  lng: 18.11,  noPin: true },  // Walled City Dubrovnik — video-67 is the pin
+  "video-82.mp4": { section: "coastal",   lat: 20.88,  lng: -156.50 },  // West Maui Coastline ✓ pin
+  "video-83.mp4": { section: "mountains", lat: 37.754, lng: -119.597 },  // Yosemite Falls ✓ pin
+  "video-84.mp4": { section: "mountains", lat: 37.745, lng: -119.587, noPin: true },  // Yosemite Valley Twilight — video-85 is the pin
+  "video-85.mp4": { section: "mountains", lat: 37.745, lng: -119.587 },  // Yosemite Valley ✓ pin
 };
 
 // Enrich VIDEOS with section + coordinates
