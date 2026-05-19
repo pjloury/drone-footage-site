@@ -1951,8 +1951,6 @@ function applyPlaybackMode(mode) {
   }
   VIDEOS.length = 0;
   newOrder.forEach(v => VIDEOS.push(v));
-  // Rebuild pin index map — indices change whenever VIDEOS order changes
-  if (mapPinData) buildMapPinData();
 }
 
 const SHUFFLE_SVG = '<svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>';
@@ -2052,12 +2050,14 @@ const MAP_DOT_RADIUS = {
 // Radius of gray neighbor-video pins — ~55% of the main dot
 const MAP_PIN_RADIUS = { bay: 4, ca: 1.4, us: 4.5, world: 3.5, europe: 0.4 };
 
-// {bay:[{idx,x,y}], ca:[...], us:[...], world:[...], europe:[...]} — built once after VIDEO_META is merged
+// {bay:[{file,x,y}], ca:[...], us:[...], world:[...], europe:[...]}
+// Built from MASTER_VIDEOS so pins always show the full catalog regardless
+// of which section is currently active.
 let mapPinData = null;
 
 function buildMapPinData() {
   mapPinData = { bay: [], ca: [], us: [], world: [], europe: [] };
-  VIDEOS.forEach((v, idx) => {
+  MASTER_VIDEOS.forEach(v => {
     if (v.lat == null || v.lng == null || v.noPin) return;
     const type =
       isInBayArea(v.lat, v.lng)    ? "bay"    :
@@ -2070,8 +2070,22 @@ function buildMapPinData() {
       type === "us"     ? projectUS     :
       type === "europe" ? projectEurope : projectWorld;
     const { x, y } = project(v.lat, v.lng);
-    mapPinData[type].push({ idx, x, y });
+    mapPinData[type].push({ file: v.file, caption: v.caption, x, y });
   });
+}
+
+// Navigate to a specific video by file name, switching to shuffle mode so
+// the full catalog is restored and the clicked clip plays immediately.
+function navigateToVideo(file) {
+  applyPlaybackMode("shuffle");
+  updateSectionBtn();
+  const idx = VIDEOS.findIndex(v => v.file === file);
+  if (idx < 0) return;
+  clearGoToLoad();
+  transitioning = false;
+  current = idx;
+  buildDots();
+  goTo(idx, { force: true });
 }
 
 async function initMiniMap() {
@@ -2179,21 +2193,24 @@ function updateMiniMap() {
     d.setAttribute("cy", pos.y);
   });
 
-  // Render gray tappable pins for all other videos in the same zoom level
+  // Render gray tappable pins for all videos in the catalog at this zoom level.
+  // Uses MASTER_VIDEOS-based pin data so pins are never hidden by section filters.
+  // Clicking any pin exits section mode, restores shuffle, and plays that clip.
   if (mapPinData) {
     const pinsGroup = dotEls[mapType].querySelector(".map-pins");
     if (pinsGroup) {
       pinsGroup.innerHTML = "";
       const r = MAP_PIN_RADIUS[mapType];
-      mapPinData[mapType].forEach(({ idx: pinIdx, x, y }) => {
-        if (pinIdx === current) return; // blue dot already marks current
+      const currentFile = VIDEOS[current]?.file;
+      mapPinData[mapType].forEach(({ file, caption, x, y }) => {
+        if (file === currentFile) return; // blue dot already marks current
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         c.setAttribute("cx", x);
         c.setAttribute("cy", y);
         c.setAttribute("r", r);
         c.classList.add("map-pin");
-        c.addEventListener("click", e => { e.stopPropagation(); goTo(pinIdx); });
-        c.addEventListener("mouseenter", e => showMapTooltip(VIDEOS[pinIdx].caption, e.clientX, e.clientY));
+        c.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(file); });
+        c.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
         c.addEventListener("mouseleave", hideMapTooltip);
         pinsGroup.appendChild(c);
       });
