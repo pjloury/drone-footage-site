@@ -477,6 +477,15 @@
       mask: url(/maps/bay-mask.svg) center / contain no-repeat;
       -webkit-mask: url(/maps/bay-mask.svg) center / contain no-repeat;
     }
+    #minimap.europe {
+      border-radius: 0;
+      mask: url(/maps/europe-mask.svg) center / contain no-repeat;
+      -webkit-mask: url(/maps/europe-mask.svg) center / contain no-repeat;
+      width: 200px; height: 110px;
+    }
+    #minimap-dots.europe {
+      width: 200px; height: 110px;
+    }
     /* California's only path is the state outline itself — drawing a
        stroke around it would just trace the mask edge a second time,
        producing the "two borders" effect. Suppress fill+stroke so the
@@ -511,10 +520,11 @@
       transition: opacity 1.2s ease;
     }
     .dot-svg.hidden { opacity: 0; }
-    #dot-us    { width: 176px; }
-    #dot-world { width: 214px; }
-    #dot-ca    { width: 106px; }
-    #dot-bay   { width: 132px; }
+    #dot-us      { width: 176px; }
+    #dot-world   { width: 214px; }
+    #dot-ca      { width: 106px; }
+    #dot-bay     { width: 132px; }
+    #dot-europe  { width: 200px; }
     .map-svg {
       position: absolute;
       top: 50%;
@@ -528,10 +538,11 @@
     /* Sized to fill the matching contour with minimal padding inside
        the 152×96 plate. Heights are auto so each viewBox keeps its
        aspect ratio. */
-    #map-us    { width: 176px; }
-    #map-world { width: 214px; }
-    #map-ca    { width: 106px; }   /* ~96% of plate height */
-    #map-bay   { width: 132px; }   /* height-bound to plate (Bay aspect ~1.18) */
+    #map-us      { width: 176px; }
+    #map-world   { width: 214px; }
+    #map-ca      { width: 106px; }   /* ~96% of plate height */
+    #map-bay     { width: 132px; }   /* height-bound to plate (Bay aspect ~1.18) */
+    #map-europe  { width: 200px; }   /* Europe viewBox 40×22 → aspect 1.82 */
     /* Land + state/country borders. fill/stroke cascade from the <g>
        wrapper to its <path> children; vector-effect keeps stroke width
        constant (in px) regardless of the SVG viewBox, so the new
@@ -609,6 +620,8 @@
       /* World: fit exact aspect ratio at portrait scale */
       #minimap.world, #minimap-dots.world { width: 178px; height: 69px; }
       #map-world, #dot-world              { width: 178px; }
+      #minimap.europe, #minimap-dots.europe { width: 166px; height: 91px; }
+      #map-europe, #dot-europe              { width: 166px; }
       #section-btn { min-width: 32px; height: 32px; font-size: 0.68rem; }
     }
     @media (orientation: landscape) and (max-height: 500px) {
@@ -622,6 +635,8 @@
       /* World: fit exact aspect ratio at landscape-mobile scale */
       #minimap.world, #minimap-dots.world { width: 185px; height: 72px; }
       #map-world, #dot-world              { width: 185px; }
+      #minimap.europe, #minimap-dots.europe { width: 172px; height: 95px; }
+      #map-europe, #dot-europe              { width: 172px; }
     }
   </style>
 </head>
@@ -2005,45 +2020,55 @@ function isInCalifornia(lat, lng) {
   return lat >= 32.5 && lat <= 42.0 && lng >= -124.5 && lng <= -114.0;
 }
 function isContigUS(lat, lng) { return lat >= 24.5 && lat <= 49.5 && lng >= -125 && lng <= -66; }
+function isInEurope(lat, lng) {
+  // Covers Iberian Peninsula through the Balkans, excluding non-European lngs.
+  return lat >= 34.0 && lat <= 57.0 && lng >= -13.0 && lng <= 27.0;
+}
 
 // Projections — all equirectangular at varying scales. Each maps the
 // region's bounding-box lng/lat to the SVG's viewBox 0..W, 0..H.
-function projectBay(lat, lng)   { return { x: (lng - (-123.533665)) * 100.0, y: (38.864245 - lat) * 100.0 }; }
-function projectCA(lat, lng)    { return { x: (lng - (-124.5))      * 10.0,  y: (42.0       - lat) * 10.0  }; }
-function projectUS(lat, lng)    { return { x: (lng - (-125.0))      * 10.0,  y: (49.5       - lat) * 10.0  }; }
+function projectBay(lat, lng)    { return { x: (lng - (-123.533665)) * 100.0, y: (38.864245 - lat) * 100.0 }; }
+function projectCA(lat, lng)     { return { x: (lng - (-124.5))      * 10.0,  y: (42.0       - lat) * 10.0  }; }
+function projectUS(lat, lng)     { return { x: (lng - (-125.0))      * 10.0,  y: (49.5       - lat) * 10.0  }; }
 // World viewBox now starts at lat 84°N (cropped from original lat 90)
 // to remove empty Arctic + Antarctic strips. Y origin shifts accordingly.
-function projectWorld(lat, lng) { return { x: lng + 180,                      y: 84 - lat                  }; }
+function projectWorld(lat, lng)  { return { x: lng + 180,                      y: 84 - lat                  }; }
+// Europe uses the same equirectangular coords as world (lng+180, 84-lat)
+// because europe.svg is just world.svg with viewBox="167 28 40 22".
+function projectEurope(lat, lng) { return { x: lng + 180,                      y: 84 - lat                  }; }
 
 // Dot/glow radii tuned per viewBox so the rendered dot is ~5–6px at
 // the displayed map size. Bay viewBox is largest in absolute units
 // (×100 scale vs the others' ×10) so its radii are bigger; world is
 // the smallest viewBox so its radii are tightest.
 const MAP_DOT_RADIUS = {
-  bay:   { glow: 14, dot: 6 },
-  ca:    { glow: 5.5, dot: 2.5 },
-  us:    { glow: 18, dot: 7.5 },
-  world: { glow: 15, dot: 6.5 },
+  bay:    { glow: 14,  dot: 6   },
+  ca:     { glow: 5.5, dot: 2.5 },
+  us:     { glow: 18,  dot: 7.5 },
+  world:  { glow: 15,  dot: 6.5 },
+  europe: { glow: 1.5, dot: 0.65 },
 };
 
 // Radius of gray neighbor-video pins — ~55% of the main dot
-const MAP_PIN_RADIUS = { bay: 4, ca: 1.4, us: 4.5, world: 3.5 };
+const MAP_PIN_RADIUS = { bay: 4, ca: 1.4, us: 4.5, world: 3.5, europe: 0.4 };
 
-// {bay:[{idx,x,y}], ca:[...], us:[...], world:[...]} — built once after VIDEO_META is merged
+// {bay:[{idx,x,y}], ca:[...], us:[...], world:[...], europe:[...]} — built once after VIDEO_META is merged
 let mapPinData = null;
 
 function buildMapPinData() {
-  mapPinData = { bay: [], ca: [], us: [], world: [] };
+  mapPinData = { bay: [], ca: [], us: [], world: [], europe: [] };
   VIDEOS.forEach((v, idx) => {
     if (v.lat == null || v.lng == null || v.noPin) return;
     const type =
-      isInBayArea(v.lat, v.lng)    ? "bay"   :
-      isInCalifornia(v.lat, v.lng) ? "ca"    :
-      isContigUS(v.lat, v.lng)     ? "us"    : "world";
+      isInBayArea(v.lat, v.lng)    ? "bay"    :
+      isInCalifornia(v.lat, v.lng) ? "ca"     :
+      isContigUS(v.lat, v.lng)     ? "us"     :
+      isInEurope(v.lat, v.lng)     ? "europe" : "world";
     const project =
-      type === "bay" ? projectBay :
-      type === "ca"  ? projectCA  :
-      type === "us"  ? projectUS  : projectWorld;
+      type === "bay"    ? projectBay    :
+      type === "ca"     ? projectCA     :
+      type === "us"     ? projectUS     :
+      type === "europe" ? projectEurope : projectWorld;
     const { x, y } = project(v.lat, v.lng);
     mapPinData[type].push({ idx, x, y });
   });
@@ -2077,22 +2102,25 @@ async function initMiniMap() {
   }
 
   try {
-    const [usText, worldText, caText, bayText] = await Promise.all([
+    const [usText, worldText, caText, bayText, europeText] = await Promise.all([
       fetch("/maps/us.svg").then(r => r.text()),
       fetch("/maps/world.svg").then(r => r.text()),
       fetch("/maps/ca.svg").then(r => r.text()),
       fetch("/maps/bay.svg").then(r => r.text()),
+      fetch("/maps/europe.svg").then(r => r.text()),
     ]);
     minimapEl.innerHTML =
-      buildLand(bayText,   "bay") +
-      buildLand(caText,    "ca") +
-      buildLand(usText,    "us") +
-      buildLand(worldText, "world");
+      buildLand(bayText,    "bay") +
+      buildLand(caText,     "ca") +
+      buildLand(usText,     "us") +
+      buildLand(worldText,  "world") +
+      buildLand(europeText, "europe");
     minimapDotsEl.innerHTML =
-      buildDots(bayText,   "bay") +
-      buildDots(caText,    "ca") +
-      buildDots(usText,    "us") +
-      buildDots(worldText, "world");
+      buildDots(bayText,    "bay") +
+      buildDots(caText,     "ca") +
+      buildDots(usText,     "us") +
+      buildDots(worldText,  "world") +
+      buildDots(europeText, "europe");
     // Build pin position lookup now that both VIDEOS metadata and SVG
     // coordinate systems are available.
     buildMapPinData();
@@ -2105,7 +2133,7 @@ async function initMiniMap() {
   }
 }
 
-const MAP_TYPES = ["bay", "ca", "us", "world"];
+const MAP_TYPES = ["bay", "ca", "us", "world", "europe"];
 
 function updateMiniMap() {
   const v = VIDEOS[current];
@@ -2114,13 +2142,14 @@ function updateMiniMap() {
   const dotEls  = Object.fromEntries(MAP_TYPES.map(k => [k, document.getElementById("dot-" + k)]));
   if (MAP_TYPES.some(k => !landEls[k] || !dotEls[k])) return; // SVGs still loading
 
-  // Four-tier zoom cascade. Each predicate is checked from most to
+  // Five-tier zoom cascade. Each predicate is checked from most to
   // least zoomed, so a Bay Area clip resolves to "bay" before
-  // "ca"/"us" can match it.
+  // "ca"/"us" can match it. Europe intercepts before falling to world.
   const mapType =
-    isInBayArea(v.lat, v.lng)     ? "bay"   :
-    isInCalifornia(v.lat, v.lng)  ? "ca"    :
-    isContigUS(v.lat, v.lng)      ? "us"    :
+    isInBayArea(v.lat, v.lng)     ? "bay"    :
+    isInCalifornia(v.lat, v.lng)  ? "ca"     :
+    isContigUS(v.lat, v.lng)      ? "us"     :
+    isInEurope(v.lat, v.lng)      ? "europe" :
                                     "world";
 
   if (mapType !== currentMapType) {
@@ -2136,10 +2165,11 @@ function updateMiniMap() {
   }
 
   const project =
-    mapType === "bay" ? projectBay :
-    mapType === "ca"  ? projectCA  :
-    mapType === "us"  ? projectUS  :
-                        projectWorld;
+    mapType === "bay"    ? projectBay    :
+    mapType === "ca"     ? projectCA     :
+    mapType === "us"     ? projectUS     :
+    mapType === "europe" ? projectEurope :
+                           projectWorld;
   const pos = project(v.lat, v.lng);
   // Position dot in the unmasked overlay SVG so it can never get
   // clipped by the landmass mask (e.g. Tahoe sitting on the eastern
