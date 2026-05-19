@@ -507,9 +507,9 @@
       opacity: 0;
       transition: opacity 1.2s ease;
     }
-    /* Allow clicks through to map pins only — must override on both SVG and circle */
+    /* Allow clicks through to map pin groups only */
     #minimap-dots .dot-svg { pointer-events: none; }
-    #minimap-dots .map-pin { pointer-events: auto; }
+    #minimap-dots .map-pin-group { pointer-events: auto; }
     #minimap-dots.visible { opacity: 1; }
     .dot-svg {
       position: absolute;
@@ -558,12 +558,16 @@
     /* GPS dot (Apple Maps blue + white ring + cyan glow) */
     .map-pin {
       fill: rgba(255,255,255,0.88);
-      cursor: pointer;
       transition: fill 0.15s;
+      pointer-events: none; /* hit target is the sibling transparent circle */
     }
-    .map-pin:hover { fill: #fff; }
+    .map-pin-group {
+      cursor: pointer;
+      pointer-events: auto;
+    }
+    .map-pin-group:hover .map-pin { fill: #fff; }
     /* Pins and tooltips are desktop-only — no hover on touch devices */
-    @media (hover: none) { .map-pin { display: none; } }
+    @media (hover: none) { .map-pin-group { display: none; } }
     /* Map pin tooltip */
     #map-tooltip {
       position: fixed;
@@ -2050,6 +2054,13 @@ const MAP_DOT_RADIUS = {
 // Radius of gray neighbor-video pins — ~55% of the main dot
 const MAP_PIN_RADIUS = { bay: 4, ca: 1.4, us: 4.5, world: 3.5, europe: 0.4 };
 
+// Transparent hit-target radius — tuned so each renders as ~8 px at display size.
+// Formula: target_px * (viewBox_width / display_width)
+//   bay:    8 * (232.5 / 132) ≈ 14    us:  8 * (585  / 176) ≈ 26
+//   ca:     8 * (105   / 106) ≈  8    world: 8 * (360 / 214) ≈ 13
+//   europe: 8 * (40    / 200) ≈  1.6
+const MAP_HIT_RADIUS = { bay: 14, ca: 8, us: 26, world: 13, europe: 1.6 };
+
 // {bay:[{file,x,y}], ca:[...], us:[...], world:[...], europe:[...]}
 // Built from MASTER_VIDEOS so pins always show the full catalog regardless
 // of which section is currently active.
@@ -2200,19 +2211,34 @@ function updateMiniMap() {
     const pinsGroup = dotEls[mapType].querySelector(".map-pins");
     if (pinsGroup) {
       pinsGroup.innerHTML = "";
-      const r = MAP_PIN_RADIUS[mapType];
+      const r   = MAP_PIN_RADIUS[mapType];
+      const rHit = MAP_HIT_RADIUS[mapType];
       const currentFile = VIDEOS[current]?.file;
       mapPinData[mapType].forEach(({ file, caption, x, y }) => {
         if (file === currentFile) return; // blue dot already marks current
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.classList.add("map-pin-group");
+
+        // Large transparent circle = hit target
+        const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        hit.setAttribute("cx", x);
+        hit.setAttribute("cy", y);
+        hit.setAttribute("r", rHit);
+        hit.setAttribute("fill", "transparent");
+
+        // Small visible circle
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         c.setAttribute("cx", x);
         c.setAttribute("cy", y);
         c.setAttribute("r", r);
         c.classList.add("map-pin");
-        c.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(file); });
-        c.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
-        c.addEventListener("mouseleave", hideMapTooltip);
-        pinsGroup.appendChild(c);
+
+        g.appendChild(hit);
+        g.appendChild(c);
+        g.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(file); });
+        g.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
+        g.addEventListener("mouseleave", hideMapTooltip);
+        pinsGroup.appendChild(g);
       });
     }
   }
@@ -2369,18 +2395,37 @@ setTimeout(() => {
 const mapTooltip = document.getElementById("map-tooltip");
 let tooltipHideTimer = null;
 
+function tooltipPos(cx, cy) {
+  const tw  = mapTooltip.offsetWidth;
+  const th  = mapTooltip.offsetHeight;
+  const pad = 8;
+  let left = cx + 14;
+  let top  = cy - th - 8;
+  // Flip left if right edge clips
+  if (left + tw + pad > window.innerWidth) left = cx - tw - 14;
+  // Hard-clamp both horizontal edges
+  left = Math.max(pad, Math.min(left, window.innerWidth - tw - pad));
+  // Flip below cursor if top clips
+  if (top < pad) top = cy + 14;
+  // Hard-clamp bottom edge
+  if (top + th + pad > window.innerHeight) top = window.innerHeight - th - pad;
+  return { left, top };
+}
+
 document.addEventListener("mousemove", e => {
   if (mapTooltip.classList.contains("visible")) {
-    mapTooltip.style.left = (e.clientX + 14) + "px";
-    mapTooltip.style.top  = (e.clientY - 28) + "px";
+    const { left, top } = tooltipPos(e.clientX, e.clientY);
+    mapTooltip.style.left = left + "px";
+    mapTooltip.style.top  = top  + "px";
   }
 });
 
 function showMapTooltip(caption, x, y) {
   clearTimeout(tooltipHideTimer);
   mapTooltip.textContent = caption;
-  mapTooltip.style.left = (x + 14) + "px";
-  mapTooltip.style.top  = (y - 28) + "px";
+  const { left, top } = tooltipPos(x, y);
+  mapTooltip.style.left = left + "px";
+  mapTooltip.style.top  = top  + "px";
   mapTooltip.classList.add("visible");
 }
 function hideMapTooltip() {
