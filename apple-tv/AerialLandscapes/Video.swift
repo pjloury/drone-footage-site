@@ -48,12 +48,15 @@ struct Video: Identifiable, Codable {
     
     var remoteVideoURL: URL? {
         guard let remotePath = remoteVideoPath else { return nil }
+        // R2 / CDN videos already store the full URL in remotePath
+        if remotePath.hasPrefix("https://") { return URL(string: remotePath) }
         return URL(string: "https://\(AWSCredentials.bucketName).s3.\(AWSCredentials.region).amazonaws.com/\(remotePath)")
     }
-    
+
     var remoteThumbnailURL: URL? {
         guard let thumbnailPath = remoteThumbnailPath else { return nil }
-        // Use S3VideoService to get a signed URL
+        // R2 / CDN thumbnails are publicly accessible — no signing needed
+        if thumbnailPath.hasPrefix("https://") { return URL(string: thumbnailPath) }
         let s3Service = S3VideoService()
         let url = URL(string: "https://\(AWSCredentials.bucketName).s3.\(AWSCredentials.region).amazonaws.com/\(thumbnailPath)")!
         let request = s3Service.generateSignedRequest(for: url)
@@ -71,20 +74,14 @@ struct Video: Identifiable, Codable {
     var thumbnailURL: URL? {
         if FeatureFlags.generateThumbnails == false {
             if let localPath = localThumbnailPath {
-                // For local thumbnails, use bundle URL (same as videos)
-                // Extract just the filename from the path, similar to video URL logic
                 let filename = localPath.components(separatedBy: "/").last ?? localPath
                 let localURL = Bundle.main.bundleURL.appendingPathComponent(filename)
-                print("Checking local thumbnail at: \(localURL.path)")
                 if FileManager.default.fileExists(atPath: localURL.path) {
-                    print("✅ NON GEN Found local thumbnail")
                     return localURL
-                } else {
-                    print("❌ NON GEN Local thumbnail file not found")
-                    return nil
                 }
             }
-            return nil
+            // Fall through to remote poster (R2 CDN videos)
+            return remoteThumbnailURL
         }
         
         else {

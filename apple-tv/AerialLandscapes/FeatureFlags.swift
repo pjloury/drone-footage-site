@@ -8,17 +8,12 @@
 import Foundation
 
 struct FeatureFlags {
-    /// When true, show the drones.pjloury.com WebView experience instead of
-    /// the native Aerial Landscapes player.  Set to false to fall back to
-    /// the original tab-based interface with local + S3 video browsing.
-    static let useWebExperience = true
-
-    /// When true, include 4 short videos for testing purposes
+    /// When true, include 4 short test videos in the catalog
     static let enableTestVideos = false
 
-    /// When true, retrieve remote videos from S3
+    /// When true, retrieve remote videos from S3 (legacy — R2 catalog is now the default)
     static let enableRemoteVideos = false
 
-    /// When true, generate thumbnails from video files
+    /// When true, generate thumbnails from local video files
     static let generateThumbnails = false
 }

@@ -9,20 +9,6 @@ import SwiftUI
 import AVKit
 
 struct ContentView: View {
-    var body: some View {
-        if FeatureFlags.useWebExperience {
-            // New experience: full-screen WebView wrapping drones.pjloury.com
-            DroneWebViewContainer()
-        } else {
-            // Legacy experience: native tab UI with local + S3 video browsing
-            LegacyAerialLandscapesView()
-        }
-    }
-}
-
-// Original Aerial Landscapes tab interface, kept intact.
-// Isolated so VideoPlayerModel is never instantiated in the web path.
-private struct LegacyAerialLandscapesView: View {
     @StateObject private var videoPlayerModel = VideoPlayerModel()
     @State private var selectedTab: Tab = .watchNow
 

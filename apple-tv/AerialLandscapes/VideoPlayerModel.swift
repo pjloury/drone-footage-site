@@ -58,8 +58,8 @@ class VideoPlayerModel: NSObject, ObservableObject {
         setupPlayerObserver()
         addPlayerObserver()
         
-        // Initialize VideoManager with default from Config
-        let defaultVideos = videoConfig.videos.map(Video.fromMetadata)
+        // Initialize VideoManager with the R2 catalog
+        let defaultVideos = VideoConfig.allVideos
         videoManager.updateVideos(defaultVideos)
             
 //            // First launch - select all local videos by default
