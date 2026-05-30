@@ -27,7 +27,12 @@
 		604BFF6E2D238120004DA734 /* AerialLandscapes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AerialLandscapes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000012D238122004DA734 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXBuildFile section */
+		AA0000022D238122004DA734 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000012D238122004DA734 /* WebKit.framework */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		604BFF702D238120004DA734 /* AerialLandscapes */ = {
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000022D238122004DA734 /* WebKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,7 +85,16 @@
 				604BFF812D238122004DA734 /* AerialLandscapesTests */,
 				604BFF8B2D238122004DA734 /* AerialLandscapesUITests */,
 				604BFF6F2D238120004DA734 /* Products */,
+				AA0000032D238122004DA734 /* Frameworks */,
 			);
+			sourceTree = "<group>";
+		};
+		AA0000032D238122004DA734 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000012D238122004DA734 /* WebKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		604BFF6F2D238120004DA734 /* Products */ = {
