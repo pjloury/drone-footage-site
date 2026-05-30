@@ -15,13 +15,19 @@ struct Video: Identifiable, Codable {
     var localThumbnailPath: String?  // Add this property
     
     // State
-    var isSelected: Bool 
-    
+    var isSelected: Bool
+
+    // Location (from VIDEO_META — used for minimap zone + dot placement)
+    var lat: Double?
+    var lng: Double?
+
     // Computed properties
     var isLocal: Bool { localVideoPath != nil }
-    
-    // Initialize with lowercase geozone
-    init(id: String, displayTitle: String, geozone: String, remoteVideoPath: String?, remoteThumbnailPath: String?, localVideoPath: String?, localThumbnailPath: String?, isSelected: Bool) {
+
+    init(id: String, displayTitle: String, geozone: String,
+         remoteVideoPath: String?, remoteThumbnailPath: String?,
+         localVideoPath: String?, localThumbnailPath: String?,
+         isSelected: Bool, lat: Double? = nil, lng: Double? = nil) {
         self.id = id
         self.displayTitle = displayTitle
         self.geozone = geozone.lowercased()
@@ -30,6 +36,8 @@ struct Video: Identifiable, Codable {
         self.localVideoPath = localVideoPath
         self.localThumbnailPath = localThumbnailPath
         self.isSelected = isSelected
+        self.lat = lat
+        self.lng = lng
     }
     
     var url: URL {

@@ -2,11 +2,8 @@
 //  PlayerOverlayView.swift
 //  AerialLandscapes
 //
-//  SwiftUI overlay drawn on top of the fullscreen AVPlayer:
-//  - Left/right nav arrows (glass, tapered, flash on press)
-//  - Title caption (bottom-left, toggleable)
-//  - Section name badge (top-right when not shuffling)
-//  - Section picker dropdown (top-right, same position as on the website)
+//  SwiftUI overlay: nav arrows, title caption, section button (always visible),
+//  minimap (bottom-right), and the section picker dropdown.
 //
 
 import SwiftUI
@@ -19,8 +16,8 @@ struct PlayerOverlayView: View {
     var body: some View {
         ZStack {
             navArrows
-            sectionBadge
-            titleCaption
+            topRightControls
+            bottomRow
             if model.showSectionPicker {
                 SectionPickerOverlay(model: model)
                     .transition(.opacity.combined(with: .move(edge: .top)))
@@ -41,56 +38,89 @@ struct PlayerOverlayView: View {
         .ignoresSafeArea()
     }
 
-    // ── Section badge (top-right, only when a section is active) ─────────
+    // ── Top-right: section button (always visible) ────────────────────────
+    // Mirrors the website's shuffle button in the top-right corner.
+    // Play/Pause on the Siri Remote opens the picker.
 
-    private var sectionBadge: some View {
+    private var topRightControls: some View {
         VStack {
             HStack {
                 Spacer()
-                if let section = model.activeSection,
-                   let name = StreamingPlayerModel.sections.first(where: { $0.id == section })?.name {
-                    Text(name.uppercased())
-                        .font(.system(size: 18, weight: .light, design: .default))
-                        .tracking(3)
-                        .foregroundColor(.white.opacity(0.85))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(.white.opacity(0.2), lineWidth: 1)
-                                )
-                        )
-                        .padding(.top, 44)
-                        .padding(.trailing, 60)
-                        .transition(.opacity)
-                }
+                SectionButton(model: model)
+                    .padding(.top, 44)
+                    .padding(.trailing, 60)
             }
             Spacer()
         }
     }
 
-    // ── Title caption (bottom-left, like the website) ─────────────────────
+    // ── Bottom: title caption (left) + minimap (right) ────────────────────
 
-    private var titleCaption: some View {
+    private var bottomRow: some View {
         VStack {
             Spacer()
-            HStack {
+            HStack(alignment: .bottom) {
+                // Title caption
                 if model.showTitleCard {
                     Text(model.currentTitle)
-                        .font(.system(size: 36, weight: .light, design: .default))
+                        .font(.system(size: 36, weight: .light))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: 1)
-                        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 0)
+                        .shadow(color: .black.opacity(0.6), radius: 12)
                         .padding(.leading, 80)
                         .padding(.bottom, 70)
                         .transition(.opacity)
                 }
                 Spacer()
+                // Minimap
+                if let lat = model.currentLat, let lng = model.currentLng {
+                    MinimapView(lat: lat, lng: lng)
+                        .padding(.trailing, 60)
+                        .padding(.bottom, 60)
+                        .transition(.opacity)
+                }
             }
         }
+    }
+}
+
+// MARK: - Section button (always visible, like the website's top-right shuffle icon)
+
+struct SectionButton: View {
+    @ObservedObject var model: StreamingPlayerModel
+
+    var label: String {
+        guard let sec = model.activeSection,
+              let name = StreamingPlayerModel.sections.first(where: { $0.id == sec })?.name
+        else { return "" }
+        return name.uppercased()
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            // Shuffle icon — always shown; becomes filled when in shuffle mode
+            Image(systemName: model.activeSection == nil ? "shuffle" : "line.3.horizontal.decrease")
+                .font(.system(size: 15, weight: .light))
+                .foregroundColor(.white.opacity(0.8))
+
+            if model.activeSection != nil {
+                Text(label)
+                    .font(.system(size: 16, weight: .light))
+                    .tracking(2)
+                    .foregroundColor(.white.opacity(0.85))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 9)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .stroke(.white.opacity(model.showSectionPicker ? 0.5 : 0.25), lineWidth: 1)
+                )
+        )
+        .opacity(model.showSectionPicker ? 1.0 : 0.75)
     }
 }
 
@@ -102,28 +132,23 @@ struct NavArrowView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let arrowHeight = geo.size.height * 0.38
-            let arrowWidth  = CGFloat(70)
-
             VStack {
                 Spacer()
                 ZStack {
                     TaperedArrowShape(pointsLeft: pointsLeft)
-                        .fill(.white.opacity(0.08))
-                    TaperedArrowShape(pointsLeft: pointsLeft)
-                        .stroke(.white.opacity(0.18), lineWidth: 1)
-                    // Blur layer via material in a clipped container
-                    TaperedArrowShape(pointsLeft: pointsLeft)
                         .fill(.ultraThinMaterial)
                         .opacity(0.55)
-
+                    TaperedArrowShape(pointsLeft: pointsLeft)
+                        .fill(.white.opacity(0.06))
+                    TaperedArrowShape(pointsLeft: pointsLeft)
+                        .stroke(.white.opacity(0.18), lineWidth: 1)
                     Image(systemName: pointsLeft ? "chevron.left" : "chevron.right")
                         .font(.system(size: 26, weight: .light))
                         .foregroundColor(.white.opacity(0.9))
                         .shadow(color: .black.opacity(0.5), radius: 4)
                         .offset(x: pointsLeft ? 4 : -4)
                 }
-                .frame(width: arrowWidth, height: arrowHeight)
+                .frame(width: 70, height: geo.size.height * 0.38)
                 .opacity(lit ? 1.0 : 0.35)
                 .animation(.easeOut(duration: lit ? 0.25 : 1.0), value: lit)
                 Spacer()
@@ -133,10 +158,8 @@ struct NavArrowView: View {
     }
 }
 
-// Tapered glass panel: flat on the screen edge, pinched inward on the opposite edge
 struct TaperedArrowShape: Shape {
     let pointsLeft: Bool
-
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let pinch = rect.height * 0.15
@@ -161,43 +184,34 @@ struct TaperedArrowShape: Shape {
 struct SectionPickerOverlay: View {
     @ObservedObject var model: StreamingPlayerModel
 
-    // Picker items: 0 = Shuffle All, 1-4 = sections
     private let items: [(id: String?, name: String, icon: String?)] = [
-        (nil,        "Shuffle All", "shuffle"),
-        ("cities",   "Cities",     nil),
-        ("coastal",  "Coastal",    nil),
-        ("mountains","Mountains",  nil),
-        ("desert",   "Desert",     nil),
+        (nil,         "Shuffle All", "shuffle"),
+        ("cities",    "Cities",      nil),
+        ("coastal",   "Coastal",     nil),
+        ("mountains", "Mountains",   nil),
+        ("desert",    "Desert",      nil),
     ]
 
     var body: some View {
-        VStack(alignment: .trailing) {
+        VStack {
             HStack {
                 Spacer()
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(items.indices, id: \.self) { idx in
                         pickerRow(for: items[idx], at: idx)
                         if idx == 0 {
-                            Divider()
-                                .background(.white.opacity(0.12))
-                                .padding(.horizontal, 14)
+                            Divider().background(.white.opacity(0.12)).padding(.horizontal, 14)
                         }
                     }
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 14)
                         .fill(.black.opacity(0.65))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(.ultraThinMaterial)
-                                .opacity(0.7)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(.white.opacity(0.15), lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial).opacity(0.7))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.15), lineWidth: 1))
                 )
-                .padding(.top, 70)
+                .shadow(color: .black.opacity(0.4), radius: 20)
+                .padding(.top, 106)    // sits just below the section button
                 .padding(.trailing, 60)
             }
             Spacer()
@@ -210,20 +224,16 @@ struct SectionPickerOverlay: View {
         let isActive  = item.id == model.activeSection
 
         HStack(spacing: 0) {
-            // Active dot
             Circle()
                 .fill(isActive ? Color.white : Color.clear)
                 .frame(width: 6, height: 6)
-                .padding(.leading, 18)
-                .padding(.trailing, 10)
+                .padding(.leading, 18).padding(.trailing, 10)
 
-            // Optional icon (shuffle row)
             if let icon = item.icon {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .light))
                     .foregroundColor(isFocused ? .white : .white.opacity(0.55))
-                    .frame(width: 20)
-                    .padding(.trailing, 8)
+                    .frame(width: 20).padding(.trailing, 8)
             } else {
                 Color.clear.frame(width: 28)
             }

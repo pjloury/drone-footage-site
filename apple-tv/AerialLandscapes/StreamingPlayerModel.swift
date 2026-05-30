@@ -2,29 +2,43 @@
 //  StreamingPlayerModel.swift
 //  AerialLandscapes
 //
-//  Manages AVQueuePlayer streaming R2 videos in shuffle or section mode.
-//  UI state (@Published properties) drives PlayerOverlayView reactively.
+//  Manages two AVPlayers that crossfade over 4 seconds (matching the website).
+//  One player is always "front" (visible), the other pre-loads the next clip.
+//  When ~4 s remain in the current clip, the back player starts and crossfadeCallback
+//  fires — PlayerViewController animates layer opacities.
 //
 
 import AVFoundation
-import Combine
 import SwiftUI
 
 class StreamingPlayerModel: ObservableObject {
 
-    // ── Playback ─────────────────────────────────────────────────────────────
-    let player = AVQueuePlayer()
-    @Published private(set) var currentTitle = ""
-    @Published private(set) var activeSection: String? = nil   // nil = shuffle all
+    // ── Two players for crossfade ─────────────────────────────────────────
+    let playerA = AVPlayer()
+    let playerB = AVPlayer()
 
-    // ── UI state (read by overlay, mutated via handleRemotePress) ────────────
+    // Which player is currently front (full opacity / audible)
+    private(set) var isFrontA = true
+
+    var frontPlayer: AVPlayer { isFrontA ? playerA : playerB }
+    var backPlayer:  AVPlayer { isFrontA ? playerB : playerA }
+
+    // Called by PlayerViewController when it should animate the crossfade
+    var crossfadeCallback: (() -> Void)?
+
+    // ── Published state ───────────────────────────────────────────────────
+    @Published private(set) var currentTitle = ""
+    @Published private(set) var activeSection: String? = nil
+    @Published private(set) var currentLat: Double? = nil
+    @Published private(set) var currentLng: Double? = nil
+
     @Published var showSectionPicker = false
-    @Published var pickerFocusIndex  = 0        // 0 = Shuffle All, 1-4 = sections
+    @Published var pickerFocusIndex  = 0
     @Published var showTitleCard     = true
     @Published var leftFlash         = false
     @Published var rightFlash        = false
 
-    // ── Sections (match the website exactly) ────────────────────────────────
+    // ── Sections ──────────────────────────────────────────────────────────
     static let sections: [(id: String, name: String)] = [
         ("cities",    "Cities"),
         ("coastal",   "Coastal"),
@@ -32,19 +46,26 @@ class StreamingPlayerModel: ObservableObject {
         ("desert",    "Desert"),
     ]
 
-    // ── Internal queue ───────────────────────────────────────────────────────
+    // ── Internal queue ────────────────────────────────────────────────────
     private var queue: [Video] = []
     private(set) var currentQueueIndex = 0
-    private var itemObservation: NSKeyValueObservation?
-    private var lastKnownItem: AVPlayerItem?
+
+    private var timeObserver: Any?
+    private var crossfadeArmed = false   // true once crossfade has been triggered for current clip
 
     // MARK: Init
 
     init() {
+        playerA.isMuted = false
+        playerB.isMuted = true   // back player always muted
         loadSection(nil)
     }
 
-    // MARK: Section loading
+    deinit {
+        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs) }
+    }
+
+    // MARK: Section / queue loading
 
     func loadSection(_ section: String?) {
         activeSection = section
@@ -53,54 +74,48 @@ class StreamingPlayerModel: ObservableObject {
             : VideoConfig.allVideos.filter { $0.geozone == section }
         queue = pool.shuffled()
         currentQueueIndex = 0
-        rebuildFromCurrentIndex()
+        crossfadeArmed = false
+        startClip(at: 0, onFront: true, startPlaying: true)
+        preloadBack()
+        startTimeObserver()
     }
 
     // MARK: Navigation
 
     func next() {
         flash(right: true)
+        cancelCrossfade()
         currentQueueIndex = (currentQueueIndex + 1) % queue.count
-        itemObservation?.invalidate()
-        player.advanceToNextItem()
-        enqueueAhead()
-        currentTitle = queue.isEmpty ? "" : queue[currentQueueIndex].displayTitle
-        player.play()
-        startObservingItemChanges()
+        crossfadeArmed = false
+        startClip(at: currentQueueIndex, onFront: true, startPlaying: true)
+        preloadBack()
+        startTimeObserver()
     }
 
     func prev() {
         flash(right: false)
+        cancelCrossfade()
         currentQueueIndex = (currentQueueIndex - 1 + queue.count) % queue.count
-        itemObservation?.invalidate()
-        rebuildFromCurrentIndex()
+        crossfadeArmed = false
+        startClip(at: currentQueueIndex, onFront: true, startPlaying: true)
+        preloadBack()
+        startTimeObserver()
     }
 
     // MARK: Remote input
 
-    /// Called by PlayerViewController.pressesBegan for every Siri Remote press.
-    /// Returns true if the press was consumed (suppresses system handling).
     func handleRemotePress(_ type: UIPress.PressType) -> Bool {
         switch type {
-
         case .leftArrow:
-            if showSectionPicker { showSectionPicker = false }
-            else { prev() }
+            if showSectionPicker { showSectionPicker = false } else { prev() }
             return true
-
         case .rightArrow:
-            if showSectionPicker { showSectionPicker = false }
-            else { next() }
+            if showSectionPicker { showSectionPicker = false } else { next() }
             return true
-
         case .upArrow:
-            if showSectionPicker {
-                pickerFocusIndex = max(0, pickerFocusIndex - 1)
-            } else {
-                showTitleCard.toggle()
-            }
+            if showSectionPicker { pickerFocusIndex = max(0, pickerFocusIndex - 1) }
+            else { showTitleCard.toggle() }
             return true
-
         case .downArrow:
             if showSectionPicker {
                 pickerFocusIndex = min(Self.sections.count, pickerFocusIndex + 1)
@@ -108,84 +123,127 @@ class StreamingPlayerModel: ObservableObject {
                 showTitleCard.toggle()
             }
             return true
-
         case .select:
             if showSectionPicker { confirmSection() }
             return true
-
         case .menu:
-            if showSectionPicker {
-                showSectionPicker = false
-                return true
-            }
-            return false   // Let system handle Menu when picker is closed (focuses TV menu)
-
+            if showSectionPicker { showSectionPicker = false; return true }
+            return false
         case .playPause:
             toggleSectionPicker()
             return true
-
         default:
             return false
         }
     }
 
-    // MARK: Private helpers
+    // MARK: Private — clip loading
 
-    private func rebuildFromCurrentIndex() {
-        player.removeAllItems()
-        let prefetch = min(5, queue.count)
-        for offset in 0..<prefetch {
-            let idx = (currentQueueIndex + offset) % queue.count
-            if let url = queue[idx].remoteVideoURL {
-                player.insert(AVPlayerItem(url: url), after: player.items().last)
-            }
-        }
-        currentTitle = queue.isEmpty ? "" : queue[currentQueueIndex].displayTitle
-        player.play()
-        startObservingItemChanges()
-    }
+    private func startClip(at index: Int, onFront: Bool, startPlaying: Bool) {
+        let video = queue[index]
+        let player = onFront ? frontPlayer : backPlayer
+        guard let url = video.remoteVideoURL else { return }
 
-    private func enqueueAhead() {
-        let aheadIdx = (currentQueueIndex + 4) % queue.count
-        if let url = queue[aheadIdx].remoteVideoURL {
-            player.insert(AVPlayerItem(url: url), after: player.items().last)
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+
+        if onFront {
+            currentTitle = video.displayTitle
+            currentLat   = video.lat
+            currentLng   = video.lng
+            player.isMuted = false
+            if startPlaying { player.seek(to: .zero); player.play() }
+        } else {
+            player.isMuted = true
         }
     }
 
-    private func startObservingItemChanges() {
-        itemObservation?.invalidate()
-        lastKnownItem = player.currentItem
-        itemObservation = player.observe(\.currentItem) { [weak self] player, _ in
-            guard let self = self else { return }
-            DispatchQueue.main.async {
-                let newItem = player.currentItem
-                guard newItem !== self.lastKnownItem, newItem != nil else { return }
-                self.lastKnownItem = newItem
-                self.currentQueueIndex = (self.currentQueueIndex + 1) % self.queue.count
-                self.currentTitle = self.queue.isEmpty ? "" : self.queue[self.currentQueueIndex].displayTitle
-                self.enqueueAhead()
-            }
+    private func preloadBack() {
+        let nextIdx = (currentQueueIndex + 1) % queue.count
+        startClip(at: nextIdx, onFront: false, startPlaying: false)
+    }
+
+    // MARK: Private — time observer + crossfade trigger
+
+    private func startTimeObserver() {
+        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs) }
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
+            self?.checkCrossfade()
         }
     }
+
+    private func checkCrossfade() {
+        guard !crossfadeArmed,
+              let item = frontPlayer.currentItem,
+              item.status == .readyToPlay else { return }
+        let duration  = item.duration.seconds
+        let remaining = duration - frontPlayer.currentTime().seconds
+        guard duration.isFinite, duration > 0, remaining > 0 else { return }
+
+        if remaining <= 4.2 {
+            crossfadeArmed = true
+            triggerCrossfade()
+        }
+    }
+
+    private func triggerCrossfade() {
+        // Start back player (pre-loaded clip) slightly ahead of the visual fade
+        backPlayer.seek(to: .zero)
+        backPlayer.play()
+
+        // Tell PlayerViewController to animate the two layers
+        crossfadeCallback?()
+
+        // After 4 s the fade is complete — swap front/back tracking
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) { [weak self] in
+            self?.completeCrossfade()
+        }
+    }
+
+    private func completeCrossfade() {
+        // Old front player stops (it's now behind the new clip)
+        frontPlayer.pause()
+        frontPlayer.replaceCurrentItem(with: nil)
+
+        // Swap which player is "front"
+        isFrontA.toggle()
+        frontPlayer.isMuted = false
+        backPlayer.isMuted  = true
+
+        // Advance queue index
+        currentQueueIndex = (currentQueueIndex + 1) % queue.count
+        currentTitle = queue[currentQueueIndex].displayTitle
+        currentLat   = queue[currentQueueIndex].lat
+        currentLng   = queue[currentQueueIndex].lng
+        crossfadeArmed = false
+
+        // Pre-load the clip after this one
+        preloadBack()
+        startTimeObserver()
+    }
+
+    private func cancelCrossfade() {
+        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs); timeObserver = nil }
+        backPlayer.pause()
+        crossfadeArmed = false
+    }
+
+    // MARK: Private — section picker
 
     private func toggleSectionPicker() {
-        if showSectionPicker {
-            showSectionPicker = false
-            return
-        }
+        if showSectionPicker { showSectionPicker = false; return }
         let idx = Self.sections.firstIndex(where: { $0.id == activeSection })
         pickerFocusIndex = idx.map { $0 + 1 } ?? 0
         showSectionPicker = true
     }
 
     private func confirmSection() {
-        if pickerFocusIndex == 0 {
-            loadSection(nil)
-        } else {
-            loadSection(Self.sections[pickerFocusIndex - 1].id)
-        }
+        if pickerFocusIndex == 0 { loadSection(nil) }
+        else { loadSection(Self.sections[pickerFocusIndex - 1].id) }
         showSectionPicker = false
     }
+
+    // MARK: Private — arrow flash
 
     private func flash(right: Bool) {
         if right {
