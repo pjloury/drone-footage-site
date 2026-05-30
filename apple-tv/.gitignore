@@ -1,0 +1,19 @@
+# Xcode
+.DS_Store
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/
+DerivedData/
+build/
+
+# AWS Configuration
+AerialLandscapes/AWSCredentials.swift
+
+AerialLandscapes/Assets.xcassets/*
+
+
+AerialLandscapes/Videos/*
+AerialLandscapes/Test-Videos/TestAlps.mov
+AerialLandscapes/Test-Videos/TestCopa.mov
+AerialLandscapes/Test-Videos/TestHvar.mov
+AerialLandscapes/Test-Videos/TestValencia.mov
