@@ -405,6 +405,7 @@
       width: 5px; height: 5px; border-radius: 50%;
       background: #fff; margin-right: 10px; flex-shrink: 0;
     }
+    .section-item.tv-focus { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.9); outline: none; }
     .section-item:not(.active)::before {
       content: ""; display: inline-block;
       width: 5px; height: 5px; margin-right: 10px; flex-shrink: 0;
@@ -975,8 +976,14 @@ Object.defineProperty(window, 'front', {
   configurable: true,
 });
 
-// Detect mobile once — used to route to lower-bitrate H.264 versions
-const IS_MOBILE = typeof navigator !== "undefined" &&
+// TV mode: loaded with ?tv=1 from Apple TV / Google TV wrapper apps.
+// Disables mobile quality routing, keeps nav arrows always visible, and
+// enables keyboard-driven section navigation.
+const IS_TV = typeof location !== "undefined" && new URLSearchParams(location.search).has("tv");
+
+// Detect mobile once — used to route to lower-bitrate H.264 versions.
+// TV apps inject a desktop UA and add ?tv=1, so we exclude them here.
+const IS_MOBILE = !IS_TV && typeof navigator !== "undefined" &&
   /iPhone|iPad|iPod|Android|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 // Tracks clips that have been downgraded from full-res to mobile quality due to slow loading
@@ -1919,7 +1926,37 @@ function buildSectionMenu() {
   sectionDropdown.appendChild(shuf);
 }
 
-function openSectionMenu()  { sectionMenuOpen = true;  buildSectionMenu(); sectionDropdown.classList.add("open"); sectionBtn.classList.add("active"); }
+// sectionFocusIdx tracks keyboard focus within the open dropdown.
+// Items are ordered: [...SECTIONS, shuffle] — indices 0..SECTIONS.length
+let sectionFocusIdx = 0;
+
+function sectionItemModes() {
+  return [...SECTIONS.map(s => s.id), "shuffle"];
+}
+
+function highlightSectionItem() {
+  [...sectionDropdown.querySelectorAll(".section-item")].forEach((el, i) => {
+    el.classList.toggle("tv-focus", i === sectionFocusIdx);
+  });
+}
+
+function selectFocusedSection() {
+  const modes = sectionItemModes();
+  const mode = modes[sectionFocusIdx];
+  if (mode) { setPlaybackMode(mode); closeSectionMenu(); }
+}
+
+function openSectionMenu() {
+  sectionMenuOpen = true;
+  // Pre-select the currently active mode so D-pad confirms immediately
+  const modes = sectionItemModes();
+  const idx = modes.indexOf(playbackMode);
+  sectionFocusIdx = idx >= 0 ? idx : 0;
+  buildSectionMenu();
+  sectionDropdown.classList.add("open");
+  sectionBtn.classList.add("active");
+  if (IS_TV) highlightSectionItem();
+}
 function closeSectionMenu() { sectionMenuOpen = false; sectionDropdown.classList.remove("open"); sectionBtn.classList.remove("active"); }
 function toggleSectionMenu() { sectionMenuOpen ? closeSectionMenu() : openSectionMenu(); }
 
@@ -2253,6 +2290,31 @@ function toggleWelcome() {
 }
 
 document.addEventListener("keydown", e => {
+  // s / S — toggle section menu (mapped to Play/Pause on TV remotes)
+  if (e.key === "s" || e.key === "S") {
+    toggleSectionMenu();
+    return;
+  }
+
+  // When the section dropdown is open, Up/Down/Enter navigate it;
+  // all other keys fall through to normal video nav
+  if (sectionMenuOpen) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      sectionFocusIdx = Math.min(sectionFocusIdx + 1, sectionItemModes().length - 1);
+      highlightSectionItem();
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      sectionFocusIdx = Math.max(sectionFocusIdx - 1, 0);
+      highlightSectionItem();
+      return;
+    }
+    if (e.key === "Enter") { selectFocusedSection(); return; }
+    if (e.key === "Escape") { closeSectionMenu(); return; }
+  }
+
   if (e.key === "Escape" && sectionMenuOpen) { closeSectionMenu(); return; }
   if (e.key === "ArrowRight") { dismissHint(); closeSectionMenu(); next(); }
   if (e.key === "ArrowLeft")  { dismissHint(); closeSectionMenu(); prev(); }
@@ -2375,7 +2437,8 @@ function init() {
       if (vidA.duration && (vidA.duration - vidA.currentTime) < 8) preloadNext();
     };
     vidA.onended = () => goTo(current + 1);
-    setTimeout(dismissHint, 5000);
+    // On TV the remote arrows are always needed — keep them visible
+    if (!IS_TV) setTimeout(dismissHint, 5000);
   }
 
   vidA.addEventListener("canplay", begin, { once: true });
@@ -2387,10 +2450,18 @@ init();
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
 welcomeEl.addEventListener("click", toggleWelcome);
-setTimeout(() => {
+// On TV the name card doubles as a section/status indicator — dock it
+// quickly so it's out of the way, but don't auto-hide it entirely
+if (!IS_TV) {
+  setTimeout(() => {
+    welcomeDocked = true;
+    welcomeEl.classList.add("docked");
+  }, 30000);
+} else {
+  // Dock immediately on TV so the full 16:9 frame is unobstructed
   welcomeDocked = true;
   welcomeEl.classList.add("docked");
-}, 30000);
+}
 // ── Map pin tooltip ───────────────────────────────────────
 const mapTooltip = document.getElementById("map-tooltip");
 let tooltipHideTimer = null;
