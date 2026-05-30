@@ -567,8 +567,6 @@
       pointer-events: auto;
     }
     .map-pin-group:hover .map-pin { fill: #fff; }
-    /* Pins and tooltips are desktop-only — no hover on touch devices */
-    @media (hover: none) { .map-pin-group { display: none; } }
     /* Map pin tooltip */
     #map-tooltip {
       position: fixed;
@@ -2273,6 +2271,9 @@ function updateMiniMap() {
         g.appendChild(hit);
         g.appendChild(c);
         g.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(file); });
+        // touchend fires immediately on mobile; preventDefault stops the
+        // subsequent click event from double-firing navigateToVideo
+        g.addEventListener("touchend", e => { e.stopPropagation(); e.preventDefault(); navigateToVideo(file); }, { passive: false });
         g.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
         g.addEventListener("mouseleave", hideMapTooltip);
         pinsGroup.appendChild(g);
