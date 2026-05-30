@@ -9,29 +9,25 @@ import SwiftUI
 import AVKit
 
 struct ContentView: View {
-    @StateObject private var videoPlayerModel = VideoPlayerModel()
-    @State private var selectedTab: Tab = .watchNow
-
-    enum Tab {
-        case watchNow
-        case browse
-    }
+    @StateObject private var model = StreamingPlayerModel()
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NowPlayingView(videoPlayerModel: videoPlayerModel)
-                .tag(Tab.watchNow)
-                .tabItem {
-                    Label("Now Playing", systemImage: "play.circle.fill")
-                }
-
-            MoreVideosView(videoPlayerModel: videoPlayerModel)
-                .tag(Tab.browse)
-                .tabItem {
-                    Label("More Videos", systemImage: "square.grid.2x2.fill")
-                }
-        }
+        PlayerContainerView(model: model)
+            .ignoresSafeArea()
+            .background(Color.black)
     }
+}
+
+/// UIViewControllerRepresentable bridge so PlayerViewController (which owns
+/// pressesBegan) can live inside a SwiftUI app lifecycle.
+struct PlayerContainerView: UIViewControllerRepresentable {
+    let model: StreamingPlayerModel
+
+    func makeUIViewController(context: Context) -> PlayerViewController {
+        PlayerViewController(model: model)
+    }
+
+    func updateUIViewController(_ vc: PlayerViewController, context: Context) {}
 }
 
 struct NowPlayingView: View {
