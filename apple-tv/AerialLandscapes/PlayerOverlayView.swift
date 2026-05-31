@@ -16,12 +16,14 @@ struct PlayerOverlayView: View {
     var body: some View {
         ZStack {
             navArrows
-            topRight
             bottomRow
         }
     }
 
     // ── Nav arrows ────────────────────────────────────────────────────────
+    // Invisible at rest (opacity 0) — flash briefly when a direction is pressed.
+    // Matches website behaviour: arrows are hidden after the initial hint and
+    // only flash during key presses so they never leave a persistent seam.
 
     private var navArrows: some View {
         HStack(spacing: 0) {
@@ -30,22 +32,6 @@ struct PlayerOverlayView: View {
             NavArrowView(pointsLeft: false, lit: model.rightFlash)
         }
         .ignoresSafeArea()
-    }
-
-    // ── Top-right: section indicator + open-sidebar hint ─────────────────
-    // Shows the active section name (or the shuffle icon) so users always
-    // know what's playing and that ↑ / Play-Pause opens the category menu.
-
-    private var topRight: some View {
-        VStack {
-            HStack {
-                Spacer()
-                SectionIndicator(model: model)
-                    .padding(.top, 44)
-                    .padding(.trailing, 60)
-            }
-            Spacer()
-        }
     }
 
     // ── Bottom: title caption (left) + minimap (right) ────────────────────
@@ -61,13 +47,9 @@ struct PlayerOverlayView: View {
                     .shadow(color: .black.opacity(0.6), radius: 12)
                     .padding(.leading, 80)
                     .padding(.bottom, 70)
-                    // Accessibility ID lets UI tests read the exact caption.
                     .accessibilityIdentifier("video-caption")
                     .accessibilityValue(model.currentTitle)
 
-                // Zero-size element that exposes currentQueueIndex as an
-                // accessibility value. .hidden() removes from a11y tree, so
-                // use .opacity(0) + tiny frame to keep it in the tree.
                 Text("\(model.currentQueueIndex)")
                     .opacity(0)
                     .frame(width: 1, height: 1)
@@ -87,52 +69,24 @@ struct PlayerOverlayView: View {
     }
 }
 
-// MARK: - Section indicator (informational; not interactive)
-
-struct SectionIndicator: View {
-    @ObservedObject var model: StreamingPlayerModel
-
-    private var sectionName: String? {
-        guard let id = model.activeSection else { return nil }
-        return StreamingPlayerModel.sections.first(where: { $0.id == id })?.name
-    }
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .light))
-                .foregroundColor(.white.opacity(0.7))
-
-            if let name = sectionName {
-                Text(name.uppercased())
-                    .font(.system(size: 15, weight: .light))
-                    .tracking(2)
-                    .foregroundColor(.white.opacity(0.8))
-            } else {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 9)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9)
-                        .stroke(.white.opacity(0.22), lineWidth: 1)
-                )
-        )
-        .opacity(0.75)
-    }
-}
-
 // MARK: - Nav arrow
+//
+// Replicates the website's nav-flash CSS keyframe exactly:
+//
+//   0 %   opacity 0
+//   10%   opacity 1   (0 → 1 over 240 ms  — quick fade-in)
+//   55%   opacity 1   (hold at full opacity until 1320 ms)
+//   100%  opacity 0   (1 → 0 over 1080 ms — slow fade-out)
+//   total: 2400 ms
+//
+// The arrow is fully invisible at rest so ultraThinMaterial never
+// leaves a persistent frosted seam at the screen edges.
 
 struct NavArrowView: View {
     let pointsLeft: Bool
-    let lit: Bool
+    let lit: Bool         // becomes true on press, false 2.4 s later
+
+    @State private var opacity: Double = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -149,11 +103,19 @@ struct NavArrowView: View {
                         .offset(x: pointsLeft ? 4 : -4)
                 }
                 .frame(width: 70, height: geo.size.height * 0.38)
-                .opacity(lit ? 1.0 : 0.35)
-                .animation(.easeOut(duration: lit ? 0.25 : 1.0), value: lit)
+                .opacity(opacity)
                 Spacer()
             }
             .frame(maxWidth: .infinity, alignment: pointsLeft ? .leading : .trailing)
+        }
+        .onChange(of: lit) {
+            guard lit else { return }   // only fire on rising edge
+            // 0 → 1 in 240 ms (10% of 2400 ms)
+            withAnimation(.easeOut(duration: 0.24)) { opacity = 1.0 }
+            // Hold until 1320 ms (55%), then fade out over 1080 ms
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.32) {
+                withAnimation(.easeOut(duration: 1.08)) { opacity = 0.0 }
+            }
         }
     }
 }
