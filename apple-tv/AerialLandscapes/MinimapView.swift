@@ -23,15 +23,21 @@ struct MinimapView: View {
 
     private var zone: MapZone { MapZone.forCoordinate(lat: lat, lng: lng) }
 
+    // Load PNG from bundle — Image("name") only reads asset catalogs,
+    // not raw resources bundled via FileSystemSynchronizedRootGroup.
+    @State private var mapImage: UIImage? = nil
+
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 // ── Website-identical map background ──────────────────────
-                Image(zone.imageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
+                if let img = mapImage {
+                    Image(uiImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
 
                 // ── GPS dot above the map ─────────────────────────────────
                 let pos = dotPosition(in: geo.size)
@@ -56,8 +62,14 @@ struct MinimapView: View {
         .shadow(color: .black.opacity(0.5), radius: 18, x: 0, y: 6)
         .accessibilityIdentifier("minimap")
         .accessibilityValue("\(lat),\(lng)")
-        .onAppear { startPulse() }
-        .onChange(of: lat) { startPulse() }
+        .onAppear {
+            loadMapImage()
+            startPulse()
+        }
+        .onChange(of: lat) {
+            loadMapImage()   // zone may have changed
+            startPulse()
+        }
     }
 
     // MARK: GPS marker
@@ -98,6 +110,16 @@ struct MinimapView: View {
     private func mercY(_ latDeg: Double) -> Double {
         let r = latDeg * .pi / 180
         return log(tan(.pi / 4 + r / 2))
+    }
+
+    private func loadMapImage() {
+        let name = zone.imageName
+        if let path = Bundle.main.path(forResource: name, ofType: "png") {
+            mapImage = UIImage(contentsOfFile: path)
+        } else {
+            // Fallback: try UIImage(named:) in case Xcode bundled it differently
+            mapImage = UIImage(named: name)
+        }
     }
 
     private func startPulse() {

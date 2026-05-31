@@ -41,10 +41,12 @@ struct PlayerOverlayView: View {
             Spacer()
             HStack(alignment: .bottom) {
                 Text(model.currentTitle)
-                    .font(.system(size: 36, weight: .light))
+                    .font(.system(size: 38, weight: .medium))
                     .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: 1)
-                    .shadow(color: .black.opacity(0.6), radius: 12)
+                    // Deep shadow stack so the title floats clearly over any footage
+                    .shadow(color: .black.opacity(0.95), radius: 2, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.75), radius: 8, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.45), radius: 20, x: 0, y: 4)
                     .padding(.leading, 80)
                     .padding(.bottom, 70)
                     .accessibilityIdentifier("video-caption")

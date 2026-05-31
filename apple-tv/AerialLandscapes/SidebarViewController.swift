@@ -2,9 +2,11 @@
 //  SidebarViewController.swift
 //  AerialLandscapes
 //
-//  Native tvOS slide-in sidebar for category selection.
-//  Uses UITableView so the system focus engine drives D-pad navigation,
-//  focus rings, and cell-scale animations automatically.
+//  Translucent frosted-glass sidebar for category selection.
+//  — view.backgroundColor = .clear so UIVisualEffectView shows video behind it
+//  — No right-side checkmark (it reserved space even when hidden, truncating labels)
+//  — Active state shown with a left accent dot + full-brightness text
+//  — Tight 28pt left indent aligns "Categories" header, icons, and labels
 //
 
 import UIKit
@@ -38,40 +40,32 @@ class SidebarViewController: UIViewController {
     // MARK: Setup
 
     private func setupBackground() {
-        // Deep frosted glass — dark blur + subtle tint, matching system sidebar style
+        // CRITICAL: .clear so the blur shows the video playing underneath
+        view.backgroundColor = .clear
+
         let blur = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
         blur.frame = view.bounds
         blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(blur)
-
-        // Right-edge gradient to soften where sidebar meets video content
-        let gradient = CAGradientLayer()
-        gradient.colors = [
-            UIColor.black.withAlphaComponent(0.0).cgColor,
-            UIColor.black.withAlphaComponent(0.25).cgColor,
-        ]
-        gradient.startPoint = CGPoint(x: 0, y: 0)
-        gradient.endPoint   = CGPoint(x: 1, y: 0)
-        gradient.frame = CGRect(x: view.bounds.width - 40, y: 0, width: 40, height: view.bounds.height)
-        blur.contentView.layer.addSublayer(gradient)
+        // No right-edge gradient — it caused the visible seam artefact
     }
 
     private func setupHeader() {
         let label = UILabel()
         label.text = "Categories"
-        label.font = UIFont.systemFont(ofSize: 28, weight: .semibold)
-        label.textColor = UIColor.white.withAlphaComponent(0.5)
+        label.font = UIFont.systemFont(ofSize: 26, weight: .semibold)
+        label.textColor = UIColor.white.withAlphaComponent(0.45)
         label.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(label)
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 52),
+            // 28 pt matches the cell's leading indent exactly
+            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
             label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
         ])
     }
 
     private func setupTable() {
         tableView.backgroundColor = .clear
-        // separatorStyle unavailable on tvOS; cells use contentView backgrounds instead
         tableView.showsVerticalScrollIndicator = false
         tableView.remembersLastFocusedIndexPath = true
         tableView.register(SidebarCell.self, forCellReuseIdentifier: "cell")
@@ -82,18 +76,15 @@ class SidebarViewController: UIViewController {
         NSLayoutConstraint.activate([
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 120),
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 116),
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
         ])
     }
 
-    // MARK: Remote — Menu closes the sidebar
+    // MARK: Remote
 
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        for press in presses where press.type == .menu {
-            onClose?()
-            return
-        }
+        for press in presses where press.type == .menu { onClose?(); return }
         super.pressesEnded(presses, with: event)
     }
 }
@@ -113,7 +104,7 @@ extension SidebarViewController: UITableViewDataSource, UITableViewDelegate {
         return cell
     }
 
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 80 }
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 78 }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         model?.loadSection(items[indexPath.row].id)
@@ -125,76 +116,88 @@ extension SidebarViewController: UITableViewDataSource, UITableViewDelegate {
 
 private class SidebarCell: UITableViewCell {
 
+    // Left accent dot — visible when item is the active section
+    private let activeDot = UIView()
     private let iconView  = UIImageView()
     private let nameLabel = UILabel()
-    private let check     = UIImageView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
-        // Remove the default blue selection flash — focus ring handles highlighting
-        selectedBackgroundView = UIView()
+        selectedBackgroundView = UIView()   // suppress default selection flash
+
+        // Active dot: 4 × 40 pt white bar flush to leading edge
+        activeDot.backgroundColor = .white
+        activeDot.layer.cornerRadius = 2
+        activeDot.isHidden = true
 
         iconView.contentMode = .scaleAspectFit
         iconView.tintColor = .white
 
         nameLabel.textColor = .white
         nameLabel.font = UIFont.systemFont(ofSize: 32, weight: .light)
+        nameLabel.numberOfLines = 1
+        // Never truncate — if the label is too narrow it's a layout bug, not a content issue
+        nameLabel.adjustsFontSizeToFitWidth = false
+        nameLabel.lineBreakMode = .byClipping
 
-        check.image = UIImage(systemName: "checkmark")
-        check.tintColor = .white
-        check.contentMode = .scaleAspectFit
-
-        [iconView, nameLabel, check].forEach {
+        [activeDot, iconView, nameLabel].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             contentView.addSubview($0)
         }
 
         NSLayoutConstraint.activate([
-            iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 32),
+            // Accent dot: 4 pt wide, 40 pt tall, centred vertically, flush left
+            activeDot.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            activeDot.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            activeDot.widthAnchor.constraint(equalToConstant: 4),
+            activeDot.heightAnchor.constraint(equalToConstant: 40),
+
+            // Icon: 28 pt leading indent, 26×26 pt
+            iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 28),
             iconView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 32),
-            iconView.heightAnchor.constraint(equalToConstant: 32),
+            iconView.widthAnchor.constraint(equalToConstant: 26),
+            iconView.heightAnchor.constraint(equalToConstant: 26),
 
-            nameLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 22),
+            // Label: immediately after icon, extends to 28 pt from right edge —
+            // no checkmark reservation so "Mountains" and all labels have full room
+            nameLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 14),
             nameLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            nameLabel.trailingAnchor.constraint(equalTo: check.leadingAnchor, constant: -16),
-
-            check.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -32),
-            check.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            check.widthAnchor.constraint(equalToConstant: 26),
-            check.heightAnchor.constraint(equalToConstant: 26),
+            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -28),
         ])
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
     func configure(name: String, symbol: String, active: Bool) {
-        iconView.image = UIImage(systemName: symbol)
-        nameLabel.text = name
-        check.isHidden = !active
-        // Dim inactive, brighten active
-        let alpha: CGFloat = active ? 1.0 : 0.6
+        iconView.image  = UIImage(systemName: symbol)
+        nameLabel.text  = name
+        activeDot.isHidden = !active
+        let alpha: CGFloat = active ? 1.0 : 0.55
         iconView.alpha  = alpha
         nameLabel.alpha = alpha
+        nameLabel.font  = UIFont.systemFont(ofSize: 32, weight: active ? .regular : .light)
     }
 
-    // tvOS focus: scale up + brighten when focused, reset when unfocused
-    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+    override func didUpdateFocus(in context: UIFocusUpdateContext,
+                                 with coordinator: UIFocusAnimationCoordinator) {
         coordinator.addCoordinatedAnimations {
             if self.isFocused {
-                self.contentView.backgroundColor = UIColor.white.withAlphaComponent(0.12)
-                self.nameLabel.font = UIFont.systemFont(ofSize: 32, weight: .medium)
-                self.iconView.alpha = 1.0; self.nameLabel.alpha = 1.0
+                self.contentView.backgroundColor = UIColor.white.withAlphaComponent(0.14)
+                self.nameLabel.font    = UIFont.systemFont(ofSize: 32, weight: .medium)
+                self.iconView.alpha    = 1.0
+                self.nameLabel.alpha   = 1.0
             } else {
                 self.contentView.backgroundColor = .clear
-                self.nameLabel.font = UIFont.systemFont(ofSize: 32, weight: .light)
-                let a: CGFloat = self.check.isHidden ? 0.6 : 1.0
-                self.iconView.alpha = a; self.nameLabel.alpha = a
+                // Restore font weight to match active/inactive state
+                let active = !self.activeDot.isHidden
+                self.nameLabel.font  = UIFont.systemFont(ofSize: 32, weight: active ? .regular : .light)
+                let alpha: CGFloat   = active ? 1.0 : 0.55
+                self.iconView.alpha  = alpha
+                self.nameLabel.alpha = alpha
             }
         }
     }
 
-    // Required for tvOS focus to enter cells
     override var canBecomeFocused: Bool { true }
 }
