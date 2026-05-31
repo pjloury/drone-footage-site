@@ -28,20 +28,31 @@ struct MinimapView: View {
         .region(MKCoordinateRegion(center: zone.center, span: zone.span))
     }
 
-    // Convert lat/lng → pixel position within the minimap frame
+    // Convert lat/lng → pixel position within the minimap frame.
+    // MapKit renders tiles in Web Mercator (EPSG:3857), so the dot Y must
+    // use the same projection — equirectangular Y would be noticeably wrong
+    // for high latitudes like Patagonia (-49°) or Maui (21°).
     private func dotPosition(in size: CGSize) -> CGPoint {
         let region = zone.region
-        let minLat = region.center.latitude  - region.span.latitudeDelta  / 2
-        let maxLat = region.center.latitude  + region.span.latitudeDelta  / 2
+        let minLat = max(region.center.latitude  - region.span.latitudeDelta  / 2, -85)
+        let maxLat = min(region.center.latitude  + region.span.latitudeDelta  / 2,  85)
         let minLng = region.center.longitude - region.span.longitudeDelta / 2
         let maxLng = region.center.longitude + region.span.longitudeDelta / 2
 
         let x = ((lng - minLng) / (maxLng - minLng)) * size.width
-        let y = ((maxLat - lat) / (maxLat - minLat)) * size.height  // north = top
+
+        // Mercator Y: ln(tan(π/4 + φ/2))
+        let y = ((mercY(maxLat) - mercY(lat)) / (mercY(maxLat) - mercY(minLat))) * size.height
+
         return CGPoint(
             x: max(10, min(size.width  - 10, x)),
             y: max(10, min(size.height - 10, y))
         )
+    }
+
+    private func mercY(_ lat: Double) -> Double {
+        let r = lat * Double.pi / 180.0
+        return log(tan(Double.pi / 4.0 + r / 2.0))
     }
 
     var body: some View {

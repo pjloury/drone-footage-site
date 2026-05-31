@@ -2,23 +2,45 @@
 //  PlayerViewController.swift
 //  AerialLandscapes
 //
-//  Hosts two AVPlayerLayer instances (one per AVPlayer in StreamingPlayerModel)
-//  and drives the 4-second crossfade via CALayer opacity animation.
+//  Root UIViewController:
+//  - Two AVPlayerLayers for 4-second automatic crossfade (end-of-clip)
+//    and 1.2-second manual crossfade (← / → skip)
+//  - SidebarViewController child for category selection (slides in from left)
+//  - UIKeyCommand for tvOS Simulator; pressesBegan for physical remote
 //
 
 import UIKit
 import AVFoundation
 import SwiftUI
 
+// MARK: - PlayerViewController
+
 class PlayerViewController: UIViewController {
 
     let model: StreamingPlayerModel
 
-    // Two CALayer-level players for crossfade
+    // Two layers — one per AVPlayer — for crossfade via CALayer opacity
     private var layerA: AVPlayerLayer!
     private var layerB: AVPlayerLayer!
 
+    // SwiftUI overlay (arrows, caption, section badge, minimap)
     private var overlayController: UIHostingController<PlayerOverlayView>!
+
+    // Sidebar
+    private var sidebarVC: SidebarViewController!
+    private var dimView: UIView!
+    private var sidebarVisible = false
+    private static let sidebarWidth: CGFloat = 380
+
+    // Debounce — UIKeyCommand and pressesBegan can both fire for the same
+    // physical remote press; the 80 ms window collapses duplicates.
+    private var lastActionAt: CFTimeInterval = 0
+    private func debounced(_ action: () -> Void) {
+        let now = CACurrentMediaTime()
+        guard now - lastActionAt > 0.08 else { return }
+        lastActionAt = now
+        action()
+    }
 
     init(model: StreamingPlayerModel) {
         self.model = model
@@ -32,11 +54,12 @@ class PlayerViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .black
         setupVideoLayers()
+        setupDimView()
+        setupSidebar()
         setupOverlay()
 
-        // Wire crossfade callback — called by model when back player has started
-        model.crossfadeCallback = { [weak self] in
-            self?.performCrossfade()
+        model.crossfadeCallback = { [weak self] duration in
+            self?.performCrossfade(duration: duration)
         }
     }
 
@@ -58,60 +81,115 @@ class PlayerViewController: UIViewController {
     private func setupVideoLayers() {
         layerA = AVPlayerLayer(player: model.playerA)
         layerA.videoGravity = .resizeAspectFill
-        layerA.frame = view.bounds
         layerA.opacity = 1.0
         view.layer.addSublayer(layerA)
 
         layerB = AVPlayerLayer(player: model.playerB)
         layerB.videoGravity = .resizeAspectFill
-        layerB.frame = view.bounds
         layerB.opacity = 0.0
         view.layer.addSublayer(layerB)
     }
 
     // MARK: - Crossfade animation
+    //
+    // Called by StreamingPlayerModel.crossfadeCallback with a duration:
+    //   4.0 s — automatic end-of-clip crossfade
+    //   1.2 s — manual ← / → skip
 
-    /// Called by model.crossfadeCallback when the back player is ready to fade in.
-    func performCrossfade() {
-        let fadingIn  = model.isFrontA ? layerB : layerA   // back → will become front
-        let fadingOut = model.isFrontA ? layerA : layerB   // front → will become back
-
-        let duration: CFTimeInterval = 4.0
+    func performCrossfade(duration: TimeInterval) {
+        let fadingIn  = model.isFrontA ? layerB : layerA
+        let fadingOut = model.isFrontA ? layerA : layerB
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
 
-        let fadeIn = CABasicAnimation(keyPath: "opacity")
-        fadeIn.fromValue = 0.0
-        fadeIn.toValue   = 1.0
-        fadeIn.duration  = duration
-        fadeIn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        fadeIn.fillMode  = .forwards
-        fadeIn.isRemovedOnCompletion = false
-        fadingIn?.add(fadeIn, forKey: "crossfadeIn")
+        let makeAnim: (Float, Float) -> CABasicAnimation = { from, to in
+            let a = CABasicAnimation(keyPath: "opacity")
+            a.fromValue = from; a.toValue = to
+            a.duration  = duration
+            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            a.fillMode = .forwards; a.isRemovedOnCompletion = false
+            return a
+        }
 
-        let fadeOut = CABasicAnimation(keyPath: "opacity")
-        fadeOut.fromValue = 1.0
-        fadeOut.toValue   = 0.0
-        fadeOut.duration  = duration
-        fadeOut.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        fadeOut.fillMode  = .forwards
-        fadeOut.isRemovedOnCompletion = false
-        fadingOut?.add(fadeOut, forKey: "crossfadeOut")
-
+        fadingIn?.add(makeAnim(0, 1), forKey: "fadeIn")
+        fadingOut?.add(makeAnim(1, 0), forKey: "fadeOut")
         CATransaction.commit()
 
-        // After fade completes, set layer model values and remove animations
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             guard let self = self else { return }
-            fadingIn?.removeAnimation(forKey: "crossfadeIn")
-            fadingOut?.removeAnimation(forKey: "crossfadeOut")
-            // isFrontA has already been toggled by model.completeCrossfade()
-            let newFrontLayer = self.model.isFrontA ? self.layerA : self.layerB
-            let newBackLayer  = self.model.isFrontA ? self.layerB : self.layerA
-            newFrontLayer?.opacity = 1.0
-            newBackLayer?.opacity  = 0.0
+            fadingIn?.removeAnimation(forKey: "fadeIn")
+            fadingOut?.removeAnimation(forKey: "fadeOut")
+            let front = self.model.isFrontA ? self.layerA : self.layerB
+            let back  = self.model.isFrontA ? self.layerB : self.layerA
+            front?.opacity = 1.0
+            back?.opacity  = 0.0
         }
+    }
+
+    // MARK: - Dim view (behind sidebar, over video)
+
+    private func setupDimView() {
+        dimView = UIView()
+        dimView.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        dimView.alpha = 0
+        dimView.frame = view.bounds
+        dimView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(dimView)
+    }
+
+    // MARK: - Sidebar
+
+    private func setupSidebar() {
+        sidebarVC = SidebarViewController()
+        sidebarVC.model   = model
+        sidebarVC.onClose = { [weak self] in self?.closeSidebar() }
+
+        addChild(sidebarVC)
+        let w = Self.sidebarWidth
+        sidebarVC.view.frame = CGRect(x: -w, y: 0, width: w, height: view.bounds.height)
+        sidebarVC.view.autoresizingMask = [.flexibleHeight]
+        view.addSubview(sidebarVC.view)
+        sidebarVC.didMove(toParent: self)
+    }
+
+    func openSidebar() {
+        guard !sidebarVisible else { return }
+        sidebarVisible = true
+
+        UIView.animate(withDuration: 0.42, delay: 0,
+                       usingSpringWithDamping: 0.88, initialSpringVelocity: 0,
+                       options: .curveEaseOut) {
+            self.sidebarVC.view.frame.origin.x = 0
+            self.dimView.alpha = 1
+        }
+
+        // Hand focus to the sidebar table view
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+    }
+
+    func closeSidebar() {
+        guard sidebarVisible else { return }
+        sidebarVisible = false
+
+        UIView.animate(withDuration: 0.32, delay: 0,
+                       usingSpringWithDamping: 0.92, initialSpringVelocity: 0,
+                       options: .curveEaseIn) {
+            self.sidebarVC.view.frame.origin.x = -Self.sidebarWidth
+            self.dimView.alpha = 0
+        }
+
+        // Return focus to PlayerViewController
+        setNeedsFocusUpdate()
+        updateFocusIfNeeded()
+        becomeFirstResponder()
+    }
+
+    // Route focus into the sidebar when it's open; nowhere specific when closed
+    // (PlayerViewController handles everything via key commands / pressesBegan)
+    override var preferredFocusEnvironments: [UIFocusEnvironment] {
+        sidebarVisible ? [sidebarVC] : []
     }
 
     // MARK: - SwiftUI overlay
@@ -134,38 +212,47 @@ class PlayerViewController: UIViewController {
         overlayController.didMove(toParent: self)
     }
 
-    // MARK: - Siri Remote + simulator keyboard
+    // MARK: - Input (UIKeyCommand + pressesBegan)
+    //
+    // UIKeyCommand fires for simulator keyboard; pressesBegan fires for the
+    // physical Siri Remote. Both call the same private action methods.
+    // The 80 ms debounce in `debounced` prevents double-execution.
 
-    // UIKeyCommand runs before pressesBegan in the responder chain and is
-    // the only reliable path for tvOS Simulator keyboard input.
-    // Both methods call the same model handler so physical Apple TV remotes
-    // (which use pressesBegan) and the simulator keyboard both work.
-
+    // When the sidebar is open: expose only Escape (to close it) and let the
+    // tvOS focus engine drive Up/Down/Select inside the table view.
     override var keyCommands: [UIKeyCommand]? {
-        [
+        if sidebarVisible {
+            return [
+                UIKeyCommand(input: UIKeyCommand.inputEscape, modifierFlags: [], action: #selector(kClose)),
+            ]
+        }
+        return [
             UIKeyCommand(input: UIKeyCommand.inputLeftArrow,  modifierFlags: [], action: #selector(kLeft)),
             UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: [], action: #selector(kRight)),
-            UIKeyCommand(input: UIKeyCommand.inputUpArrow,    modifierFlags: [], action: #selector(kUp)),
-            UIKeyCommand(input: UIKeyCommand.inputDownArrow,  modifierFlags: [], action: #selector(kDown)),
-            UIKeyCommand(input: "\r",                         modifierFlags: [], action: #selector(kSelect)),
-            UIKeyCommand(input: UIKeyCommand.inputEscape,     modifierFlags: [], action: #selector(kMenu)),
-            UIKeyCommand(input: " ",                          modifierFlags: [], action: #selector(kPlayPause)),
+            UIKeyCommand(input: UIKeyCommand.inputUpArrow,    modifierFlags: [], action: #selector(kOpen)),
+            UIKeyCommand(input: " ",                          modifierFlags: [], action: #selector(kOpen)),
         ]
     }
 
-    @objc private func kLeft()      { _ = model.handleRemotePress(.leftArrow) }
-    @objc private func kRight()     { _ = model.handleRemotePress(.rightArrow) }
-    @objc private func kUp()        { _ = model.handleRemotePress(.upArrow) }
-    @objc private func kDown()      { _ = model.handleRemotePress(.downArrow) }
-    @objc private func kSelect()    { _ = model.handleRemotePress(.select) }
-    @objc private func kMenu()      { _ = model.handleRemotePress(.menu) }
-    @objc private func kPlayPause() { _ = model.handleRemotePress(.playPause) }
+    @objc private func kLeft()  { debounced { self.model.prev() } }
+    @objc private func kRight() { debounced { self.model.next() } }
+    @objc private func kOpen()  { debounced { self.openSidebar() } }
+    @objc private func kClose() { debounced { self.closeSidebar() } }
 
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        var handled = false
-        for press in presses {
-            if model.handleRemotePress(press.type) { handled = true }
+        if sidebarVisible {
+            for press in presses where press.type == .menu { closeSidebar(); return }
+            super.pressesBegan(presses, with: event)
+            return
         }
-        if !handled { super.pressesBegan(presses, with: event) }
+        for press in presses {
+            switch press.type {
+            case .leftArrow:            debounced { self.model.prev() }
+            case .rightArrow:           debounced { self.model.next() }
+            case .upArrow, .playPause:  debounced { self.openSidebar() }
+            default: break
+            }
+        }
+        super.pressesBegan(presses, with: event)
     }
 }
