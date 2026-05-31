@@ -162,6 +162,9 @@ class PlayerViewController: UIViewController {
         let w = Self.sidebarWidth
         sidebarVC.view.frame = CGRect(x: -w, y: 0, width: w, height: view.bounds.height)
         sidebarVC.view.autoresizingMask = [.flexibleHeight]
+        // Hidden when closed: UIVisualEffectView renders even when off-screen,
+        // which creates a visible frosted-glass seam at the screen edge.
+        sidebarVC.view.isHidden = true
         view.addSubview(sidebarVC.view)
         sidebarVC.didMove(toParent: self)
     }
@@ -169,6 +172,7 @@ class PlayerViewController: UIViewController {
     func openSidebar() {
         guard !sidebarVisible else { return }
         sidebarVisible = true
+        sidebarVC.view.isHidden = false   // un-hide before animating in
 
         UIView.animate(withDuration: 0.42, delay: 0,
                        usingSpringWithDamping: 0.88, initialSpringVelocity: 0,
@@ -177,7 +181,6 @@ class PlayerViewController: UIViewController {
             self.dimView.alpha = 1
         }
 
-        // Hand focus to the sidebar table view
         setNeedsFocusUpdate()
         updateFocusIfNeeded()
     }
@@ -188,10 +191,15 @@ class PlayerViewController: UIViewController {
 
         UIView.animate(withDuration: 0.32, delay: 0,
                        usingSpringWithDamping: 0.92, initialSpringVelocity: 0,
-                       options: .curveEaseIn) {
-            self.sidebarVC.view.frame.origin.x = -Self.sidebarWidth
-            self.dimView.alpha = 0
-        }
+                       options: .curveEaseIn,
+                       animations: {
+                           self.sidebarVC.view.frame.origin.x = -Self.sidebarWidth
+                           self.dimView.alpha = 0
+                       },
+                       completion: { _ in
+                           // Hide after animation so the blur doesn't render off-screen
+                           self.sidebarVC.view.isHidden = true
+                       })
 
         // Return focus to PlayerViewController
         setNeedsFocusUpdate()

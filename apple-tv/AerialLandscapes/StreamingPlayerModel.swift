@@ -108,21 +108,20 @@ class StreamingPlayerModel: ObservableObject {
     func next() {
         flash(right: true)
         startCrossfade(to: (currentQueueIndex + 1) % queue.count,
-                       duration: Self.manualDuration)
+                       duration: Self.manualDuration, isAutoFade: false)
     }
 
     func prev() {
         flash(right: false)
         startCrossfade(to: (currentQueueIndex - 1 + queue.count) % queue.count,
-                       duration: Self.manualDuration)
+                       duration: Self.manualDuration, isAutoFade: false)
     }
 
     // MARK: Private — unified crossfade
 
-    private func startCrossfade(to targetIdx: Int, duration: TimeInterval) {
+    private func startCrossfade(to targetIdx: Int, duration: TimeInterval, isAutoFade: Bool) {
         guard !queue.isEmpty else { return }
 
-        // ── Bug 2 fix: reuse preloaded item if it's already the right URL ──
         let targetURL      = queue[targetIdx].remoteVideoURL
         let preloadedURL   = (backPlayer.currentItem?.asset as? AVURLAsset)?.url
         let reusePreloaded = targetURL != nil && targetURL == preloadedURL
@@ -150,18 +149,28 @@ class StreamingPlayerModel: ObservableObject {
             backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
         }
 
-        // ── Bug 3 fix: caption updates NOW (as the new video starts fading in) ──
-        updateMetadata(from: targetIdx)
-
         backPlayer.isMuted = true
         backPlayer.seek(to: .zero)
         backPlayer.play()
 
-        // ── Wait until the back player has enough data to show a frame ────
-        // Falls through after 4s if buffering is slow.
-        waitUntilLikelyToKeepUp(gen: gen) { [weak self] in
+        // Auto-fades: pre-loaded item should already be buffering — use a short
+        // 1 s timeout so high-bitrate short clips (e.g. Palma, 7 s / 52 Mbps)
+        // don't freeze on their last frame waiting for the next clip to buffer.
+        // Manual skips: allow up to 4 s for a cold item to buffer.
+        let bufferTimeout: TimeInterval = isAutoFade ? 1.0 : 4.0
+
+        waitUntilLikelyToKeepUp(gen: gen, maxWait: bufferTimeout) { [weak self] in
             guard let self = self, self.crossfadeGeneration == gen else { return }
             self.crossfadeCallback?(duration)
+
+            // Caption + minimap update at the midpoint of the crossfade —
+            // matching the website: caption.textContent is set at CROSSFADE_MS/2.
+            // This keeps the title in sync with the visible video blend.
+            let half = duration * 0.5
+            DispatchQueue.main.asyncAfter(deadline: .now() + half) { [weak self] in
+                guard let self = self, self.crossfadeGeneration == gen else { return }
+                self.updateMetadata(from: targetIdx)
+            }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
                 guard let self = self, self.crossfadeGeneration == gen else { return }
@@ -170,12 +179,11 @@ class StreamingPlayerModel: ObservableObject {
         }
     }
 
-    // Wait for isPlaybackLikelyToKeepUp; fall through after `maxWait` seconds.
-    private func waitUntilLikelyToKeepUp(gen: Int, completion: @escaping () -> Void) {
+    private func waitUntilLikelyToKeepUp(gen: Int, maxWait: TimeInterval,
+                                          completion: @escaping () -> Void) {
         guard let item = backPlayer.currentItem else { completion(); return }
         if item.isPlaybackLikelyToKeepUp { completion(); return }
 
-        let maxWait = 4.0
         bufferingObservation?.invalidate()
         bufferingObservation = item.observe(\.isPlaybackLikelyToKeepUp,
                                              options: [.new]) { [weak self] item, _ in
@@ -183,7 +191,6 @@ class StreamingPlayerModel: ObservableObject {
             self?.bufferingObservation?.invalidate()
             DispatchQueue.main.async { completion() }
         }
-        // Fallback
         DispatchQueue.main.asyncAfter(deadline: .now() + maxWait) { [weak self] in
             guard let self = self, self.crossfadeGeneration == gen else { return }
             self.bufferingObservation?.invalidate()
@@ -257,7 +264,7 @@ class StreamingPlayerModel: ObservableObject {
         if rem <= Self.autoDuration + 0.2 {
             autoFadeArmed = true
             let nextIdx = (currentQueueIndex + 1) % queue.count
-            startCrossfade(to: nextIdx, duration: Self.autoDuration)
+            startCrossfade(to: nextIdx, duration: Self.autoDuration, isAutoFade: true)
         }
     }
 
