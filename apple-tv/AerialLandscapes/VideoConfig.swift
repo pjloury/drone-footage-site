@@ -73,7 +73,7 @@ struct VideoConfig {
         r2(69, "Ho\u{02BB}okipa Beach, Maui",     "coastal",  20.94, -156.34),
         r2(70, "Bay of Kotor, Montenegro",        "coastal",  42.43,   18.77),
         r2(71, "Lands End, San Francisco",        "coastal",  37.78, -122.51),
-        r2(72, "Maui Lava Coast",                 "coastal",  20.80, -156.50),
+        r2(72, "Maui Lava Coast",                 "coastal",  20.60, -156.40),  // La Perouse Bay / south Maui lava coast
         r2(73, "Ocean Beach, San Francisco",      "coastal",  37.76, -122.51),
         r2(75, "Port Novi, Montenegro",           "coastal",  42.45,   18.68),
         r2(80, "Tivat, Montenegro",               "coastal",  42.44,   18.70),
