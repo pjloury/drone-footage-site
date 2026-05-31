@@ -61,6 +61,19 @@ class PlayerViewController: UIViewController {
         model.crossfadeCallback = { [weak self] duration in
             self?.performCrossfade(duration: duration)
         }
+
+        // Snap layers back to clean state when a crossfade is cancelled mid-flight.
+        // Removes in-progress CALayer animations and hard-sets opacities so the
+        // next crossfade starts from a known (front=1, back=0) baseline.
+        model.resetLayersCallback = { [weak self] in
+            guard let self = self else { return }
+            let front = self.model.isFrontA ? self.layerA : self.layerB
+            let back  = self.model.isFrontA ? self.layerB : self.layerA
+            front?.removeAllAnimations()
+            back?.removeAllAnimations()
+            front?.opacity = 1.0
+            back?.opacity  = 0.0
+        }
     }
 
     override func viewDidLayoutSubviews() {

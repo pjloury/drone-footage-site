@@ -2,30 +2,39 @@
 //  StreamingPlayerModel.swift
 //  AerialLandscapes
 //
-//  Two-player crossfade engine.
-//  - Automatic crossfade (4 s) triggers ~4 s before natural end-of-clip.
-//  - Manual crossfade (1.2 s) fires on next() / prev().
-//  - crossfadeCallback carries the duration so PlayerViewController can
-//    run the matching CALayer animation.
-//  - Category selection is owned entirely by SidebarViewController;
-//    this model only tracks activeSection and exposes loadSection().
+//  Two-player crossfade engine with a proper state machine.
+//
+//  Key invariants (mirrors the website's transitioning flag):
+//  - Only ONE crossfade may be in-flight at a time.
+//  - Calling next()/prev() while isCrossfading=true cancels the current
+//    crossfade (resets layers + back player), then starts a new one.
+//  - crossfadeGeneration is incremented on every cancel so stale async
+//    completion blocks self-invalidate on arrival.
+//  - captions and metadata update only AFTER the fade completes (the
+//    front player is already showing the new clip at that point).
 //
 
 import AVFoundation
 import SwiftUI
 
+// MARK: - StreamingPlayerModel
+
 class StreamingPlayerModel: ObservableObject {
 
-    // ── Two players for crossfade ─────────────────────────────────────────
+    // ── Two players ───────────────────────────────────────────────────────
     let playerA = AVPlayer()
     let playerB = AVPlayer()
 
     private(set) var isFrontA = true
+
     var frontPlayer: AVPlayer { isFrontA ? playerA : playerB }
     var backPlayer:  AVPlayer { isFrontA ? playerB : playerA }
 
-    // Duration parameter: 4.0 for auto end-of-clip, 1.2 for manual skip
+    // Callbacks set by PlayerViewController
+    /// Called with the crossfade duration whenever a new fade starts.
     var crossfadeCallback: ((TimeInterval) -> Void)?
+    /// Called when a crossfade is cancelled mid-flight — VC resets layer opacities.
+    var resetLayersCallback: (() -> Void)?
 
     // ── Published state ───────────────────────────────────────────────────
     @Published private(set) var currentTitle = ""
@@ -43,16 +52,20 @@ class StreamingPlayerModel: ObservableObject {
         ("desert",    "Desert"),
     ]
 
-    // ── Internal queue ────────────────────────────────────────────────────
+    // ── Queue ─────────────────────────────────────────────────────────────
     private var queue: [Video] = []
     private(set) var currentQueueIndex = 0
 
+    // ── Crossfade state machine ───────────────────────────────────────────
+    private var crossfadeGeneration = 0  // invalidates stale async completions
+    private var isCrossfading = false
+
     private var timeObserver: Any?
     private var timeObserverOwner: AVPlayer?
-    private var crossfadeArmed = false
+    private var autoFadeArmed = false   // true once auto-crossfade has been triggered
 
-    static let autoCrossfadeDuration:   TimeInterval = 4.0
-    static let manualCrossfadeDuration: TimeInterval = 1.2
+    static let autoDuration:   TimeInterval = 4.0
+    static let manualDuration: TimeInterval = 1.2
 
     // MARK: Init
 
@@ -64,98 +77,115 @@ class StreamingPlayerModel: ObservableObject {
 
     deinit { removeTimeObserver() }
 
-    // MARK: Section / queue loading
+    // MARK: Section loading
 
     func loadSection(_ section: String?) {
-        cancelCrossfade()
+        cancelAndReset()            // stop everything cleanly first
         activeSection = section
         let pool = section == nil
             ? VideoConfig.allVideos
             : VideoConfig.allVideos.filter { $0.geozone == section }
         queue = pool.shuffled()
         currentQueueIndex = 0
-        startClip(at: 0, onFront: true, startPlaying: true)
+        loadClip(at: 0, onFront: true, startPlaying: true)
         preloadBack()
         startTimeObserver()
+        // Update caption immediately for the first clip
+        updateMetadata(from: currentQueueIndex)
     }
 
-    // MARK: Navigation — both use the crossfade path (manual = 1.2 s)
+    // MARK: Navigation
 
     func next() {
         flash(right: true)
-        cancelCrossfade()
-        let targetIdx = (currentQueueIndex + 1) % queue.count
-        triggerManualCrossfade(to: targetIdx)
+        let target = (currentQueueIndex + 1) % queue.count
+        startCrossfade(to: target, duration: Self.manualDuration)
     }
 
     func prev() {
         flash(right: false)
-        cancelCrossfade()
-        let targetIdx = (currentQueueIndex - 1 + queue.count) % queue.count
-        triggerManualCrossfade(to: targetIdx)
+        let target = (currentQueueIndex - 1 + queue.count) % queue.count
+        startCrossfade(to: target, duration: Self.manualDuration)
     }
 
-    // MARK: Private — clip loading
+    // MARK: Private — unified crossfade entry point
 
-    private func startClip(at index: Int, onFront: Bool, startPlaying: Bool) {
-        let video  = queue[index]
-        let player = onFront ? frontPlayer : backPlayer
-        guard let url = video.remoteVideoURL else { return }
+    private func startCrossfade(to targetIdx: Int, duration: TimeInterval) {
+        // Cancel any in-progress fade first (safe to call even if not fading)
+        cancelAndReset()
 
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        guard !queue.isEmpty, let url = queue[targetIdx].remoteVideoURL else { return }
 
-        if onFront {
-            currentTitle = video.displayTitle
-            currentLat   = video.lat
-            currentLng   = video.lng
-            player.isMuted = false
-            if startPlaying { player.seek(to: .zero); player.play() }
-        } else {
-            player.isMuted = true
-        }
-    }
+        let gen = crossfadeGeneration   // capture before any increment
+        isCrossfading = true
+        autoFadeArmed = true            // block auto-fade triggering during manual fade
 
-    private func preloadBack() {
-        let nextIdx = (currentQueueIndex + 1) % queue.count
-        startClip(at: nextIdx, onFront: false, startPlaying: false)
-    }
-
-    // MARK: Private — manual crossfade (← / →)
-
-    private func triggerManualCrossfade(to targetIdx: Int) {
-        guard let url = queue[targetIdx].remoteVideoURL else { return }
+        // Load target onto back player and start it (muted — front is still audible)
         backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
         backPlayer.seek(to: .zero)
         backPlayer.play()
         backPlayer.isMuted = true
 
-        // Signal PlayerViewController to animate layers
-        crossfadeCallback?(Self.manualCrossfadeDuration)
+        // Tell PlayerViewController to run the layer opacity animation
+        crossfadeCallback?(duration)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.manualCrossfadeDuration) { [weak self] in
-            guard let self = self else { return }
-            self.frontPlayer.pause()
-            self.frontPlayer.replaceCurrentItem(with: nil)
-            self.isFrontA.toggle()
-            self.frontPlayer.isMuted = false
-            self.backPlayer.isMuted  = true
-            self.currentQueueIndex = targetIdx
-            self.currentTitle = self.queue[targetIdx].displayTitle
-            self.currentLat   = self.queue[targetIdx].lat
-            self.currentLng   = self.queue[targetIdx].lng
-            self.preloadBack()
-            self.startTimeObserver()
+        // Completion — fires only if generation hasn't been invalidated
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self = self, self.crossfadeGeneration == gen else { return }
+            self.completeFade(to: targetIdx)
         }
     }
 
-    // MARK: Private — automatic crossfade (end-of-clip)
+    private func completeFade(to targetIdx: Int) {
+        // Old front player retires — stop it and clear its item
+        frontPlayer.pause()
+        frontPlayer.replaceCurrentItem(with: nil)
+
+        // Swap
+        isFrontA.toggle()
+        frontPlayer.isMuted = false
+        backPlayer.isMuted  = true
+
+        currentQueueIndex = targetIdx
+        isCrossfading = false
+        autoFadeArmed = false
+
+        // Caption and metadata update HERE — the new clip is now fully visible
+        updateMetadata(from: targetIdx)
+
+        preloadBack()
+        startTimeObserver()
+    }
+
+    // MARK: Private — hard cancel (called by next/prev/loadSection)
+
+    private func cancelAndReset() {
+        crossfadeGeneration += 1        // invalidate any pending async completion
+        removeTimeObserver()
+        isCrossfading = false
+        autoFadeArmed = false
+
+        // Stop back player and clear its item so it doesn't ghost
+        backPlayer.pause()
+        backPlayer.replaceCurrentItem(with: nil)
+        backPlayer.isMuted = true
+
+        // Tell PlayerViewController to snap layers back to clean state
+        resetLayersCallback?()
+
+        // Ensure front player is playing and audible
+        frontPlayer.isMuted = false
+        if frontPlayer.timeControlStatus == .paused { frontPlayer.play() }
+    }
+
+    // MARK: Private — auto crossfade (end-of-clip, time observer)
 
     private func startTimeObserver() {
         removeTimeObserver()
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
         timeObserverOwner = frontPlayer
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
-            self?.checkCrossfade()
+            self?.checkAutoFade()
         }
     }
 
@@ -167,52 +197,50 @@ class StreamingPlayerModel: ObservableObject {
         timeObserverOwner = nil
     }
 
-    private func checkCrossfade() {
-        guard !crossfadeArmed,
+    private func checkAutoFade() {
+        guard !autoFadeArmed,
+              !isCrossfading,
               let item = frontPlayer.currentItem,
               item.status == .readyToPlay else { return }
-        let duration  = item.duration.seconds
-        let remaining = duration - frontPlayer.currentTime().seconds
-        guard duration.isFinite, duration > 0, remaining > 0 else { return }
-
-        if remaining <= Self.autoCrossfadeDuration + 0.2 {
-            crossfadeArmed = true
-            triggerAutoCrossfade()
+        let dur = item.duration.seconds
+        let rem = dur - frontPlayer.currentTime().seconds
+        guard dur.isFinite, dur > 0, rem > 0 else { return }
+        if rem <= Self.autoDuration + 0.2 {
+            autoFadeArmed = true
+            let nextIdx = (currentQueueIndex + 1) % queue.count
+            startCrossfade(to: nextIdx, duration: Self.autoDuration)
         }
     }
 
-    private func triggerAutoCrossfade() {
-        backPlayer.seek(to: .zero)
-        backPlayer.play()
-        crossfadeCallback?(Self.autoCrossfadeDuration)
+    // MARK: Private — helpers
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoCrossfadeDuration) { [weak self] in
-            self?.completeAutoCrossfade()
+    private func loadClip(at index: Int, onFront: Bool, startPlaying: Bool) {
+        guard !queue.isEmpty else { return }
+        let video  = queue[index]
+        let player = onFront ? frontPlayer : backPlayer
+        guard let url = video.remoteVideoURL else { return }
+        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        if onFront {
+            player.isMuted = false
+            if startPlaying { player.seek(to: .zero); player.play() }
+        } else {
+            player.isMuted = true
         }
     }
 
-    private func completeAutoCrossfade() {
-        frontPlayer.pause()
-        frontPlayer.replaceCurrentItem(with: nil)
-        isFrontA.toggle()
-        frontPlayer.isMuted = false
-        backPlayer.isMuted  = true
-        currentQueueIndex = (currentQueueIndex + 1) % queue.count
-        currentTitle = queue[currentQueueIndex].displayTitle
-        currentLat   = queue[currentQueueIndex].lat
-        currentLng   = queue[currentQueueIndex].lng
-        crossfadeArmed = false
-        preloadBack()
-        startTimeObserver()
+    private func preloadBack() {
+        guard !queue.isEmpty else { return }
+        let nextIdx = (currentQueueIndex + 1) % queue.count
+        loadClip(at: nextIdx, onFront: false, startPlaying: false)
     }
 
-    private func cancelCrossfade() {
-        removeTimeObserver()
-        backPlayer.pause()
-        crossfadeArmed = false
+    private func updateMetadata(from index: Int) {
+        guard !queue.isEmpty, index < queue.count else { return }
+        let v = queue[index]
+        currentTitle = v.displayTitle
+        currentLat   = v.lat
+        currentLng   = v.lng
     }
-
-    // MARK: Private — arrow flash
 
     private func flash(right: Bool) {
         if right {
