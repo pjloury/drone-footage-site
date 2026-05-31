@@ -113,15 +113,18 @@ class StreamingPlayerModel: ObservableObject {
             if showSectionPicker { showSectionPicker = false } else { next() }
             return true
         case .upArrow:
-            if showSectionPicker { pickerFocusIndex = max(0, pickerFocusIndex - 1) }
-            else { showTitleCard.toggle() }
+            if showSectionPicker {
+                pickerFocusIndex = max(0, pickerFocusIndex - 1)
+            } else {
+                // Up opens the section picker (mirrors website's section button in top-right)
+                toggleSectionPicker()
+            }
             return true
         case .downArrow:
             if showSectionPicker {
                 pickerFocusIndex = min(Self.sections.count, pickerFocusIndex + 1)
-            } else {
-                showTitleCard.toggle()
             }
+            // Down does nothing when picker is closed — caption is always visible
             return true
         case .select:
             if showSectionPicker { confirmSection() }

@@ -60,17 +60,14 @@ struct PlayerOverlayView: View {
         VStack {
             Spacer()
             HStack(alignment: .bottom) {
-                // Title caption
-                if model.showTitleCard {
-                    Text(model.currentTitle)
-                        .font(.system(size: 36, weight: .light))
-                        .foregroundColor(.white)
-                        .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: 1)
-                        .shadow(color: .black.opacity(0.6), radius: 12)
-                        .padding(.leading, 80)
-                        .padding(.bottom, 70)
-                        .transition(.opacity)
-                }
+                // Title caption — always visible, matching the desktop web app
+                Text(model.currentTitle)
+                    .font(.system(size: 36, weight: .light))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.6), radius: 12)
+                    .padding(.leading, 80)
+                    .padding(.bottom, 70)
                 Spacer()
                 // Minimap
                 if let lat = model.currentLat, let lng = model.currentLng {

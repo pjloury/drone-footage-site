@@ -134,7 +134,32 @@ class PlayerViewController: UIViewController {
         overlayController.didMove(toParent: self)
     }
 
-    // MARK: - Siri Remote
+    // MARK: - Siri Remote + simulator keyboard
+
+    // UIKeyCommand runs before pressesBegan in the responder chain and is
+    // the only reliable path for tvOS Simulator keyboard input.
+    // Both methods call the same model handler so physical Apple TV remotes
+    // (which use pressesBegan) and the simulator keyboard both work.
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(input: UIKeyCommand.inputLeftArrow,  modifierFlags: [], action: #selector(kLeft)),
+            UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: [], action: #selector(kRight)),
+            UIKeyCommand(input: UIKeyCommand.inputUpArrow,    modifierFlags: [], action: #selector(kUp)),
+            UIKeyCommand(input: UIKeyCommand.inputDownArrow,  modifierFlags: [], action: #selector(kDown)),
+            UIKeyCommand(input: "\r",                         modifierFlags: [], action: #selector(kSelect)),
+            UIKeyCommand(input: UIKeyCommand.inputEscape,     modifierFlags: [], action: #selector(kMenu)),
+            UIKeyCommand(input: " ",                          modifierFlags: [], action: #selector(kPlayPause)),
+        ]
+    }
+
+    @objc private func kLeft()      { _ = model.handleRemotePress(.leftArrow) }
+    @objc private func kRight()     { _ = model.handleRemotePress(.rightArrow) }
+    @objc private func kUp()        { _ = model.handleRemotePress(.upArrow) }
+    @objc private func kDown()      { _ = model.handleRemotePress(.downArrow) }
+    @objc private func kSelect()    { _ = model.handleRemotePress(.select) }
+    @objc private func kMenu()      { _ = model.handleRemotePress(.menu) }
+    @objc private func kPlayPause() { _ = model.handleRemotePress(.playPause) }
 
     override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         var handled = false
