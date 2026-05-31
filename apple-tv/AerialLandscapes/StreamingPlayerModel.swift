@@ -51,7 +51,12 @@ class StreamingPlayerModel: ObservableObject {
     private(set) var currentQueueIndex = 0
 
     private var timeObserver: Any?
-    private var crossfadeArmed = false   // true once crossfade has been triggered for current clip
+    // Track which AVPlayer owns the current observer — removing it from the
+    // wrong player crashes with NSInvalidArgumentException (the bug that
+    // appeared when isFrontA was toggled mid-crossfade before removal).
+    private var timeObserverOwner: AVPlayer?
+
+    private var crossfadeArmed = false
 
     // MARK: Init
 
@@ -62,12 +67,13 @@ class StreamingPlayerModel: ObservableObject {
     }
 
     deinit {
-        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs) }
+        removeTimeObserver()
     }
 
     // MARK: Section / queue loading
 
     func loadSection(_ section: String?) {
+        cancelCrossfade()   // always cancel before rebuilding the queue
         activeSection = section
         let pool = section == nil
             ? VideoConfig.allVideos
@@ -167,9 +173,18 @@ class StreamingPlayerModel: ObservableObject {
 
     // MARK: Private — time observer + crossfade trigger
 
+    private func removeTimeObserver() {
+        if let obs = timeObserver, let owner = timeObserverOwner {
+            owner.removeTimeObserver(obs)   // must use the same player that added it
+        }
+        timeObserver = nil
+        timeObserverOwner = nil
+    }
+
     private func startTimeObserver() {
-        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs) }
+        removeTimeObserver()
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        timeObserverOwner = frontPlayer
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             self?.checkCrossfade()
         }
@@ -226,7 +241,7 @@ class StreamingPlayerModel: ObservableObject {
     }
 
     private func cancelCrossfade() {
-        if let obs = timeObserver { frontPlayer.removeTimeObserver(obs); timeObserver = nil }
+        removeTimeObserver()
         backPlayer.pause()
         crossfadeArmed = false
     }
