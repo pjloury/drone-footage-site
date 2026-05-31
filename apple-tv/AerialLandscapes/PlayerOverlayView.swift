@@ -61,6 +61,18 @@ struct PlayerOverlayView: View {
                     .shadow(color: .black.opacity(0.6), radius: 12)
                     .padding(.leading, 80)
                     .padding(.bottom, 70)
+                    // Accessibility ID lets UI tests read the exact caption.
+                    .accessibilityIdentifier("video-caption")
+                    .accessibilityValue(model.currentTitle)
+
+                // Zero-size element that exposes currentQueueIndex as an
+                // accessibility value. .hidden() removes from a11y tree, so
+                // use .opacity(0) + tiny frame to keep it in the tree.
+                Text("\(model.currentQueueIndex)")
+                    .opacity(0)
+                    .frame(width: 1, height: 1)
+                    .accessibilityIdentifier("queue-index")
+                    .accessibilityValue("\(model.currentQueueIndex)")
 
                 Spacer()
 

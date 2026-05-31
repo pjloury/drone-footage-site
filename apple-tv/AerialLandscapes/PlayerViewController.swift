@@ -62,17 +62,14 @@ class PlayerViewController: UIViewController {
             self?.performCrossfade(duration: duration)
         }
 
-        // Snap layers back to clean state when a crossfade is cancelled mid-flight.
-        // Removes in-progress CALayer animations and hard-sets opacities so the
-        // next crossfade starts from a known (front=1, back=0) baseline.
+        // Cancel: snap layers to known baseline (front=1, back=0)
         model.resetLayersCallback = { [weak self] in
-            guard let self = self else { return }
-            let front = self.model.isFrontA ? self.layerA : self.layerB
-            let back  = self.model.isFrontA ? self.layerB : self.layerA
-            front?.removeAllAnimations()
-            back?.removeAllAnimations()
-            front?.opacity = 1.0
-            back?.opacity  = 0.0
+            self?.setLayerOpacities()
+        }
+
+        // Finalize: called after isFrontA.toggle() — MUST read new state
+        model.finalizeLayersCallback = { [weak self] in
+            self?.setLayerOpacities()
         }
     }
 
@@ -109,13 +106,16 @@ class PlayerViewController: UIViewController {
     //   4.0 s — automatic end-of-clip crossfade
     //   1.2 s — manual ← / → skip
 
+    // Bug 1 fix: no asyncAfter cleanup here.
+    // Cleanup is now driven by finalizeLayersCallback which fires inside
+    // completeFade() AFTER isFrontA has been toggled — so setLayerOpacities()
+    // always reads the correct (post-toggle) front/back assignment.
     func performCrossfade(duration: TimeInterval) {
-        let fadingIn  = model.isFrontA ? layerB : layerA
-        let fadingOut = model.isFrontA ? layerA : layerB
+        let fadingIn  = model.isFrontA ? layerB : layerA   // back layer
+        let fadingOut = model.isFrontA ? layerA : layerB   // front layer
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-
         let makeAnim: (Float, Float) -> CABasicAnimation = { from, to in
             let a = CABasicAnimation(keyPath: "opacity")
             a.fromValue = from; a.toValue = to
@@ -124,20 +124,20 @@ class PlayerViewController: UIViewController {
             a.fillMode = .forwards; a.isRemovedOnCompletion = false
             return a
         }
-
-        fadingIn?.add(makeAnim(0, 1), forKey: "fadeIn")
+        fadingIn?.add(makeAnim(0, 1),  forKey: "fadeIn")
         fadingOut?.add(makeAnim(1, 0), forKey: "fadeOut")
         CATransaction.commit()
+    }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
-            guard let self = self else { return }
-            fadingIn?.removeAnimation(forKey: "fadeIn")
-            fadingOut?.removeAnimation(forKey: "fadeOut")
-            let front = self.model.isFrontA ? self.layerA : self.layerB
-            let back  = self.model.isFrontA ? self.layerB : self.layerA
-            front?.opacity = 1.0
-            back?.opacity  = 0.0
-        }
+    // Called by both resetLayersCallback (cancel) and finalizeLayersCallback (complete).
+    // Reads model.isFrontA which is already in its final state at both call sites.
+    private func setLayerOpacities() {
+        let front = model.isFrontA ? layerA : layerB
+        let back  = model.isFrontA ? layerB : layerA
+        front?.removeAllAnimations()
+        back?.removeAllAnimations()
+        front?.opacity = 1.0
+        back?.opacity  = 0.0
     }
 
     // MARK: - Dim view (behind sidebar, over video)

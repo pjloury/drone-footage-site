@@ -2,16 +2,21 @@
 //  StreamingPlayerModel.swift
 //  AerialLandscapes
 //
-//  Two-player crossfade engine with a proper state machine.
+//  Two-player crossfade engine — three-bug rewrite.
 //
-//  Key invariants (mirrors the website's transitioning flag):
-//  - Only ONE crossfade may be in-flight at a time.
-//  - Calling next()/prev() while isCrossfading=true cancels the current
-//    crossfade (resets layers + back player), then starts a new one.
-//  - crossfadeGeneration is incremented on every cancel so stale async
-//    completion blocks self-invalidate on arrival.
-//  - captions and metadata update only AFTER the fade completes (the
-//    front player is already showing the new clip at that point).
+//  Bug 1 fixed: layer cleanup race
+//    performCrossfade() no longer has an asyncAfter cleanup.
+//    finalizeLayersCallback is called inside completeFade() AFTER
+//    isFrontA.toggle(), so PlayerVC always reads the correct state.
+//
+//  Bug 2 fixed: preloaded item destroyed on every manual skip
+//    startCrossfade checks whether backPlayer already has the target
+//    URL loaded (from preloadBack). If it does, we reuse it and skip
+//    the replaceCurrentItem+seek sequence, giving the user instant playback.
+//
+//  Bug 3 fixed: caption updated too late / wrong player state
+//    Caption updates at the START of crossfadeCallback (when the new
+//    video begins fading in) rather than only on completeFade().
 //
 
 import AVFoundation
@@ -26,18 +31,20 @@ class StreamingPlayerModel: ObservableObject {
     let playerB = AVPlayer()
 
     private(set) var isFrontA = true
-
     var frontPlayer: AVPlayer { isFrontA ? playerA : playerB }
     var backPlayer:  AVPlayer { isFrontA ? playerB : playerA }
 
-    // Callbacks set by PlayerViewController
-    /// Called with the crossfade duration whenever a new fade starts.
+    // ── Callbacks (set by PlayerViewController) ───────────────────────────
+    /// Fired with the crossfade duration when a fade should start.
     var crossfadeCallback: ((TimeInterval) -> Void)?
-    /// Called when a crossfade is cancelled mid-flight — VC resets layer opacities.
+    /// Fired when a crossfade is cancelled — VC snaps layers to a clean baseline.
     var resetLayersCallback: (() -> Void)?
+    /// Fired inside completeFade() AFTER isFrontA.toggle() — VC finalises opacities.
+    var finalizeLayersCallback: (() -> Void)?
 
     // ── Published state ───────────────────────────────────────────────────
     @Published private(set) var currentTitle = ""
+    @Published private(set) var currentQueueIndex = 0   // exposed for UI tests
     @Published private(set) var activeSection: String? = nil
     @Published private(set) var currentLat: Double? = nil
     @Published private(set) var currentLng: Double? = nil
@@ -54,18 +61,18 @@ class StreamingPlayerModel: ObservableObject {
 
     // ── Queue ─────────────────────────────────────────────────────────────
     private var queue: [Video] = []
-    private(set) var currentQueueIndex = 0
 
-    // ── Crossfade state machine ───────────────────────────────────────────
-    private var crossfadeGeneration = 0  // invalidates stale async completions
-    private var isCrossfading = false
+    // ── Crossfade state ───────────────────────────────────────────────────
+    private var crossfadeGeneration = 0
+    private var isCrossfading  = false
+    private var autoFadeArmed  = false
 
     private var timeObserver: Any?
     private var timeObserverOwner: AVPlayer?
-    private var autoFadeArmed = false   // true once auto-crossfade has been triggered
+    private var bufferingObservation: NSKeyValueObservation?
 
     static let autoDuration:   TimeInterval = 4.0
-    static let manualDuration: TimeInterval = 1.2
+    static let manualDuration: TimeInterval = 1.5   // slightly longer for buffering headroom
 
     // MARK: Init
 
@@ -75,12 +82,15 @@ class StreamingPlayerModel: ObservableObject {
         loadSection(nil)
     }
 
-    deinit { removeTimeObserver() }
+    deinit {
+        removeTimeObserver()
+        bufferingObservation?.invalidate()
+    }
 
     // MARK: Section loading
 
     func loadSection(_ section: String?) {
-        cancelAndReset()            // stop everything cleanly first
+        hardCancel()
         activeSection = section
         let pool = section == nil
             ? VideoConfig.allVideos
@@ -88,103 +98,143 @@ class StreamingPlayerModel: ObservableObject {
         queue = pool.shuffled()
         currentQueueIndex = 0
         loadClip(at: 0, onFront: true, startPlaying: true)
+        updateMetadata(from: 0)
         preloadBack()
         startTimeObserver()
-        // Update caption immediately for the first clip
-        updateMetadata(from: currentQueueIndex)
     }
 
     // MARK: Navigation
 
     func next() {
         flash(right: true)
-        let target = (currentQueueIndex + 1) % queue.count
-        startCrossfade(to: target, duration: Self.manualDuration)
+        startCrossfade(to: (currentQueueIndex + 1) % queue.count,
+                       duration: Self.manualDuration)
     }
 
     func prev() {
         flash(right: false)
-        let target = (currentQueueIndex - 1 + queue.count) % queue.count
-        startCrossfade(to: target, duration: Self.manualDuration)
+        startCrossfade(to: (currentQueueIndex - 1 + queue.count) % queue.count,
+                       duration: Self.manualDuration)
     }
 
-    // MARK: Private — unified crossfade entry point
+    // MARK: Private — unified crossfade
 
     private func startCrossfade(to targetIdx: Int, duration: TimeInterval) {
-        // Cancel any in-progress fade first (safe to call even if not fading)
-        cancelAndReset()
+        guard !queue.isEmpty else { return }
 
-        guard !queue.isEmpty, let url = queue[targetIdx].remoteVideoURL else { return }
+        // ── Bug 2 fix: reuse preloaded item if it's already the right URL ──
+        let targetURL      = queue[targetIdx].remoteVideoURL
+        let preloadedURL   = (backPlayer.currentItem?.asset as? AVURLAsset)?.url
+        let reusePreloaded = targetURL != nil && targetURL == preloadedURL
 
-        let gen = crossfadeGeneration   // capture before any increment
+        // Cancel any in-progress crossfade
+        crossfadeGeneration += 1
+        removeTimeObserver()
+        bufferingObservation?.invalidate()
+        isCrossfading = false
+        autoFadeArmed = false
+        resetLayersCallback?()
+        frontPlayer.isMuted = false
+
+        if !reusePreloaded {
+            backPlayer.pause()
+            backPlayer.replaceCurrentItem(with: nil)
+        }
+
+        let gen = crossfadeGeneration
         isCrossfading = true
-        autoFadeArmed = true            // block auto-fade triggering during manual fade
+        autoFadeArmed = true
 
-        // Load target onto back player and start it (muted — front is still audible)
-        backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
+        if !reusePreloaded {
+            guard let url = targetURL else { isCrossfading = false; return }
+            backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
+        }
+
+        // ── Bug 3 fix: caption updates NOW (as the new video starts fading in) ──
+        updateMetadata(from: targetIdx)
+
+        backPlayer.isMuted = true
         backPlayer.seek(to: .zero)
         backPlayer.play()
-        backPlayer.isMuted = true
 
-        // Tell PlayerViewController to run the layer opacity animation
-        crossfadeCallback?(duration)
-
-        // Completion — fires only if generation hasn't been invalidated
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+        // ── Wait until the back player has enough data to show a frame ────
+        // Falls through after 4s if buffering is slow.
+        waitUntilLikelyToKeepUp(gen: gen) { [weak self] in
             guard let self = self, self.crossfadeGeneration == gen else { return }
-            self.completeFade(to: targetIdx)
+            self.crossfadeCallback?(duration)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+                guard let self = self, self.crossfadeGeneration == gen else { return }
+                self.completeFade(to: targetIdx)
+            }
         }
     }
 
+    // Wait for isPlaybackLikelyToKeepUp; fall through after `maxWait` seconds.
+    private func waitUntilLikelyToKeepUp(gen: Int, completion: @escaping () -> Void) {
+        guard let item = backPlayer.currentItem else { completion(); return }
+        if item.isPlaybackLikelyToKeepUp { completion(); return }
+
+        let maxWait = 4.0
+        bufferingObservation?.invalidate()
+        bufferingObservation = item.observe(\.isPlaybackLikelyToKeepUp,
+                                             options: [.new]) { [weak self] item, _ in
+            guard item.isPlaybackLikelyToKeepUp else { return }
+            self?.bufferingObservation?.invalidate()
+            DispatchQueue.main.async { completion() }
+        }
+        // Fallback
+        DispatchQueue.main.asyncAfter(deadline: .now() + maxWait) { [weak self] in
+            guard let self = self, self.crossfadeGeneration == gen else { return }
+            self.bufferingObservation?.invalidate()
+            completion()
+        }
+    }
+
+    // ── Bug 1 fix: completeFade() calls finalizeLayersCallback AFTER toggle ──
     private func completeFade(to targetIdx: Int) {
-        // Old front player retires — stop it and clear its item
         frontPlayer.pause()
         frontPlayer.replaceCurrentItem(with: nil)
 
-        // Swap
-        isFrontA.toggle()
-        frontPlayer.isMuted = false
+        isFrontA.toggle()                   // swap players
+        frontPlayer.isMuted = false         // new front gets audio
         backPlayer.isMuted  = true
 
         currentQueueIndex = targetIdx
         isCrossfading = false
         autoFadeArmed = false
 
-        // Caption and metadata update HERE — the new clip is now fully visible
-        updateMetadata(from: targetIdx)
+        // Finalize opacities only NOW that isFrontA is correct
+        finalizeLayersCallback?()
 
         preloadBack()
         startTimeObserver()
     }
 
-    // MARK: Private — hard cancel (called by next/prev/loadSection)
+    // MARK: Private — hard cancel (destroys everything)
 
-    private func cancelAndReset() {
-        crossfadeGeneration += 1        // invalidate any pending async completion
+    private func hardCancel() {
+        crossfadeGeneration += 1
         removeTimeObserver()
+        bufferingObservation?.invalidate()
         isCrossfading = false
         autoFadeArmed = false
-
-        // Stop back player and clear its item so it doesn't ghost
         backPlayer.pause()
         backPlayer.replaceCurrentItem(with: nil)
         backPlayer.isMuted = true
-
-        // Tell PlayerViewController to snap layers back to clean state
         resetLayersCallback?()
-
-        // Ensure front player is playing and audible
         frontPlayer.isMuted = false
         if frontPlayer.timeControlStatus == .paused { frontPlayer.play() }
     }
 
-    // MARK: Private — auto crossfade (end-of-clip, time observer)
+    // MARK: Private — auto crossfade
 
     private func startTimeObserver() {
         removeTimeObserver()
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
         timeObserverOwner = frontPlayer
-        timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
+        timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval,
+                                                           queue: .main) { [weak self] _ in
             self?.checkAutoFade()
         }
     }
@@ -198,8 +248,7 @@ class StreamingPlayerModel: ObservableObject {
     }
 
     private func checkAutoFade() {
-        guard !autoFadeArmed,
-              !isCrossfading,
+        guard !autoFadeArmed, !isCrossfading,
               let item = frontPlayer.currentItem,
               item.status == .readyToPlay else { return }
         let dur = item.duration.seconds
@@ -215,7 +264,7 @@ class StreamingPlayerModel: ObservableObject {
     // MARK: Private — helpers
 
     private func loadClip(at index: Int, onFront: Bool, startPlaying: Bool) {
-        guard !queue.isEmpty else { return }
+        guard !queue.isEmpty, index < queue.count else { return }
         let video  = queue[index]
         let player = onFront ? frontPlayer : backPlayer
         guard let url = video.remoteVideoURL else { return }
