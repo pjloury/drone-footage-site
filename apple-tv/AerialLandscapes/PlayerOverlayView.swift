@@ -17,7 +17,35 @@ struct PlayerOverlayView: View {
         ZStack {
             navArrows
             bottomRow
+            progressBar
         }
+    }
+
+    // ── Thin translucent progress bar pinned to the bottom edge ───────────
+    // Mirrors the website: 4px track at 12% white, fill at 55% white, width
+    // = playback progress, eased linearly so it advances smoothly.
+    //
+    // Fades out/in with the rest of the overlay via `overlayVisible` (see the
+    // convention on StreamingPlayerModel.overlayVisible) so it disappears
+    // during the crossfade and reappears, empty, with the new clip.
+
+    private var progressBar: some View {
+        VStack(spacing: 0) {
+            Spacer()
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Rectangle().fill(Color.white.opacity(0.12))
+                    Rectangle().fill(Color.white.opacity(0.55))
+                        .frame(width: max(0, geo.size.width * CGFloat(model.playbackProgress)))
+                        .animation(.linear(duration: 0.25), value: model.playbackProgress)
+                }
+            }
+            .frame(height: 4)
+        }
+        .ignoresSafeArea()
+        .opacity(model.overlayVisible ? 1 : 0)
+        .animation(.easeInOut(duration: StreamingPlayerModel.overlayFadeDuration),
+                   value: model.overlayVisible)
     }
 
     // ── Nav arrows ────────────────────────────────────────────────────────
@@ -49,6 +77,14 @@ struct PlayerOverlayView: View {
                     .shadow(color: .black.opacity(0.45), radius: 20, x: 0, y: 4)
                     .padding(.leading, 80)
                     .padding(.bottom, 70)
+                    // Slide right when the sidebar is open so the caption
+                    // clears the sidebar edge (animated from PlayerViewController).
+                    .offset(x: model.captionOffset)
+                    // Fade out at crossfade start, fade in at the midpoint —
+                    // mirrors the website's 0.6s ease-in-out caption fade.
+                    .opacity(model.overlayVisible ? 1 : 0)
+                    .animation(.easeInOut(duration: StreamingPlayerModel.overlayFadeDuration),
+                               value: model.overlayVisible)
                     .accessibilityIdentifier("video-caption")
                     .accessibilityValue(model.currentTitle)
 
@@ -58,10 +94,26 @@ struct PlayerOverlayView: View {
                     .accessibilityIdentifier("queue-index")
                     .accessibilityValue("\(model.currentQueueIndex)")
 
+                // Hidden probe: lets UI tests assert that the VISIBLE video
+                // actually kept playing (currentTime advanced), not merely that
+                // the queue-index state machine completed.
+                Text("\(model.stuckEventCount)")
+                    .opacity(0)
+                    .frame(width: 1, height: 1)
+                    .accessibilityIdentifier("stuck-count")
+                    .accessibilityValue("\(model.stuckEventCount)")
+
                 Spacer()
 
                 if let lat = model.currentLat, let lng = model.currentLng {
                     MinimapView(lat: lat, lng: lng)
+                        // Fade out at crossfade start, fade in at the midpoint —
+                        // same lifecycle as the caption, so the map image (and
+                        // any zone change, e.g. California → US) swaps while
+                        // invisible instead of flickering.
+                        .opacity(model.overlayVisible ? 1 : 0)
+                        .animation(.easeInOut(duration: StreamingPlayerModel.overlayFadeDuration),
+                                   value: model.overlayVisible)
                         .padding(.trailing, 60)
                         .padding(.bottom, 60)
                         .transition(.opacity)

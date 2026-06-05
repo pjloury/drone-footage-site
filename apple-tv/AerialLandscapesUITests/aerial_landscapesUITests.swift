@@ -235,21 +235,22 @@ final class AerialLandscapesUITests: XCTestCase {
     }
 
     func testMinimapDoesNotLagBehindCaption() {
-        // Press right and immediately check that caption + minimap update together.
-        // If the dot lags (old coords while new caption is showing), this catches it.
+        // Caption and minimap coords both update at the crossfade midpoint
+        // (matching the website's CROSSFADE_MS/2 behaviour).
+        // Key invariant: they are ALWAYS in sync — never in different states.
         remote.press(.right)
-        waitFor(seconds: 0.3)   // caption updates at start of crossfade
-        let capQuick   = caption()
-        let mapQuick   = minimapCoords()
 
-        waitFor(seconds: 5.5)   // crossfade completes
-        let capFinal   = caption()
-        let mapFinal   = minimapCoords()
+        // Wait past the midpoint (up to 1 s buffer + 0.75 s half-duration)
+        waitFor(seconds: 5)
+        let capMid  = caption()
+        let mapMid  = minimapCoords()
+        XCTAssertFalse(capMid.isEmpty,  "Caption must not be empty at midpoint")
+        XCTAssertFalse(mapMid.isEmpty,  "Map coords must not be empty at midpoint")
 
-        XCTAssertEqual(capQuick, capFinal,
-                       "Caption set at crossfade start should match final caption")
-        XCTAssertEqual(mapQuick, mapFinal,
-                       "Minimap coords set at crossfade start should match final coords")
+        // Both should remain stable after midpoint until next navigation
+        waitFor(seconds: 3)
+        XCTAssertEqual(caption(),         capMid, "Caption should be stable after midpoint")
+        XCTAssertEqual(minimapCoords(),   mapMid, "Map coords should be stable after midpoint")
         XCTAssertEqual(app.state, .runningForeground)
         attach("minimap-no-lag")
     }
@@ -269,5 +270,110 @@ final class AerialLandscapesUITests: XCTestCase {
             attach("frame-check-\(i)")
             XCTAssertEqual(app.state, .runningForeground)
         }
+    }
+
+    // MARK: - Preview mode (sidebar D-pad focus)
+
+    /// Regression: D-padding to a sidebar section used to auto-advance the
+    /// preview clip (via checkAutoFade) and then freeze on the second clip.
+    /// With isPreviewMode, checkAutoFade is suppressed — queue index must
+    /// stay at 0 while the sidebar is open.
+    func testSidebarPreviewDoesNotAutoAdvance() {
+        // Open sidebar
+        remote.press(.playPause)
+        XCTAssertTrue(app.staticTexts["Shuffle All"].waitForExistence(timeout: 3))
+
+        // D-pad to Cities row → previewSection fires
+        remote.press(.down)
+        waitFor(seconds: 2)   // let the preview crossfade start
+
+        let idxDuringPreview = queueIndex()
+
+        // Wait well past UITEST_FAST_AUTOFADE threshold (3 s) — preview should NOT advance
+        waitFor(seconds: 6)
+
+        let idxAfterWait = queueIndex()
+        XCTAssertEqual(idxAfterWait, idxDuringPreview,
+                       "Preview clip must not auto-advance (stuck at \(idxDuringPreview), got \(idxAfterWait))")
+        XCTAssertEqual(app.state, .runningForeground, "App must not crash during preview")
+        attach("preview-no-auto-advance")
+    }
+
+    /// Reproduces the user's real complaint: open the sidebar and rapidly
+    /// scrub up/down through several categories (firing many previewSection
+    /// crossfades back-to-back), then commit one. The os_log telemetry +
+    /// STUCK watchdog reveal whether playback actually keeps running. This
+    /// test deliberately does NOT assert on queue-index alone (the flaw in the
+    /// prior suite) — it keeps the app alive long enough for the watchdog to
+    /// fire if the video freezes.
+    func testRapidCategoryScrubbingStaysAlive() {
+        remote.press(.playPause)
+        XCTAssertTrue(app.staticTexts["Shuffle All"].waitForExistence(timeout: 3))
+
+        // Scrub down through all categories quickly
+        for _ in 0..<4 { remote.press(.down); Thread.sleep(forTimeInterval: 0.25) }
+        attach("scrub-bottom")
+        // Scrub back up
+        for _ in 0..<4 { remote.press(.up);   Thread.sleep(forTimeInterval: 0.25) }
+        attach("scrub-top")
+        // Another fast pass to stress overlapping crossfades
+        for _ in 0..<4 { remote.press(.down); Thread.sleep(forTimeInterval: 0.4) }
+
+        // Let preview clips settle — watchdog needs ~1s of frozen time to log STUCK
+        waitFor(seconds: 5)
+        attach("scrub-settled")
+
+        // Commit the focused category
+        remote.press(.select)
+        // Give committed clip time to load and (hopefully) keep playing
+        waitFor(seconds: 8)
+        attach("scrub-committed")
+
+        XCTAssertEqual(app.state, .runningForeground, "App must survive rapid category scrubbing")
+        XCTAssertFalse(caption().isEmpty, "Caption must not be blank after committing a scrubbed category")
+        // The real assertion the old suite was missing: the visible video must
+        // have actually kept playing. A spurious double-crossfade froze the
+        // front layer — the stuck-watchdog catches that even though queue-index
+        // looks fine.
+        XCTAssertEqual(stuckCount(), 0,
+                       "Front video must never freeze during/after category scrubbing")
+    }
+
+    private func stuckCount() -> Int {
+        let el = app.descendants(matching: .any)
+            .matching(identifier: "stuck-count").firstMatch
+        return Int((el.value as? String) ?? el.label) ?? -1
+    }
+
+    // MARK: - Auto crossfade (end-of-clip, no user input)
+
+    /// Verifies the clip advances on its own when one video ends — i.e. the
+    /// crossfade happens between videos, not only on ←/→. Uses the
+    /// UITEST_FAST_AUTOFADE launch arg so the end-of-clip fade fires ~3 s in
+    /// (the production trigger is identical, just ~4 s before the natural end).
+    func testAutoCrossfadeAdvancesWithoutInput() {
+        app.terminate()
+        let fastApp = XCUIApplication()
+        fastApp.launchArguments = ["UITEST_FAST_AUTOFADE"]
+        fastApp.launch()
+        waitFor(seconds: 6)   // first clip buffers + begins playing
+
+        let beforeEl = fastApp.descendants(matching: .any)
+            .matching(identifier: "queue-index").firstMatch
+        let before = Int((beforeEl.value as? String) ?? beforeEl.label) ?? -1
+
+        // No remote press at all — wait out the 3 s trigger + 1 s fade + buffer.
+        waitFor(seconds: 9)
+
+        let afterEl = fastApp.descendants(matching: .any)
+            .matching(identifier: "queue-index").firstMatch
+        let after = Int((afterEl.value as? String) ?? afterEl.label) ?? -1
+
+        XCTAssertEqual(fastApp.state, .runningForeground,
+                       "App must survive an automatic crossfade")
+        XCTAssertNotEqual(after, before,
+                          "Queue index should auto-advance with no user input (was \(before), got \(after))")
+        let s = XCTAttachment(screenshot: fastApp.screenshot())
+        s.name = "auto-crossfade"; s.lifetime = .keepAlways; add(s)
     }
 }
