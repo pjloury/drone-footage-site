@@ -16,7 +16,8 @@ import UIKit
 class SidebarViewController: UIViewController {
 
     weak var model: StreamingPlayerModel?
-    var onClose: (() -> Void)?
+    var onClose:   (() -> Void)?
+    var onCancel:  (() -> Void)?   // called when user presses Menu (cancel preview)
 
     private let tableView = UITableView(frame: .zero, style: .plain)
 
@@ -40,14 +41,16 @@ class SidebarViewController: UIViewController {
     // MARK: Setup
 
     private func setupBackground() {
-        // CRITICAL: .clear so the blur shows the video playing underneath
-        view.backgroundColor = .clear
+        view.backgroundColor = .clear   // let the blur show video underneath
 
-        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .dark))
+        // .regular style is lighter/more transparent than .dark,
+        // making the video more visible through the frosted glass
+        let blur = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
         blur.frame = view.bounds
         blur.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // Reduce overall opacity for extra translucency on top of the blur
+        blur.alpha = 0.82
         view.addSubview(blur)
-        // No right-edge gradient — it caused the visible seam artefact
     }
 
     private func setupHeader() {
@@ -84,7 +87,11 @@ class SidebarViewController: UIViewController {
     // MARK: Remote
 
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
-        for press in presses where press.type == .menu { onClose?(); return }
+        for press in presses where press.type == .menu {
+            onCancel?()   // revert preview before closing
+            onClose?()
+            return
+        }
         super.pressesEnded(presses, with: event)
     }
 }
@@ -107,8 +114,17 @@ extension SidebarViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 78 }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        // Section is already previewing — commit it and close
         model?.loadSection(items[indexPath.row].id)
         onClose?()
+    }
+
+    // Fire a live preview as soon as focus moves to a row
+    func tableView(_ tableView: UITableView,
+                   didUpdateFocusIn context: UITableViewFocusUpdateContext,
+                   with coordinator: UIFocusAnimationCoordinator) {
+        guard let next = context.nextFocusedIndexPath else { return }
+        model?.previewSection(items[next.row].id)
     }
 }
 

@@ -155,8 +155,9 @@ class PlayerViewController: UIViewController {
 
     private func setupSidebar() {
         sidebarVC = SidebarViewController()
-        sidebarVC.model   = model
-        sidebarVC.onClose = { [weak self] in self?.closeSidebar() }
+        sidebarVC.model    = model
+        sidebarVC.onClose  = { [weak self] in self?.closeSidebar() }
+        sidebarVC.onCancel = { [weak self] in self?.model.cancelPreview() }
 
         addChild(sidebarVC)
         let w = Self.sidebarWidth
@@ -180,6 +181,10 @@ class PlayerViewController: UIViewController {
             self.sidebarVC.view.frame.origin.x = 0
             self.dimView.alpha = 1
         }
+        // Slide caption + minimap right so they clear the sidebar edge
+        withAnimation(.spring(duration: 0.42, bounce: 0.12)) {
+            model.captionOffset = Self.sidebarWidth
+        }
 
         setNeedsFocusUpdate()
         updateFocusIfNeeded()
@@ -200,6 +205,10 @@ class PlayerViewController: UIViewController {
                            // Hide after animation so the blur doesn't render off-screen
                            self.sidebarVC.view.isHidden = true
                        })
+        // Slide caption back to its resting position
+        withAnimation(.spring(duration: 0.32, bounce: 0.12)) {
+            model.captionOffset = 0
+        }
 
         // Return focus to PlayerViewController
         setNeedsFocusUpdate()
