@@ -19,18 +19,37 @@ struct MinimapView: View {
     let lat: Double
     let lng: Double
 
-    @State private var pulseScale: CGFloat = 1.0
-
     private var zone: MapZone { MapZone.forCoordinate(lat: lat, lng: lng) }
 
-    // Load PNG from bundle — Image("name") only reads asset catalogs,
+    // Load PNGs from bundle — Image("name") only reads asset catalogs,
     // not raw resources bundled via FileSystemSynchronizedRootGroup.
-    @State private var mapImage: UIImage? = nil
+    //   mapImage  — white continent fill + outlines, transparent water
+    //   maskImage — solid silhouette of the land, used to clip the
+    //               frosted-glass plate so only land is frosted (water clear)
+    @State private var mapImage:  UIImage? = nil
+    @State private var maskImage: UIImage? = nil
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // ── Website-identical map background ──────────────────────
+                // ── Frosted-glass plate, clipped to the land silhouette ───
+                // Mirrors the website's `backdrop-filter: blur()` on the
+                // masked minimap: land looks like frosted glass over the
+                // video, while the water (outside the mask) stays fully
+                // see-through.
+                if let mask = maskImage {
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .mask(
+                            Image(uiImage: mask)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                        )
+                }
+
+                // ── Continent fill (13% white) + outlines (58% white) ─────
                 if let img = mapImage {
                     Image(uiImage: img)
                         .resizable()
@@ -46,42 +65,20 @@ struct MinimapView: View {
             }
         }
         .frame(width: zone.displaySize.width, height: zone.displaySize.height)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .inset(by: 0.5)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.35), .white.opacity(0.08)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .shadow(color: .black.opacity(0.5), radius: 18, x: 0, y: 6)
         .accessibilityIdentifier("minimap")
         .accessibilityValue("\(lat),\(lng)")
-        .onAppear {
-            loadMapImage()
-            startPulse()
-        }
-        .onChange(of: lat) {
-            loadMapImage()   // zone may have changed
-            startPulse()
-        }
+        .onAppear { loadMapImage() }
+        .onChange(of: lat) { loadMapImage() }
     }
 
     // MARK: GPS marker
 
     private var gpsMarker: some View {
         ZStack {
-            // Pulse ring
-            Circle()
-                .fill(Color(red: 0.29, green: 0.62, blue: 1.0).opacity(0.45))
-                .frame(width: 8, height: 8)
-                .scaleEffect(pulseScale)
-                .opacity(max(0, 1.0 - (pulseScale - 1.0) / 3.5))
+            // Three staggered pulse rings — luxuriously slow, wide diffusion
+            PulseRing(startDelay: 0.0)
+            PulseRing(startDelay: 4.0 / 3.0)   // 1.33 s
+            PulseRing(startDelay: 4.0 * 2 / 3)  // 2.67 s
             // White halo
             Circle()
                 .strokeBorder(.white, lineWidth: 1.5)
@@ -94,38 +91,102 @@ struct MinimapView: View {
         }
     }
 
-    // MARK: Dot position (Web Mercator, matching MapKit rendering)
-
+    // MARK: Dot position
+    //
+    // Mirrors the website EXACTLY. On the web, the dot SVG and the map SVG
+    // share a viewBox and are both centered in the plate at a fixed
+    // per-zone width (CSS: `position:absolute; top/left:50%;
+    // translate(-50%,-50%); width:<mapRenderWidth>; height:auto`). The dot
+    // is placed at the projected viewBox coordinate, so it lands on the
+    // same pixel as the landmass below.
+    //
+    // The tvOS PNGs are captures of that same plate (map centered at
+    // `mapRenderWidth`), displayed 1:1 in the displaySize frame — so we
+    // reproduce the identical transform here:
+    //   1. project (lat,lng) → viewBox coords (equirectangular, per web)
+    //   2. scale the viewBox to `mapRenderWidth`, height auto
+    //   3. center that rendered rect in the frame
+    //   4. place the dot at (projected − viewBoxOrigin) × scale + centerOffset
     private func dotPosition(in size: CGSize) -> CGPoint {
-        let bounds = zone.bounds
-        let x = ((lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * size.width
-        let y  = ((mercY(bounds.maxLat) - mercY(lat)) /
-                  (mercY(bounds.maxLat) - mercY(bounds.minLat))) * size.height
-        return CGPoint(
-            x: max(8, min(size.width  - 8, x)),
-            y: max(8, min(size.height - 8, y))
-        )
-    }
-
-    private func mercY(_ latDeg: Double) -> Double {
-        let r = latDeg * .pi / 180
-        return log(tan(.pi / 4 + r / 2))
+        let vb = zone.viewBox
+        let p  = zone.project(lat: lat, lng: lng)
+        let scale     = zone.mapRenderWidth / vb.w
+        let renderedW = vb.w * scale
+        let renderedH = vb.h * scale
+        let offX = (size.width  - renderedW) / 2
+        let offY = (size.height - renderedH) / 2
+        return CGPoint(x: offX + (p.x - vb.x) * scale,
+                       y: offY + (p.y - vb.y) * scale)
     }
 
     private func loadMapImage() {
-        let name = zone.imageName
-        if let path = Bundle.main.path(forResource: name, ofType: "png") {
-            mapImage = UIImage(contentsOfFile: path)
-        } else {
-            // Fallback: try UIImage(named:) in case Xcode bundled it differently
-            mapImage = UIImage(named: name)
-        }
+        mapImage  = loadBundlePNG(zone.imageName)
+        maskImage = loadBundlePNG(zone.imageName + "-mask")
     }
 
-    private func startPulse() {
-        pulseScale = 1.0
-        withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) {
-            pulseScale = 4.0
+    private func loadBundlePNG(_ name: String) -> UIImage? {
+        if let path = Bundle.main.path(forResource: name, ofType: "png") {
+            return UIImage(contentsOfFile: path)
+        }
+        // Fallback: try UIImage(named:) in case Xcode bundled it differently
+        return UIImage(named: name)
+    }
+
+}
+
+// MARK: - PulseRing
+//
+// One expanding ring of the GPS diffusion animation.
+// Three instances with staggered startDelays create an evenly-spaced ripple.
+//
+// Cycle (4 s):
+//   0 ms  — instant reset to scale 1.0, opacity 0.5 (via disablesAnimations)
+//   16 ms — easeOut expansion begins: scale 1 → 6, opacity 0.5 → 0
+//   4 s   — ring is fully invisible; next cycle starts
+//
+// The reset always happens while the ring is at opacity 0, so the
+// snap from scale 6 → 1 is invisible — no flicker.
+
+private struct PulseRing: View {
+    let startDelay: Double
+
+    static let cycleDuration: Double  = 4.0
+    static let maxScale:      CGFloat = 6.0
+
+    @State private var scale:   CGFloat = 1.0
+    @State private var opacity: Double  = 0.5
+
+    var body: some View {
+        Circle()
+            .fill(Color(red: 0.29, green: 0.62, blue: 1.0))
+            .frame(width: 10, height: 10)
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + startDelay) {
+                    cycle()
+                }
+            }
+    }
+
+    private func cycle() {
+        // 1. Instant reset — ring snaps to small/visible with no animation
+        var tx = Transaction()
+        tx.disablesAnimations = true
+        withTransaction(tx) {
+            scale   = 1.0
+            opacity = 0.5
+        }
+        // 2. One render frame later, begin the slow easeOut expansion
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.016) {
+            withAnimation(.easeOut(duration: Self.cycleDuration)) {
+                scale   = Self.maxScale
+                opacity = 0.0
+            }
+            // 3. At the end of the cycle, start over
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.cycleDuration) {
+                cycle()
+            }
         }
     }
 }
@@ -164,30 +225,43 @@ enum MapZone: CaseIterable {
         }
     }
 
-    // Lat/lng bounds of the region shown by each map PNG —
-    // used to project the dot onto the image coordinate space.
-    var bounds: (minLat: Double, maxLat: Double, minLng: Double, maxLng: Double) {
+    // SVG viewBox (origin x, origin y, width, height) — MUST match the
+    // corresponding maps/<zone>.svg viewBox, since the PNGs are rendered
+    // from those SVGs and the dot is projected into the same space.
+    var viewBox: (x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
         switch self {
-        case .bay:
-            // projectBay: x = (lng - (-123.533665)) * 100, y = (38.864245 - lat) * 100
-            // viewBox 0 0 232.5 196.8 → reverse: lat range 38.864245 - 196.8/100 = 36.896..38.864
-            return (minLat: 36.90, maxLat: 38.87, minLng: -123.53, maxLng: -121.20)
-        case .ca:
-            // projectCA: x = (lng - (-124.5)) * 10, y = (42.0 - lat) * 10
-            // viewBox 0 0 105 95 → lat 42 - 9.5 = 32.5..42, lng -124.5..-114
-            return (minLat: 32.50, maxLat: 42.00, minLng: -124.50, maxLng: -114.00)
-        case .us:
-            // projectUS: x = (lng - (-125)) * 10, y = (49.5 - lat) * 10
-            // viewBox 0 0 585 255 → lat 49.5 - 25.5 = 24..49.5, lng -125..-66.5
-            return (minLat: 24.00, maxLat: 49.50, minLng: -125.00, maxLng:  -66.50)
-        case .europe:
-            // projectEurope uses same formula as world (x=lng+180, y=84-lat)
-            // viewBox "167 28 40 22" → lng 167-180=-13..227-180=47, lat 84-28=56..84-50=34
-            return (minLat: 34.00, maxLat: 56.00, minLng: -13.00, maxLng:  47.00)
-        case .world:
-            // projectWorld: x = lng + 180, y = 84 - lat
-            // viewBox 0 0 360 139.6 → full equirectangular, lat 84-0=84..84-139.6=-55.6
-            return (minLat: -55.60, maxLat: 84.00, minLng: -180.00, maxLng: 180.00)
+        case .bay:    return (0,   0,   232.5, 196.8)
+        case .ca:     return (0,   0,   105,    95)
+        case .us:     return (0,   0,   585,   255)
+        case .europe: return (167, 28,   40,    22)
+        case .world:  return (0,   0,   360,   139.6)
+        }
+    }
+
+    // Rendered width of the map SVG inside the plate, matching the website
+    // CSS (`#map-<zone> { width: … }`). The SVG is centered in displaySize
+    // with height:auto, so this width + the viewBox aspect fix the scale
+    // and the centering offset.
+    var mapRenderWidth: CGFloat {
+        switch self {
+        case .bay:    return 132
+        case .ca:     return 106
+        case .us:     return 176
+        case .europe: return 200
+        case .world:  return 214
+        }
+    }
+
+    // Equirectangular projection from (lat,lng) → SVG viewBox coords,
+    // identical to the website's project<Zone>() functions. All maps are
+    // plate-carrée (linear in lat), NOT Mercator.
+    func project(lat: Double, lng: Double) -> (x: CGFloat, y: CGFloat) {
+        switch self {
+        case .bay:    return (CGFloat((lng + 123.533665) * 100.0), CGFloat((38.864245 - lat) * 100.0))
+        case .ca:     return (CGFloat((lng + 124.5)       *  10.0), CGFloat((42.0       - lat) *  10.0))
+        case .us:     return (CGFloat((lng + 125.0)       *  10.0), CGFloat((49.5       - lat) *  10.0))
+        case .europe: return (CGFloat(lng + 180.0),                 CGFloat(84.0 - lat))
+        case .world:  return (CGFloat(lng + 180.0),                 CGFloat(84.0 - lat))
         }
     }
 }

@@ -6,10 +6,6 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXBuildFile section */
-		AA0000022D238122004DA734 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA0000012D238122004DA734 /* WebKit.framework */; };
-/* End PBXBuildFile section */
-
 /* Begin PBXContainerItemProxy section */
 		604BFF7F2D238122004DA734 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
