@@ -46,7 +46,7 @@ struct MinimapView: View {
                 // size and does zero per-frame video readback.
                 if let mask = maskImage {
                     Rectangle()
-                        .fill(Color.white.opacity(0.70))
+                        .fill(Color.white.opacity(0.55))
                         .frame(width: geo.size.width, height: geo.size.height)
                         .mask(
                             Image(uiImage: mask)
