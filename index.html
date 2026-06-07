@@ -998,12 +998,15 @@ const degradedClips = new Set();
 //   v5 → 1080p @ 3 Mbps, maxrate 4.5M — full res, peak 63% of 7 Mbps hotel WiFi
 //        Run: bash encode_and_upload.sh --force-mobile --skip-desktop-upload
 const MOBILE_VERSION = 5;
+// Bump whenever desktop clips are re-encoded (forces browsers to bypass immutable cache).
+// Last bumped: 2026-06-07 — Tier-1 clips re-encoded to 15 Mbps H.264 (was 50–130 Mbps raw)
+const DESKTOP_VERSION = 1;
 
 function url(i) {
   const file = VIDEOS[i].file;
   const useLowRes = IS_MOBILE || degradedClips.has(i);
   const name = useLowRes ? file.replace(".mp4", "-mobile.mp4") : file;
-  return `${BASE_URL}/${name}${useLowRes ? `?v=${MOBILE_VERSION}` : ""}`;
+  return `${BASE_URL}/${name}?v=${useLowRes ? MOBILE_VERSION : DESKTOP_VERSION}`;
 }
 
 // Returns the filename segment actually being used for a given index (accounting for degradation)
