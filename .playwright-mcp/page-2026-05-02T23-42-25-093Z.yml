@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3] [cursor=pointer]:
+    - generic [ref=e4]: PJ Loury
+    - generic [ref=e5]: Drone Videography
+  - generic: mode shuffle (26/57) clip video-59.mp4 (mobile) dim 1920×1080 @ 23.3s time 5.9s state ready=2 net=2 buffer 0.0–6.1 cushion 0.2s freeze 10 events · 6502ms total · avg 650ms · max 1000ms frames 16 dropped / 180 total (8.9%) stalls 0 stalled · 158 waiting · 3 fallbacks dl — net 4g · 1.65 Mbps · 50ms
+  - generic: UC Berkeley Campus
+  - button "Previous video":
+    - img
+  - button "Next video":
+    - img
+  - button "Sections" [ref=e17] [cursor=pointer]:
+    - img [ref=e18]
+  - generic:
+    - img
+    - img
+    - img
+    - img
+  - generic:
+    - img
+    - img
+    - img
+    - img

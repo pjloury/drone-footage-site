@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3] [cursor=pointer]:
+    - generic [ref=e4]: PJ Loury
+    - generic [ref=e5]: Drone Videography
+  - generic: mode shuffle (1/57) clip video-34.mp4 (desktop) dim 3840×2160 @ 46.8s time 0.0s state ready=1 net=2 buffer 0.0–0.1 cushion 0.1s freeze none frames 0 dropped / 3 total (0.0%) stalls 0 stalled · 0 waiting · 0 fallbacks dl — net 4g · 1.65 Mbps · 50ms
+  - generic: SF Lunar New Year
+  - button "Previous video" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - button "Next video" [ref=e14] [cursor=pointer]:
+    - img [ref=e15]
+  - button "Sections":
+    - img
+  - generic:
+    - img
+    - img
+    - img
+    - img
+  - generic:
+    - img
+    - img
+    - img
+    - img

@@ -1,0 +1,23 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3] [cursor=pointer]:
+    - generic [ref=e4]: PJ Loury
+    - generic [ref=e5]: Drone Videography
+  - generic: mode shuffle (1/80) clip video-72.mp4 (desktop) dim 3840×2160 @ 11.9s time 0.0s state ready=1 net=2 buffer 0.0–0.7 cushion 0.7s freeze none frames — (API unavailable) stalls 0 stalled · 0 waiting · 0 fallbacks dl — net 4g · 1.6 Mbps · 50ms
+  - generic: Maui Lava Coast
+  - button "Previous video" [ref=e11] [cursor=pointer]:
+    - img [ref=e12]
+  - button "Next video" [ref=e14] [cursor=pointer]:
+    - img [ref=e15]
+  - button "Sections"
+  - generic [ref=e17]:
+    - img [ref=e18]
+    - img [ref=e29]
+    - img [ref=e32]
+    - img [ref=e83]
+    - img [ref=e261]
+  - generic:
+    - img
+    - img
+    - img
+    - img
+    - img
