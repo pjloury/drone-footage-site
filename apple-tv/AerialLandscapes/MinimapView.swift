@@ -32,14 +32,21 @@ struct MinimapView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                // ── Frosted-glass plate, clipped to the land silhouette ───
-                // Mirrors the website's `backdrop-filter: blur()` on the
-                // masked minimap: land looks like frosted glass over the
-                // video, while the water (outside the mask) stays fully
-                // see-through.
+                // ── Land plate, clipped to the land silhouette ────────────
+                // Mirrors the website's masked minimap visually, but does NOT
+                // use a live backdrop blur (`.ultraThinMaterial`). That blur
+                // samples + Gaussian-blurs the 4K AVPlayerLayer behind it on
+                // EVERY frame, which on tvOS competes with the hardware video
+                // decoder for GPU/memory bandwidth and stalls it — the video
+                // freezes (currentTime stops) while compositor-thread
+                // animations like the pulse rings keep going. Regression
+                // introduced 2026-06-05 (e30ddc8) and removed here.
+                //
+                // A flat translucent plate is visually ~identical at minimap
+                // size and does zero per-frame video readback.
                 if let mask = maskImage {
                     Rectangle()
-                        .fill(.ultraThinMaterial)
+                        .fill(Color.white.opacity(0.35))
                         .frame(width: geo.size.width, height: geo.size.height)
                         .mask(
                             Image(uiImage: mask)
