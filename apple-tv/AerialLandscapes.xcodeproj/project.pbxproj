@@ -28,6 +28,7 @@
 		604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000012D238122004DA734 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		AA0001012D238122004DA734 /* AerialLandscapesMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AerialLandscapesMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -44,6 +45,11 @@
 		604BFF8B2D238122004DA734 /* AerialLandscapesUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AerialLandscapesUITests;
+			sourceTree = "<group>";
+		};
+		AA0001022D238122004DA734 /* MacWallpaper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MacWallpaper;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -70,6 +76,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0001042D238122004DA734 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -79,6 +92,7 @@
 				604BFF702D238120004DA734 /* AerialLandscapes */,
 				604BFF812D238122004DA734 /* AerialLandscapesTests */,
 				604BFF8B2D238122004DA734 /* AerialLandscapesUITests */,
+				AA0001022D238122004DA734 /* MacWallpaper */,
 				604BFF6F2D238120004DA734 /* Products */,
 				AA0000032D238122004DA734 /* Frameworks */,
 			);
@@ -90,6 +104,7 @@
 				604BFF6E2D238120004DA734 /* AerialLandscapes.app */,
 				604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */,
 				604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */,
+				AA0001012D238122004DA734 /* AerialLandscapesMac.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -173,6 +188,28 @@
 			productReference = 604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		AA0001062D238122004DA734 /* AerialLandscapesMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0001092D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesMac" */;
+			buildPhases = (
+				AA0001032D238122004DA734 /* Sources */,
+				AA0001042D238122004DA734 /* Frameworks */,
+				AA0001052D238122004DA734 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0001022D238122004DA734 /* MacWallpaper */,
+			);
+			name = AerialLandscapesMac;
+			packageProductDependencies = (
+			);
+			productName = AerialLandscapesMac;
+			productReference = AA0001012D238122004DA734 /* AerialLandscapesMac.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -194,6 +231,9 @@
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = 604BFF6D2D238120004DA734;
 					};
+					AA0001062D238122004DA734 = {
+						CreatedOnToolsVersion = 16.0;
+					};
 				};
 			};
 			buildConfigurationList = 604BFF692D238120004DA734 /* Build configuration list for PBXProject "AerialLandscapes" */;
@@ -213,6 +253,7 @@
 				604BFF6D2D238120004DA734 /* AerialLandscapes */,
 				604BFF7D2D238122004DA734 /* AerialLandscapesTests */,
 				604BFF872D238122004DA734 /* AerialLandscapesUITests */,
+				AA0001062D238122004DA734 /* AerialLandscapesMac */,
 			);
 		};
 /* End PBXProject section */
@@ -239,6 +280,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0001052D238122004DA734 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -257,6 +305,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		604BFF842D238122004DA734 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0001032D238122004DA734 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -530,6 +585,53 @@
 			};
 			name = Release;
 		};
+		AA0001072D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D2GRT69L42;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pjloury.aerial-landscapes-wallpaper";
+				PRODUCT_NAME = AerialLandscapesMac;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA0001082D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = D2GRT69L42;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pjloury.aerial-landscapes-wallpaper";
+				PRODUCT_NAME = AerialLandscapesMac;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -565,6 +667,15 @@
 			buildConfigurations = (
 				604BFF992D238122004DA734 /* Debug */,
 				604BFF9A2D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0001092D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0001072D238122004DA734 /* Debug */,
+				AA0001082D238122004DA734 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
