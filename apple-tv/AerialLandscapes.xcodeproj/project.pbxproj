@@ -590,6 +590,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D2GRT69L42;
@@ -614,6 +615,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = D2GRT69L42;
