@@ -37,8 +37,11 @@ def load_font(path, size):
         return ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", size)
 
 
+CAPTION_CROP_PX = 80  # pixels to trim from bottom of source to remove burned-in caption
+
 def scale_fill(img: Image.Image, w: int, h: int) -> Image.Image:
-    """Scale image to fill w×h, center-crop."""
+    """Scale image to fill w×h, center-crop. Trims bottom first to remove burned-in caption."""
+    img = img.crop((0, 0, img.width, img.height - CAPTION_CROP_PX))
     ratio = max(w / img.width, h / img.height)
     new_w = round(img.width * ratio)
     new_h = round(img.height * ratio)
