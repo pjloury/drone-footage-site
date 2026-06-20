@@ -5,14 +5,14 @@ What's done locally vs. what you still have to click through in Play Console.
 ## ✅ What's already done
 
 ```
-play-store/
+store-assets/
   LISTING.md                       — listing copy (paste into Play Console)
   PRIVACY.html                     — privacy policy (also at /privacy.html on the site)
   icon-512.png                     — 512×512 hi-res icon
   feature-graphic-1024x500.png     — 1024×500 feature graphic
   tv-banner-1280x720.png           — 1280×720 TV banner
 
-googletv-app/
+android/
   app/build/outputs/bundle/release/app-release.aab   — signed AAB (upload this)
   app/build/outputs/apk/release/app-release.apk      — signed APK (sideload to test)
   app/release.keystore                               — release signing key (BACK UP)
@@ -32,7 +32,7 @@ You almost certainly want to confirm it works on your TV before uploading anywhe
 ```bash
 # Find your TV's IP under Settings → System → About → Status
 adb connect <tv-ip>:5555
-adb install googletv-app/app/build/outputs/apk/release/app-release.apk
+adb install android/app/build/outputs/apk/release/app-release.apk
 ```
 
 The first time, the TV will ask you to authorize the development machine.
@@ -47,7 +47,7 @@ Required by Play Console:
   - On Google TV, hold the back button to bring up the screenshot prompt — or use `adb exec-out screencap -p > screenshot-1.png` from your Mac.
   - Suggested shots: (1) opening welcome card, (2) a coastal clip mid-playback with the mini-map visible, (3) a mountain clip with the GPS dot, (4) the section selector menu open, (5) a desert clip.
 
-The feature graphic and TV banner are already generated in `play-store/`.
+The feature graphic and TV banner are already generated in `store-assets/`.
 
 ### 4. Create the app in Play Console
 
@@ -59,12 +59,12 @@ The feature graphic and TV banner are already generated in `play-store/`.
 6. Accept the declarations.
 
 ### 5. Set up the listing
-Go to **Store presence → Main store listing** and paste each field from `play-store/LISTING.md`.
+Go to **Store presence → Main store listing** and paste each field from `store-assets/LISTING.md`.
 
 Upload the assets:
-- App icon → `play-store/icon-512.png`
-- Feature graphic → `play-store/feature-graphic-1024x500.png`
-- TV banner → `play-store/tv-banner-1280x720.png`
+- App icon → `store-assets/icon-512.png`
+- Feature graphic → `store-assets/feature-graphic-1024x500.png`
+- TV banner → `store-assets/tv-banner-1280x720.png`
 - TV screenshots → the ones you took in step 3
 
 ### 6. Privacy policy URL
@@ -102,7 +102,7 @@ Does your app contain ads? **No**.
 ### 12. Set up an internal testing track FIRST
 **Testing → Internal testing → Create new release**:
 
-1. Upload `googletv-app/app/build/outputs/bundle/release/app-release.aab`
+1. Upload `android/app/build/outputs/bundle/release/app-release.aab`
 2. Release name: `1.0`
 3. Release notes (paste from LISTING.md "What's new"):
    ```
@@ -126,24 +126,24 @@ Submit for review. Google's review for a TV app typically takes 1–7 days for a
 
 ## 🔴 Critical: back up the keystore
 
-Losing `googletv-app/app/release.keystore` (or its password from `keystore.properties`) means **you can never publish an update to this app** on the Play Store again — every update must be signed with the same key, and the key cannot be regenerated.
+Losing `android/app/release.keystore` (or its password from `keystore.properties`) means **you can never publish an update to this app** on the Play Store again — every update must be signed with the same key, and the key cannot be regenerated.
 
 Suggested backup:
 1. Copy both files to a password manager or encrypted backup:
    ```bash
    tar czf release-keystore-backup.tgz \
-     googletv-app/app/release.keystore \
-     googletv-app/keystore.properties
+     android/app/release.keystore \
+     android/keystore.properties
    ```
 2. Upload `release-keystore-backup.tgz` somewhere durable (1Password / iCloud / encrypted external drive).
 3. Optionally enable Google Play App Signing during initial upload (Play Console → "Use Play App Signing") — Google holds the upload key and re-signs releases, so even if you lose your local key Google can issue you a new one.
 
 ## Updating the app later
-1. Bump `versionCode` and `versionName` in `googletv-app/app/build.gradle`.
+1. Bump `versionCode` and `versionName` in `android/app/build.gradle`.
 2. Make whatever code changes.
 3. Rebuild:
    ```bash
-   cd googletv-app
+   cd android
    JAVA_HOME=/opt/homebrew/opt/openjdk@17 ./gradlew bundleRelease
    ```
 4. Upload the new AAB to **Production → Create new release**.

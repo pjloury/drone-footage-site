@@ -63,7 +63,7 @@ First release. 50+ aerial drone clips, smooth 1080p, full Google TV remote suppo
 ## Contact info
 - **Website:** https://drones.pjloury.com
 - **Email:** *(use whatever address you want public — or set up `support@pjloury.com` if you don't want personal email exposed)*
-- **Privacy policy:** https://drones.pjloury.com/privacy.html *(see PRIVACY.html in the play-store folder; copy it to the site root and commit so the URL resolves)*
+- **Privacy policy:** https://drones.pjloury.com/privacy.html *(see PRIVACY.html in the store-assets folder; copy it to the site root and commit so the URL resolves)*
 
 ## Form-factor / device targeting
 
