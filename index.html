@@ -1448,13 +1448,11 @@ function goTo(index, opts) {
   // Flip front/back tracking
   front = front === "A" ? "B" : "A";
 
-  // START THE VISUAL TRANSITION IMMEDIATELY (feels responsive)
-  // Outgoing starts fading out right away regardless of load state
+  // Hide caption + minimap immediately (feels responsive)
   caption.classList.add("fade");
   minimapEl.classList.remove("visible");
   minimapDotsEl.classList.remove("visible");
   updateDots();
-  setTimeout(() => outgoingLayer.classList.remove("active"), 50);
 
   activeGoToAbort = new AbortController();
 
@@ -1500,6 +1498,9 @@ function goTo(index, opts) {
     if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
     clearGoToLoad();
     safePlay(incoming, "goTo_crossfade");
+    // Fade out outgoing only now that incoming is ready — prevents black gap
+    // on iOS where preload="auto" is ignored and buffering takes time
+    outgoingLayer.classList.remove("active");
     incomingLayer.classList.add("active");
     if (typeof castCurrentVideo === "function") castCurrentVideo();
 
