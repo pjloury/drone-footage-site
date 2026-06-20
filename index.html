@@ -1035,7 +1035,9 @@ Object.defineProperty(window, 'front', {
 // TV mode: loaded with ?tv=1 from Apple TV / Google TV wrapper apps.
 // Disables mobile quality routing, keeps nav arrows always visible, and
 // enables keyboard-driven section navigation.
-const IS_TV = typeof location !== "undefined" && new URLSearchParams(location.search).has("tv");
+const IS_TV  = typeof location !== "undefined" && new URLSearchParams(location.search).has("tv");
+// Native app wrapper (macOS / iOS) — hides the PJ Loury branding UI
+const IS_APP = typeof location !== "undefined" && new URLSearchParams(location.search).has("app");
 
 // Detect mobile once — used to route to lower-bitrate H.264 versions.
 // TV apps inject a desktop UA and add ?tv=1, so we exclude them here.
@@ -2516,9 +2518,10 @@ init();
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
 welcomeEl.addEventListener("click", toggleWelcome);
-// On TV the name card doubles as a section/status indicator — dock it
-// quickly so it's out of the way, but don't auto-hide it entirely
-if (!IS_TV) {
+if (IS_APP) {
+  // Native app — hide branding entirely
+  welcomeEl.style.display = "none";
+} else if (!IS_TV) {
   setTimeout(() => {
     welcomeDocked = true;
     welcomeEl.classList.add("docked");
