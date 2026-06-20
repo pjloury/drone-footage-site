@@ -1603,7 +1603,10 @@ attachVideoAnalytics(vidB);
 setInterval(() => {
   const v = frontVid();
   // Only watch a video that is actively supposed to be playing
-  if (!v || v.paused || v.ended || v.readyState < 2 || v.currentTime < 0.5 || transitioning) {
+  // Skip if video hasn't started at all (currentTime=0 AND never played any range)
+  // but do NOT skip if it's been "playing" for >3s with no progress — that's the stall case.
+  const neverStarted = v.currentTime === 0 && v.played.length === 0;
+  if (!v || v.paused || v.ended || v.readyState < 2 || neverStarted || transitioning) {
     _wd.lastCT = null;
     _wd.frozenSince = null;
     return;
