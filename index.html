@@ -2585,7 +2585,8 @@ function syncCastControlsVisibility() {
   if (typeof window.WebKitPlaybackTargetAvailabilityEvent === "undefined") return;
 
   function onAvailability(e) {
-    airplayBtn.style.display = e.availability === "available" ? "flex" : "none";
+    // AirPlay button intentionally hidden to avoid UI clutter;
+    // picker still works if wired to another trigger in the future.
     syncCastControlsVisibility();
   }
 
