@@ -17,7 +17,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.pjloury.drones"
+        applicationId "com.lourydesigns.aerial_landscapes"
         minSdk 21          // Android TV minimum
         targetSdk 34
         versionCode 1
