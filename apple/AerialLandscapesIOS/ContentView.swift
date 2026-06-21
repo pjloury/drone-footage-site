@@ -9,26 +9,35 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .background(Color.black)
 
-            // Category switcher — top, horizontally scrollable pills.
+            // Category switcher — single button that reveals options on tap.
             VStack {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                HStack {
+                    Spacer()
+                    Menu {
                         ForEach(PlaybackMode.allCases) { m in
-                            Button { model.setMode(m) } label: {
-                                Text(m.label)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(model.mode == m ? .black : .white)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(
-                                        Capsule().fill(model.mode == m
-                                            ? Color.white.opacity(0.92)
-                                            : Color.black.opacity(0.35)))
+                            Button {
+                                model.setMode(m)
+                            } label: {
+                                if model.mode == m {
+                                    Label(m.label, systemImage: "checkmark")
+                                } else {
+                                    Text(m.label)
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Text(model.mode.label)
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Color.black.opacity(0.35)))
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.trailing, 16)
                 }
                 .padding(.top, 8)
                 Spacer()
