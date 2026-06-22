@@ -256,8 +256,8 @@ struct IOSNavArrowView: View {
             }
             .frame(maxWidth: .infinity, alignment: pointsLeft ? .leading : .trailing)
         }
-        .onChange(of: lit) {
-            guard lit else { return }
+        .onChange(of: lit) { newValue in
+            guard newValue else { return }
             withAnimation(.easeOut(duration: 0.24)) { opacity = 1.0 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.32) {
                 withAnimation(.easeOut(duration: 1.08)) { opacity = 0.0 }
