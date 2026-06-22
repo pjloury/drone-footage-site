@@ -112,14 +112,9 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     let player = AVQueuePlayer()
     @Published private(set) var currentTitle = ""
     @Published private(set) var mode: PlaybackMode = .shuffle
-    /// True when AirPlay-eligible external routes are detected nearby — drives
-    /// the reveal of the AirPlay button.
-    @Published private(set) var airplayAvailable = false
     /// Arrow flash state for nav feedback — mirrors tvOS NavArrowView convention.
     @Published private(set) var leftFlash  = false
     @Published private(set) var rightFlash = false
-
-    private let routeDetector = AVRouteDetector()
     /// URLs valid for the active mode — guards itemDidEnd against re-appending
     /// a stale clip from a previous mode after the queue is rebuilt.
     private var activeURLs: Set<URL> = []
@@ -147,10 +142,6 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         // currentItem can be nil/NSNull while the queue is empty.
         player.addObserver(self, forKeyPath: "currentItem", options: [.initial, .new], context: nil)
 
-        // Watch for nearby AirPlay devices; reveal the button only when present.
-        routeDetector.isRouteDetectionEnabled = true
-        routeDetector.addObserver(self, forKeyPath: "multipleRoutesDetected", options: [.initial, .new], context: nil)
-
         NotificationCenter.default.addObserver(
             self, selector: #selector(itemDidEnd(_:)),
             name: .AVPlayerItemDidPlayToEndTime, object: nil)
@@ -171,9 +162,6 @@ final class AerialPlayerModel: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
             }
-        case "multipleRoutesDetected":
-            let available = routeDetector.multipleRoutesDetected
-            DispatchQueue.main.async { self.airplayAvailable = available }
         default:
             break
         }
@@ -236,8 +224,6 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     deinit {
         player.removeObserver(self, forKeyPath: "currentItem")
-        routeDetector.removeObserver(self, forKeyPath: "multipleRoutesDetected")
-        routeDetector.isRouteDetectionEnabled = false
         NotificationCenter.default.removeObserver(self)
     }
 }

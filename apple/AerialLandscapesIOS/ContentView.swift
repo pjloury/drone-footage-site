@@ -21,15 +21,22 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .background(Color.black)
 
-            // Tap zones: left half = back, right half = forward.
+            // Edge tap strips (mirrors web app nav zones) + full-screen swipe.
             GeometryReader { geo in
-                HStack(spacing: 0) {
+                let stripW = geo.size.width * 0.2
+                ZStack {
+                    // Left edge strip → back
                     Color.clear
                         .contentShape(Rectangle())
+                        .frame(width: stripW)
                         .onTapGesture { model.skipBackward() }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // Right edge strip → forward
                     Color.clear
                         .contentShape(Rectangle())
+                        .frame(width: stripW)
                         .onTapGesture { model.skipForward() }
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
             .ignoresSafeArea()
@@ -60,14 +67,11 @@ struct ContentView: View {
             VStack {
                 HStack(spacing: 10) {
                     Spacer()
-                    // AirPlay button — revealed only when nearby devices exist.
-                    if model.airplayAvailable {
-                        AirPlayButton()
-                            .frame(width: 34, height: 34)
-                            .padding(.horizontal, 6)
-                            .background(Capsule().fill(Color.black.opacity(0.35)))
-                            .transition(.opacity)
-                    }
+                    // AirPlay button — always visible; picker filters to video routes.
+                    AirPlayButton()
+                        .frame(width: 34, height: 34)
+                        .padding(.horizontal, 6)
+                        .background(Capsule().fill(Color.black.opacity(0.35)))
                     Menu {
                         ForEach(PlaybackMode.allCases) { m in
                             Button {
