@@ -148,6 +148,10 @@ final class AerialPlayerModel: NSObject, ObservableObject {
             self, selector: #selector(itemDidEnd(_:)),
             name: .AVPlayerItemDidPlayToEndTime, object: nil)
 
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification, object: nil)
+
         setMode(.shuffle)
     }
 
@@ -175,6 +179,10 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         activeURLs = Set(urls)
         player.removeAllItems()
         for url in urls { player.insert(AVPlayerItem(url: url), after: nil) }
+        player.play()
+    }
+
+    @objc private func appWillEnterForeground() {
         player.play()
     }
 
