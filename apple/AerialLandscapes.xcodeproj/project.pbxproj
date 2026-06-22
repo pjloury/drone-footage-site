@@ -1,1489 +1,825 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>archiveVersion</key>
-	<string>1</string>
-	<key>classes</key>
-	<dict/>
-	<key>objectVersion</key>
-	<string>77</string>
-	<key>objects</key>
-	<dict>
-		<key>604BFF652D238120004DA734</key>
-		<dict>
-			<key>children</key>
-			<array>
-				<string>604BFF702D238120004DA734</string>
-				<string>604BFF812D238122004DA734</string>
-				<string>604BFF8B2D238122004DA734</string>
-				<string>AA0001022D238122004DA734</string>
-				<string>604BFF6F2D238120004DA734</string>
-				<string>AA0000032D238122004DA734</string>
-				<string>BB0001060000000000000001</string>
-			</array>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>604BFF662D238120004DA734</key>
-		<dict>
-			<key>attributes</key>
-			<dict>
-				<key>BuildIndependentTargetsInParallel</key>
-				<string>1</string>
-				<key>LastSwiftUpdateCheck</key>
-				<string>1600</string>
-				<key>LastUpgradeCheck</key>
-				<string>1600</string>
-				<key>TargetAttributes</key>
-				<dict>
-					<key>604BFF6D2D238120004DA734</key>
-					<dict>
-						<key>CreatedOnToolsVersion</key>
-						<string>16.0</string>
-					</dict>
-					<key>604BFF7D2D238122004DA734</key>
-					<dict>
-						<key>CreatedOnToolsVersion</key>
-						<string>16.0</string>
-						<key>TestTargetID</key>
-						<string>604BFF6D2D238120004DA734</string>
-					</dict>
-					<key>604BFF872D238122004DA734</key>
-					<dict>
-						<key>CreatedOnToolsVersion</key>
-						<string>16.0</string>
-						<key>TestTargetID</key>
-						<string>604BFF6D2D238120004DA734</string>
-					</dict>
-					<key>AA0001062D238122004DA734</key>
-					<dict>
-						<key>CreatedOnToolsVersion</key>
-						<string>16.0</string>
-					</dict>
-				</dict>
-			</dict>
-			<key>buildConfigurationList</key>
-			<string>604BFF692D238120004DA734</string>
-			<key>developmentRegion</key>
-			<string>en</string>
-			<key>hasScannedForEncodings</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXProject</string>
-			<key>knownRegions</key>
-			<array>
-				<string>en</string>
-				<string>Base</string>
-			</array>
-			<key>mainGroup</key>
-			<string>604BFF652D238120004DA734</string>
-			<key>minimizedProjectReferenceProxies</key>
-			<string>1</string>
-			<key>preferredProjectObjectVersion</key>
-			<string>77</string>
-			<key>productRefGroup</key>
-			<string>604BFF6F2D238120004DA734</string>
-			<key>projectDirPath</key>
-			<string></string>
-			<key>projectRoot</key>
-			<string></string>
-			<key>targets</key>
-			<array>
-				<string>604BFF6D2D238120004DA734</string>
-				<string>604BFF7D2D238122004DA734</string>
-				<string>604BFF872D238122004DA734</string>
-				<string>AA0001062D238122004DA734</string>
-				<string>BB0001100000000000000001</string>
-			</array>
-		</dict>
-		<key>604BFF692D238120004DA734</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>604BFF902D238122004DA734</string>
-				<string>604BFF912D238122004DA734</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>604BFF6A2D238120004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF6B2D238120004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF6C2D238120004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXResourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF6D2D238120004DA734</key>
-		<dict>
-			<key>buildConfigurationList</key>
-			<string>604BFF922D238122004DA734</string>
-			<key>buildPhases</key>
-			<array>
-				<string>604BFF6A2D238120004DA734</string>
-				<string>604BFF6B2D238120004DA734</string>
-				<string>604BFF6C2D238120004DA734</string>
-			</array>
-			<key>buildRules</key>
-			<array/>
-			<key>dependencies</key>
-			<array/>
-			<key>fileSystemSynchronizedGroups</key>
-			<array>
-				<string>604BFF702D238120004DA734</string>
-			</array>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AerialLandscapes</string>
-			<key>packageProductDependencies</key>
-			<array/>
-			<key>productName</key>
-			<string>AerialLandscapes</string>
-			<key>productReference</key>
-			<string>604BFF6E2D238120004DA734</string>
-			<key>productType</key>
-			<string>com.apple.product-type.application</string>
-		</dict>
-		<key>604BFF6E2D238120004DA734</key>
-		<dict>
-			<key>explicitFileType</key>
-			<string>wrapper.application</string>
-			<key>includeInIndex</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>path</key>
-			<string>AerialLandscapes.app</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>604BFF6F2D238120004DA734</key>
-		<dict>
-			<key>children</key>
-			<array>
-				<string>604BFF6E2D238120004DA734</string>
-				<string>604BFF7E2D238122004DA734</string>
-				<string>604BFF882D238122004DA734</string>
-				<string>AA0001012D238122004DA734</string>
-				<string>BB0001010000000000000001</string>
-			</array>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Products</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>604BFF702D238120004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileSystemSynchronizedRootGroup</string>
-			<key>path</key>
-			<string>AerialLandscapes</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>604BFF7A2D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF7B2D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF7C2D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXResourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF7D2D238122004DA734</key>
-		<dict>
-			<key>buildConfigurationList</key>
-			<string>604BFF952D238122004DA734</string>
-			<key>buildPhases</key>
-			<array>
-				<string>604BFF7A2D238122004DA734</string>
-				<string>604BFF7B2D238122004DA734</string>
-				<string>604BFF7C2D238122004DA734</string>
-			</array>
-			<key>buildRules</key>
-			<array/>
-			<key>dependencies</key>
-			<array>
-				<string>604BFF802D238122004DA734</string>
-			</array>
-			<key>fileSystemSynchronizedGroups</key>
-			<array>
-				<string>604BFF812D238122004DA734</string>
-			</array>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AerialLandscapesTests</string>
-			<key>packageProductDependencies</key>
-			<array/>
-			<key>productName</key>
-			<string>AerialLandscapesTests</string>
-			<key>productReference</key>
-			<string>604BFF7E2D238122004DA734</string>
-			<key>productType</key>
-			<string>com.apple.product-type.bundle.unit-test</string>
-		</dict>
-		<key>604BFF7E2D238122004DA734</key>
-		<dict>
-			<key>explicitFileType</key>
-			<string>wrapper.cfbundle</string>
-			<key>includeInIndex</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>path</key>
-			<string>AerialLandscapesTests.xctest</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>604BFF7F2D238122004DA734</key>
-		<dict>
-			<key>containerPortal</key>
-			<string>604BFF662D238120004DA734</string>
-			<key>isa</key>
-			<string>PBXContainerItemProxy</string>
-			<key>proxyType</key>
-			<string>1</string>
-			<key>remoteGlobalIDString</key>
-			<string>604BFF6D2D238120004DA734</string>
-			<key>remoteInfo</key>
-			<string>AerialLandscapes</string>
-		</dict>
-		<key>604BFF802D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXTargetDependency</string>
-			<key>target</key>
-			<string>604BFF6D2D238120004DA734</string>
-			<key>targetProxy</key>
-			<string>604BFF7F2D238122004DA734</string>
-		</dict>
-		<key>604BFF812D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileSystemSynchronizedRootGroup</string>
-			<key>path</key>
-			<string>AerialLandscapesTests</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>604BFF842D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF852D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF862D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXResourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>604BFF872D238122004DA734</key>
-		<dict>
-			<key>buildConfigurationList</key>
-			<string>604BFF982D238122004DA734</string>
-			<key>buildPhases</key>
-			<array>
-				<string>604BFF842D238122004DA734</string>
-				<string>604BFF852D238122004DA734</string>
-				<string>604BFF862D238122004DA734</string>
-			</array>
-			<key>buildRules</key>
-			<array/>
-			<key>dependencies</key>
-			<array>
-				<string>604BFF8A2D238122004DA734</string>
-			</array>
-			<key>fileSystemSynchronizedGroups</key>
-			<array>
-				<string>604BFF8B2D238122004DA734</string>
-			</array>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AerialLandscapesUITests</string>
-			<key>packageProductDependencies</key>
-			<array/>
-			<key>productName</key>
-			<string>AerialLandscapesUITests</string>
-			<key>productReference</key>
-			<string>604BFF882D238122004DA734</string>
-			<key>productType</key>
-			<string>com.apple.product-type.bundle.ui-testing</string>
-		</dict>
-		<key>604BFF882D238122004DA734</key>
-		<dict>
-			<key>explicitFileType</key>
-			<string>wrapper.cfbundle</string>
-			<key>includeInIndex</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>path</key>
-			<string>AerialLandscapesUITests.xctest</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>604BFF892D238122004DA734</key>
-		<dict>
-			<key>containerPortal</key>
-			<string>604BFF662D238120004DA734</string>
-			<key>isa</key>
-			<string>PBXContainerItemProxy</string>
-			<key>proxyType</key>
-			<string>1</string>
-			<key>remoteGlobalIDString</key>
-			<string>604BFF6D2D238120004DA734</string>
-			<key>remoteInfo</key>
-			<string>AerialLandscapes</string>
-		</dict>
-		<key>604BFF8A2D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXTargetDependency</string>
-			<key>target</key>
-			<string>604BFF6D2D238120004DA734</string>
-			<key>targetProxy</key>
-			<string>604BFF892D238122004DA734</string>
-		</dict>
-		<key>604BFF8B2D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileSystemSynchronizedRootGroup</string>
-			<key>path</key>
-			<string>AerialLandscapesUITests</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>604BFF902D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ALWAYS_SEARCH_USER_PATHS</key>
-				<string>NO</string>
-				<key>ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS</key>
-				<string>YES</string>
-				<key>CLANG_ANALYZER_NONNULL</key>
-				<string>YES</string>
-				<key>CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>CLANG_CXX_LANGUAGE_STANDARD</key>
-				<string>gnu++20</string>
-				<key>CLANG_ENABLE_MODULES</key>
-				<string>YES</string>
-				<key>CLANG_ENABLE_OBJC_ARC</key>
-				<string>YES</string>
-				<key>CLANG_ENABLE_OBJC_WEAK</key>
-				<string>YES</string>
-				<key>CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING</key>
-				<string>YES</string>
-				<key>CLANG_WARN_BOOL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_COMMA</key>
-				<string>YES</string>
-				<key>CLANG_WARN_CONSTANT_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_DIRECT_OBJC_ISA_USAGE</key>
-				<string>YES_ERROR</string>
-				<key>CLANG_WARN_DOCUMENTATION_COMMENTS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_EMPTY_BODY</key>
-				<string>YES</string>
-				<key>CLANG_WARN_ENUM_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_INFINITE_RECURSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_INT_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_NON_LITERAL_NULL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_LITERAL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_ROOT_CLASS</key>
-				<string>YES_ERROR</string>
-				<key>CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER</key>
-				<string>YES</string>
-				<key>CLANG_WARN_RANGE_LOOP_ANALYSIS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_STRICT_PROTOTYPES</key>
-				<string>YES</string>
-				<key>CLANG_WARN_SUSPICIOUS_MOVE</key>
-				<string>YES</string>
-				<key>CLANG_WARN_UNGUARDED_AVAILABILITY</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>CLANG_WARN_UNREACHABLE_CODE</key>
-				<string>YES</string>
-				<key>CLANG_WARN__DUPLICATE_METHOD_MATCH</key>
-				<string>YES</string>
-				<key>COPY_PHASE_STRIP</key>
-				<string>NO</string>
-				<key>DEBUG_INFORMATION_FORMAT</key>
-				<string>dwarf</string>
-				<key>ENABLE_STRICT_OBJC_MSGSEND</key>
-				<string>YES</string>
-				<key>ENABLE_TESTABILITY</key>
-				<string>YES</string>
-				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
-				<string>YES</string>
-				<key>GCC_C_LANGUAGE_STANDARD</key>
-				<string>gnu17</string>
-				<key>GCC_DYNAMIC_NO_PIC</key>
-				<string>NO</string>
-				<key>GCC_NO_COMMON_BLOCKS</key>
-				<string>YES</string>
-				<key>GCC_OPTIMIZATION_LEVEL</key>
-				<string>0</string>
-				<key>GCC_PREPROCESSOR_DEFINITIONS</key>
-				<array>
-					<string>DEBUG=1</string>
-					<string>$(inherited)</string>
-				</array>
-				<key>GCC_WARN_64_TO_32_BIT_CONVERSION</key>
-				<string>YES</string>
-				<key>GCC_WARN_ABOUT_RETURN_TYPE</key>
-				<string>YES_ERROR</string>
-				<key>GCC_WARN_UNDECLARED_SELECTOR</key>
-				<string>YES</string>
-				<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>GCC_WARN_UNUSED_FUNCTION</key>
-				<string>YES</string>
-				<key>GCC_WARN_UNUSED_VARIABLE</key>
-				<string>YES</string>
-				<key>LOCALIZATION_PREFERS_STRING_CATALOGS</key>
-				<string>YES</string>
-				<key>MTL_ENABLE_DEBUG_INFO</key>
-				<string>INCLUDE_SOURCE</string>
-				<key>MTL_FAST_MATH</key>
-				<string>YES</string>
-				<key>ONLY_ACTIVE_ARCH</key>
-				<string>YES</string>
-				<key>SDKROOT</key>
-				<string>appletvos</string>
-				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
-				<string>DEBUG $(inherited)</string>
-				<key>SWIFT_OPTIMIZATION_LEVEL</key>
-				<string>-Onone</string>
-				<key>TVOS_DEPLOYMENT_TARGET</key>
-				<string>18.0</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>604BFF912D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ALWAYS_SEARCH_USER_PATHS</key>
-				<string>NO</string>
-				<key>ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS</key>
-				<string>YES</string>
-				<key>CLANG_ANALYZER_NONNULL</key>
-				<string>YES</string>
-				<key>CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>CLANG_CXX_LANGUAGE_STANDARD</key>
-				<string>gnu++20</string>
-				<key>CLANG_ENABLE_MODULES</key>
-				<string>YES</string>
-				<key>CLANG_ENABLE_OBJC_ARC</key>
-				<string>YES</string>
-				<key>CLANG_ENABLE_OBJC_WEAK</key>
-				<string>YES</string>
-				<key>CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING</key>
-				<string>YES</string>
-				<key>CLANG_WARN_BOOL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_COMMA</key>
-				<string>YES</string>
-				<key>CLANG_WARN_CONSTANT_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_DIRECT_OBJC_ISA_USAGE</key>
-				<string>YES_ERROR</string>
-				<key>CLANG_WARN_DOCUMENTATION_COMMENTS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_EMPTY_BODY</key>
-				<string>YES</string>
-				<key>CLANG_WARN_ENUM_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_INFINITE_RECURSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_INT_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_NON_LITERAL_NULL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_LITERAL_CONVERSION</key>
-				<string>YES</string>
-				<key>CLANG_WARN_OBJC_ROOT_CLASS</key>
-				<string>YES_ERROR</string>
-				<key>CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER</key>
-				<string>YES</string>
-				<key>CLANG_WARN_RANGE_LOOP_ANALYSIS</key>
-				<string>YES</string>
-				<key>CLANG_WARN_STRICT_PROTOTYPES</key>
-				<string>YES</string>
-				<key>CLANG_WARN_SUSPICIOUS_MOVE</key>
-				<string>YES</string>
-				<key>CLANG_WARN_UNGUARDED_AVAILABILITY</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>CLANG_WARN_UNREACHABLE_CODE</key>
-				<string>YES</string>
-				<key>CLANG_WARN__DUPLICATE_METHOD_MATCH</key>
-				<string>YES</string>
-				<key>COPY_PHASE_STRIP</key>
-				<string>NO</string>
-				<key>DEBUG_INFORMATION_FORMAT</key>
-				<string>dwarf-with-dsym</string>
-				<key>ENABLE_NS_ASSERTIONS</key>
-				<string>NO</string>
-				<key>ENABLE_STRICT_OBJC_MSGSEND</key>
-				<string>YES</string>
-				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
-				<string>YES</string>
-				<key>GCC_C_LANGUAGE_STANDARD</key>
-				<string>gnu17</string>
-				<key>GCC_NO_COMMON_BLOCKS</key>
-				<string>YES</string>
-				<key>GCC_WARN_64_TO_32_BIT_CONVERSION</key>
-				<string>YES</string>
-				<key>GCC_WARN_ABOUT_RETURN_TYPE</key>
-				<string>YES_ERROR</string>
-				<key>GCC_WARN_UNDECLARED_SELECTOR</key>
-				<string>YES</string>
-				<key>GCC_WARN_UNINITIALIZED_AUTOS</key>
-				<string>YES_AGGRESSIVE</string>
-				<key>GCC_WARN_UNUSED_FUNCTION</key>
-				<string>YES</string>
-				<key>GCC_WARN_UNUSED_VARIABLE</key>
-				<string>YES</string>
-				<key>LOCALIZATION_PREFERS_STRING_CATALOGS</key>
-				<string>YES</string>
-				<key>MTL_ENABLE_DEBUG_INFO</key>
-				<string>NO</string>
-				<key>MTL_FAST_MATH</key>
-				<string>YES</string>
-				<key>SDKROOT</key>
-				<string>appletvos</string>
-				<key>SWIFT_COMPILATION_MODE</key>
-				<string>wholemodule</string>
-				<key>TVOS_DEPLOYMENT_TARGET</key>
-				<string>18.0</string>
-				<key>VALIDATE_PRODUCT</key>
-				<string>YES</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>604BFF922D238122004DA734</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>604BFF932D238122004DA734</string>
-				<string>604BFF942D238122004DA734</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>604BFF932D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>App Icon &amp; Top Shelf Image</string>
-				<key>ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME</key>
-				<string>AccentColor</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_ASSET_PATHS</key>
-				<string>"AerialLandscapes/Preview Content"</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>ENABLE_PREVIEWS</key>
-				<string>YES</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UILaunchScreen_Generation</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UIUserInterfaceStyle</key>
-				<string>Automatic</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/Frameworks</string>
-				</array>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapes</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>YES</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>604BFF942D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>App Icon &amp; Top Shelf Image</string>
-				<key>ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME</key>
-				<string>AccentColor</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_ASSET_PATHS</key>
-				<string>"AerialLandscapes/Preview Content"</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>ENABLE_PREVIEWS</key>
-				<string>YES</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UILaunchScreen_Generation</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UIUserInterfaceStyle</key>
-				<string>Automatic</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/Frameworks</string>
-				</array>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapes</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>YES</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>604BFF952D238122004DA734</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>604BFF962D238122004DA734</string>
-				<string>604BFF972D238122004DA734</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>604BFF962D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>BUNDLE_LOADER</key>
-				<string>$(TEST_HOST)</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapesTests</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>NO</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-				<key>TEST_HOST</key>
-				<string>$(BUILT_PRODUCTS_DIR)/AerialLandscapes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AerialLandscapes</string>
-				<key>TVOS_DEPLOYMENT_TARGET</key>
-				<string>18.0</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>604BFF972D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>BUNDLE_LOADER</key>
-				<string>$(TEST_HOST)</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapesTests</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>NO</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-				<key>TEST_HOST</key>
-				<string>$(BUILT_PRODUCTS_DIR)/AerialLandscapes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AerialLandscapes</string>
-				<key>TVOS_DEPLOYMENT_TARGET</key>
-				<string>18.0</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>604BFF982D238122004DA734</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>604BFF992D238122004DA734</string>
-				<string>604BFF9A2D238122004DA734</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>604BFF992D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapesUITests</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>NO</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-				<key>TEST_TARGET_NAME</key>
-				<string>AerialLandscapes</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>604BFF9A2D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>pjloury.AerialLandscapesUITests</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>NO</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>3</string>
-				<key>TEST_TARGET_NAME</key>
-				<string>AerialLandscapes</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>AA0000012D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>wrapper.framework</string>
-			<key>name</key>
-			<string>WebKit.framework</string>
-			<key>path</key>
-			<string>System/Library/Frameworks/WebKit.framework</string>
-			<key>sourceTree</key>
-			<string>SDKROOT</string>
-		</dict>
-		<key>AA0000032D238122004DA734</key>
-		<dict>
-			<key>children</key>
-			<array>
-				<string>AA0000012D238122004DA734</string>
-			</array>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Frameworks</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>AA0001012D238122004DA734</key>
-		<dict>
-			<key>explicitFileType</key>
-			<string>wrapper.application</string>
-			<key>includeInIndex</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>path</key>
-			<string>AerialLandscapesMac.app</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>AA0001022D238122004DA734</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileSystemSynchronizedRootGroup</string>
-			<key>path</key>
-			<string>MacWallpaper</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>AA0001032D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>AA0001042D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>AA0001052D238122004DA734</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXResourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>AA0001062D238122004DA734</key>
-		<dict>
-			<key>buildConfigurationList</key>
-			<string>AA0001092D238122004DA734</string>
-			<key>buildPhases</key>
-			<array>
-				<string>AA0001032D238122004DA734</string>
-				<string>AA0001042D238122004DA734</string>
-				<string>AA0001052D238122004DA734</string>
-			</array>
-			<key>buildRules</key>
-			<array/>
-			<key>dependencies</key>
-			<array/>
-			<key>fileSystemSynchronizedGroups</key>
-			<array>
-				<string>AA0001022D238122004DA734</string>
-			</array>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AerialLandscapesMac</string>
-			<key>packageProductDependencies</key>
-			<array/>
-			<key>productName</key>
-			<string>AerialLandscapesMac</string>
-			<key>productReference</key>
-			<string>AA0001012D238122004DA734</string>
-			<key>productType</key>
-			<string>com.apple.product-type.application</string>
-		</dict>
-		<key>AA0001072D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>AppIcon</string>
-				<key>CODE_SIGN_ENTITLEMENTS</key>
-				<string>MacWallpaper/Resources/MacWallpaper.entitlements</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
-				<string>public.app-category.entertainment</string>
-				<key>INFOPLIST_KEY_LSUIElement</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_NSPrincipalClass</key>
-				<string>NSApplication</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/../Frameworks</string>
-				</array>
-				<key>MACOSX_DEPLOYMENT_TARGET</key>
-				<string>13.0</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes-wallpaper</string>
-				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesMac</string>
-				<key>SDKROOT</key>
-				<string>macosx</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>AA0001082D238122004DA734</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>AppIcon</string>
-				<key>CODE_SIGN_ENTITLEMENTS</key>
-				<string>MacWallpaper/Resources/MacWallpaper.entitlements</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
-				<string>public.app-category.entertainment</string>
-				<key>INFOPLIST_KEY_LSUIElement</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_NSPrincipalClass</key>
-				<string>NSApplication</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/../Frameworks</string>
-				</array>
-				<key>MACOSX_DEPLOYMENT_TARGET</key>
-				<string>13.0</string>
-				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes-wallpaper</string>
-				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesMac</string>
-				<key>SDKROOT</key>
-				<string>macosx</string>
-				<key>SWIFT_COMPILATION_MODE</key>
-				<string>wholemodule</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>AA0001092D238122004DA734</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>AA0001072D238122004DA734</string>
-				<string>AA0001082D238122004DA734</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>BB0001010000000000000001</key>
-		<dict>
-			<key>explicitFileType</key>
-			<string>wrapper.application</string>
-			<key>includeInIndex</key>
-			<string>0</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>path</key>
-			<string>AerialLandscapesIOS.app</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-		</dict>
-		<key>BB0001020000000000000001</key>
-		<dict>
-			<key>fileEncoding</key>
-			<string>4</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>App.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB0001030000000000000001</key>
-		<dict>
-			<key>fileEncoding</key>
-			<string>4</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>ContentView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB0001040000000000000001</key>
-		<dict>
-			<key>fileEncoding</key>
-			<string>4</string>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>WebView.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB0001050000000000000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>folder.assetcatalog</string>
-			<key>name</key>
-			<string>Assets.xcassets</string>
-			<key>path</key>
-			<string>Resources/Assets.xcassets</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB0001060000000000000001</key>
-		<dict>
-			<key>children</key>
-			<array>
-				<string>BB0001020000000000000001</string>
-				<string>BB0001030000000000000001</string>
-				<string>BB0001040000000000000001</string>
-				<string>BB0001050000000000000001</string>
-			</array>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>path</key>
-			<string>AerialLandscapesIOS</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>BB0001070000000000000001</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array>
-				<string>BB0001200000000000000001</string>
-				<string>BB0001210000000000000001</string>
-				<string>BB0001220000000000000001</string>
-			</array>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>BB0001080000000000000001</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>BB0001090000000000000001</key>
-		<dict>
-			<key>buildActionMask</key>
-			<string>2147483647</string>
-			<key>files</key>
-			<array>
-				<string>BB0001230000000000000001</string>
-			</array>
-			<key>isa</key>
-			<string>PBXResourcesBuildPhase</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<string>0</string>
-		</dict>
-		<key>BB0001100000000000000001</key>
-		<dict>
-			<key>buildConfigurationList</key>
-			<string>BB0001130000000000000001</string>
-			<key>buildPhases</key>
-			<array>
-				<string>BB0001070000000000000001</string>
-				<string>BB0001080000000000000001</string>
-				<string>BB0001090000000000000001</string>
-			</array>
-			<key>buildRules</key>
-			<array/>
-			<key>dependencies</key>
-			<array/>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AerialLandscapesIOS</string>
-			<key>productName</key>
-			<string>AerialLandscapesIOS</string>
-			<key>productReference</key>
-			<string>BB0001010000000000000001</string>
-			<key>productType</key>
-			<string>com.apple.product-type.application</string>
-		</dict>
-		<key>BB0001110000000000000001</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>AppIcon</string>
-				<key>CODE_SIGN_IDENTITY</key>
-				<string>Apple Development</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
-				<key>DEBUG_INFORMATION_FORMAT</key>
-				<string>dwarf</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UILaunchScreen_Generation</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UIStatusBarStyle</key>
-				<string>UIStatusBarStyleLightContent</string>
-				<key>INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad</key>
-				<array>
-					<string>UIInterfaceOrientationPortrait</string>
-					<string>UIInterfaceOrientationLandscapeLeft</string>
-					<string>UIInterfaceOrientationLandscapeRight</string>
-					<string>UIInterfaceOrientationPortraitUpsideDown</string>
-				</array>
-				<key>INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone</key>
-				<array>
-					<string>UIInterfaceOrientationPortrait</string>
-					<string>UIInterfaceOrientationLandscapeLeft</string>
-					<string>UIInterfaceOrientationLandscapeRight</string>
-					<string>UIInterfaceOrientationPortraitUpsideDown</string>
-				</array>
-				<key>INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance</key>
-				<string>NO</string>
-				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
-				<string>16.0</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/Frameworks</string>
-				</array>
-				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes-ios</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>PROVISIONING_PROFILE_SPECIFIER</key>
-				<string></string>
-				<key>SDKROOT</key>
-				<string>iphoneos</string>
-				<key>SUPPORTED_PLATFORMS</key>
-				<string>iphoneos iphonesimulator</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>YES</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>1,2</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-		</dict>
-		<key>BB0001120000000000000001</key>
-		<dict>
-			<key>buildSettings</key>
-			<dict>
-				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
-				<string>AppIcon</string>
-				<key>CODE_SIGN_IDENTITY</key>
-				<string>Apple Development</string>
-				<key>CODE_SIGN_STYLE</key>
-				<string>Automatic</string>
-				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
-				<key>DEBUG_INFORMATION_FORMAT</key>
-				<string>dwarf-with-dsym</string>
-				<key>DEVELOPMENT_TEAM</key>
-				<string>D2GRT69L42</string>
-				<key>GENERATE_INFOPLIST_FILE</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UILaunchScreen_Generation</key>
-				<string>YES</string>
-				<key>INFOPLIST_KEY_UIStatusBarStyle</key>
-				<string>UIStatusBarStyleLightContent</string>
-				<key>INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad</key>
-				<array>
-					<string>UIInterfaceOrientationPortrait</string>
-					<string>UIInterfaceOrientationLandscapeLeft</string>
-					<string>UIInterfaceOrientationLandscapeRight</string>
-					<string>UIInterfaceOrientationPortraitUpsideDown</string>
-				</array>
-				<key>INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone</key>
-				<array>
-					<string>UIInterfaceOrientationPortrait</string>
-					<string>UIInterfaceOrientationLandscapeLeft</string>
-					<string>UIInterfaceOrientationLandscapeRight</string>
-					<string>UIInterfaceOrientationPortraitUpsideDown</string>
-				</array>
-				<key>INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance</key>
-				<string>NO</string>
-				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
-				<string>16.0</string>
-				<key>LD_RUNPATH_SEARCH_PATHS</key>
-				<array>
-					<string>$(inherited)</string>
-					<string>@executable_path/Frameworks</string>
-				</array>
-				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
-				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes-ios</string>
-				<key>PRODUCT_NAME</key>
-				<string>$(TARGET_NAME)</string>
-				<key>PROVISIONING_PROFILE_SPECIFIER</key>
-				<string></string>
-				<key>SDKROOT</key>
-				<string>iphoneos</string>
-				<key>SUPPORTED_PLATFORMS</key>
-				<string>iphoneos iphonesimulator</string>
-				<key>SWIFT_EMIT_LOC_STRINGS</key>
-				<string>YES</string>
-				<key>SWIFT_VERSION</key>
-				<string>5.0</string>
-				<key>TARGETED_DEVICE_FAMILY</key>
-				<string>1,2</string>
-			</dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-		</dict>
-		<key>BB0001130000000000000001</key>
-		<dict>
-			<key>buildConfigurations</key>
-			<array>
-				<string>BB0001110000000000000001</string>
-				<string>BB0001120000000000000001</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<string>0</string>
-			<key>defaultConfigurationName</key>
-			<string>Release</string>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-		</dict>
-		<key>BB0001200000000000000001</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB0001020000000000000001</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>BB0001210000000000000001</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB0001030000000000000001</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>BB0001220000000000000001</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB0001040000000000000001</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>BB0001230000000000000001</key>
-		<dict>
-			<key>fileRef</key>
-			<string>BB0001050000000000000001</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-	</dict>
-	<key>rootObject</key>
-	<string>604BFF662D238120004DA734</string>
-</dict>
-</plist>
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB0001200000000000000001 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0001020000000000000001 /* App.swift */; };
+		BB0001210000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0001030000000000000001 /* ContentView.swift */; };
+		BB0001220000000000000001 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0001040000000000000001 /* WebView.swift */; };
+		BB0001230000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0001050000000000000001 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		604BFF7F2D238122004DA734 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 604BFF662D238120004DA734 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 604BFF6D2D238120004DA734;
+			remoteInfo = AerialLandscapes;
+		};
+		604BFF892D238122004DA734 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 604BFF662D238120004DA734 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 604BFF6D2D238120004DA734;
+			remoteInfo = AerialLandscapes;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		604BFF6E2D238120004DA734 /* AerialLandscapes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AerialLandscapes.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AerialLandscapesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000012D238122004DA734 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
+		AA0001012D238122004DA734 /* AerialLandscapesMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AerialLandscapesMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0001010000000000000001 /* AerialLandscapesIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AerialLandscapesIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0001020000000000000001 /* App.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
+		BB0001030000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		BB0001040000000000000001 /* WebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebView.swift; sourceTree = "<group>"; };
+		BB0001050000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Resources/Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		604BFF702D238120004DA734 /* AerialLandscapes */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AerialLandscapes;
+			sourceTree = "<group>";
+		};
+		604BFF812D238122004DA734 /* AerialLandscapesTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AerialLandscapesTests;
+			sourceTree = "<group>";
+		};
+		604BFF8B2D238122004DA734 /* AerialLandscapesUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = AerialLandscapesUITests;
+			sourceTree = "<group>";
+		};
+		AA0001022D238122004DA734 /* MacWallpaper */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MacWallpaper;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		604BFF6B2D238120004DA734 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF7B2D238122004DA734 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF852D238122004DA734 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0001042D238122004DA734 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB0001080000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		604BFF652D238120004DA734 = {
+			isa = PBXGroup;
+			children = (
+				604BFF702D238120004DA734 /* AerialLandscapes */,
+				604BFF812D238122004DA734 /* AerialLandscapesTests */,
+				604BFF8B2D238122004DA734 /* AerialLandscapesUITests */,
+				AA0001022D238122004DA734 /* MacWallpaper */,
+				604BFF6F2D238120004DA734 /* Products */,
+				AA0000032D238122004DA734 /* Frameworks */,
+				BB0001060000000000000001 /* AerialLandscapesIOS */,
+			);
+			sourceTree = "<group>";
+		};
+		604BFF6F2D238120004DA734 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				604BFF6E2D238120004DA734 /* AerialLandscapes.app */,
+				604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */,
+				604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */,
+				AA0001012D238122004DA734 /* AerialLandscapesMac.app */,
+				BB0001010000000000000001 /* AerialLandscapesIOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA0000032D238122004DA734 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000012D238122004DA734 /* WebKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BB0001060000000000000001 /* AerialLandscapesIOS */ = {
+			isa = PBXGroup;
+			children = (
+				BB0001020000000000000001 /* App.swift */,
+				BB0001030000000000000001 /* ContentView.swift */,
+				BB0001040000000000000001 /* WebView.swift */,
+				BB0001050000000000000001 /* Assets.xcassets */,
+			);
+			path = AerialLandscapesIOS;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		604BFF6D2D238120004DA734 /* AerialLandscapes */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 604BFF922D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapes" */;
+			buildPhases = (
+				604BFF6A2D238120004DA734 /* Sources */,
+				604BFF6B2D238120004DA734 /* Frameworks */,
+				604BFF6C2D238120004DA734 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				604BFF702D238120004DA734 /* AerialLandscapes */,
+			);
+			name = AerialLandscapes;
+			packageProductDependencies = (
+			);
+			productName = AerialLandscapes;
+			productReference = 604BFF6E2D238120004DA734 /* AerialLandscapes.app */;
+			productType = "com.apple.product-type.application";
+		};
+		604BFF7D2D238122004DA734 /* AerialLandscapesTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 604BFF952D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesTests" */;
+			buildPhases = (
+				604BFF7A2D238122004DA734 /* Sources */,
+				604BFF7B2D238122004DA734 /* Frameworks */,
+				604BFF7C2D238122004DA734 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				604BFF802D238122004DA734 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				604BFF812D238122004DA734 /* AerialLandscapesTests */,
+			);
+			name = AerialLandscapesTests;
+			packageProductDependencies = (
+			);
+			productName = AerialLandscapesTests;
+			productReference = 604BFF7E2D238122004DA734 /* AerialLandscapesTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		604BFF872D238122004DA734 /* AerialLandscapesUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 604BFF982D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesUITests" */;
+			buildPhases = (
+				604BFF842D238122004DA734 /* Sources */,
+				604BFF852D238122004DA734 /* Frameworks */,
+				604BFF862D238122004DA734 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				604BFF8A2D238122004DA734 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				604BFF8B2D238122004DA734 /* AerialLandscapesUITests */,
+			);
+			name = AerialLandscapesUITests;
+			packageProductDependencies = (
+			);
+			productName = AerialLandscapesUITests;
+			productReference = 604BFF882D238122004DA734 /* AerialLandscapesUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		AA0001062D238122004DA734 /* AerialLandscapesMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0001092D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesMac" */;
+			buildPhases = (
+				AA0001032D238122004DA734 /* Sources */,
+				AA0001042D238122004DA734 /* Frameworks */,
+				AA0001052D238122004DA734 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0001022D238122004DA734 /* MacWallpaper */,
+			);
+			name = AerialLandscapesMac;
+			packageProductDependencies = (
+			);
+			productName = AerialLandscapesMac;
+			productReference = AA0001012D238122004DA734 /* AerialLandscapesMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		BB0001100000000000000001 /* AerialLandscapesIOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0001130000000000000001 /* Build configuration list for PBXNativeTarget "AerialLandscapesIOS" */;
+			buildPhases = (
+				BB0001070000000000000001 /* Sources */,
+				BB0001080000000000000001 /* Frameworks */,
+				BB0001090000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AerialLandscapesIOS;
+			productName = AerialLandscapesIOS;
+			productReference = BB0001010000000000000001 /* AerialLandscapesIOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		604BFF662D238120004DA734 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					604BFF6D2D238120004DA734 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					604BFF7D2D238122004DA734 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 604BFF6D2D238120004DA734;
+					};
+					604BFF872D238122004DA734 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = 604BFF6D2D238120004DA734;
+					};
+					AA0001062D238122004DA734 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = 604BFF692D238120004DA734 /* Build configuration list for PBXProject "AerialLandscapes" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 604BFF652D238120004DA734;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 604BFF6F2D238120004DA734 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				604BFF6D2D238120004DA734 /* AerialLandscapes */,
+				604BFF7D2D238122004DA734 /* AerialLandscapesTests */,
+				604BFF872D238122004DA734 /* AerialLandscapesUITests */,
+				AA0001062D238122004DA734 /* AerialLandscapesMac */,
+				BB0001100000000000000001 /* AerialLandscapesIOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		604BFF6C2D238120004DA734 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF7C2D238122004DA734 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF862D238122004DA734 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0001052D238122004DA734 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB0001090000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0001230000000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		604BFF6A2D238120004DA734 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF7A2D238122004DA734 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		604BFF842D238122004DA734 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0001032D238122004DA734 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB0001070000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0001200000000000000001 /* App.swift in Sources */,
+				BB0001210000000000000001 /* ContentView.swift in Sources */,
+				BB0001220000000000000001 /* WebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		604BFF802D238122004DA734 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 604BFF6D2D238120004DA734 /* AerialLandscapes */;
+			targetProxy = 604BFF7F2D238122004DA734 /* PBXContainerItemProxy */;
+		};
+		604BFF8A2D238122004DA734 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 604BFF6D2D238120004DA734 /* AerialLandscapes */;
+			targetProxy = 604BFF892D238122004DA734 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		604BFF902D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = D2GRT69L42;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Debug;
+		};
+		604BFF912D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = D2GRT69L42;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = appletvos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		604BFF932D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_ASSET_PATHS = "\"AerialLandscapes/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Debug;
+		};
+		604BFF942D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				DEVELOPMENT_ASSET_PATHS = "\"AerialLandscapes/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+			};
+			name = Release;
+		};
+		604BFF962D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AerialLandscapes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AerialLandscapes";
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Debug;
+		};
+		604BFF972D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapesTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/AerialLandscapes.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/AerialLandscapes";
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Release;
+		};
+		604BFF992D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapesUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = AerialLandscapes;
+			};
+			name = Debug;
+		};
+		604BFF9A2D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapesUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = AerialLandscapes;
+			};
+			name = Release;
+		};
+		AA0001072D238122004DA734 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pjloury.aerial-landscapes-wallpaper";
+				PRODUCT_NAME = AerialLandscapesMac;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AA0001082D238122004DA734 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = MacWallpaper/Resources/MacWallpaper.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.pjloury.aerial-landscapes-wallpaper";
+				PRODUCT_NAME = AerialLandscapesMac;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		BB0001110000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_CFBundleDisplayName = "Aerial Landscapes";
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		BB0001120000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_UIViewControllerBasedStatusBarAppearance = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_CFBundleDisplayName = "Aerial Landscapes";
+				PRODUCT_BUNDLE_IDENTIFIER = pjloury.AerialLandscapes;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		604BFF692D238120004DA734 /* Build configuration list for PBXProject "AerialLandscapes" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				604BFF902D238122004DA734 /* Debug */,
+				604BFF912D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		604BFF922D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapes" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				604BFF932D238122004DA734 /* Debug */,
+				604BFF942D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		604BFF952D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				604BFF962D238122004DA734 /* Debug */,
+				604BFF972D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		604BFF982D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				604BFF992D238122004DA734 /* Debug */,
+				604BFF9A2D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0001092D238122004DA734 /* Build configuration list for PBXNativeTarget "AerialLandscapesMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0001072D238122004DA734 /* Debug */,
+				AA0001082D238122004DA734 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB0001130000000000000001 /* Build configuration list for PBXNativeTarget "AerialLandscapesIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0001110000000000000001 /* Debug */,
+				BB0001120000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 604BFF662D238120004DA734 /* Project object */;
+}
