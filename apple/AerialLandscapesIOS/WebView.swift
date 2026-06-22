@@ -108,35 +108,59 @@ enum PlaybackMode: String, CaseIterable, Identifiable {
 /// Owns the AVQueuePlayer and keeps it playing forever: when a clip finishes,
 /// its URL is re-appended to the tail so the queue never drains. Publishes the
 /// current clip's title via KVO on `currentItem`.
-final class AerialPlayerModel: ObservableObject {
+final class AerialPlayerModel: NSObject, ObservableObject {
     let player = AVQueuePlayer()
     @Published private(set) var currentTitle = ""
     @Published private(set) var mode: PlaybackMode = .shuffle
+    /// True when AirPlay-eligible external routes are detected nearby — drives
+    /// the reveal of the AirPlay button.
+    @Published private(set) var airplayAvailable = false
 
-    private var itemObservation: NSKeyValueObservation?
+    private let routeDetector = AVRouteDetector()
     /// URLs valid for the active mode — guards itemDidEnd against re-appending
     /// a stale clip from a previous mode after the queue is rebuilt.
     private var activeURLs: Set<URL> = []
 
-    init() {
-        try? AVAudioSession.sharedInstance().setCategory(.ambient)
+    override init() {
+        super.init()
+        try? AVAudioSession.sharedInstance().setCategory(.playback)
         player.isMuted = true
+        player.allowsExternalPlayback = true
         player.actionAtItemEnd = .advance
 
-        itemObservation = player.observe(\.currentItem, options: [.initial, .new]) { [weak self] player, _ in
-            guard let self else { return }
-            let title = (player.currentItem?.asset as? AVURLAsset)
-                .flatMap { AerialCatalog.titlesByURL[$0.url] } ?? ""
-            DispatchQueue.main.async {
-                withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
-            }
-        }
+        // Manual (Obj-C) KVO throughout — Swift's typed observe(_:options:)
+        // traps on these AVFoundation properties in the simulator. Read the
+        // live value inside observeValue instead.
+        //
+        // currentItem can be nil/NSNull while the queue is empty.
+        player.addObserver(self, forKeyPath: "currentItem", options: [.initial, .new], context: nil)
+
+        // Watch for nearby AirPlay devices; reveal the button only when present.
+        routeDetector.isRouteDetectionEnabled = true
+        routeDetector.addObserver(self, forKeyPath: "multipleRoutesDetected", options: [.initial, .new], context: nil)
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(itemDidEnd(_:)),
             name: .AVPlayerItemDidPlayToEndTime, object: nil)
 
         setMode(.shuffle)
+    }
+
+    override func observeValue(forKeyPath keyPath: String?, of object: Any?,
+                              change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
+        switch keyPath {
+        case "currentItem":
+            let title = (player.currentItem?.asset as? AVURLAsset)
+                .flatMap { AerialCatalog.titlesByURL[$0.url] } ?? ""
+            DispatchQueue.main.async {
+                withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
+            }
+        case "multipleRoutesDetected":
+            let available = routeDetector.multipleRoutesDetected
+            DispatchQueue.main.async { self.airplayAvailable = available }
+        default:
+            break
+        }
     }
 
     /// Rebuild the queue for the given mode and start playing.
@@ -157,7 +181,26 @@ final class AerialPlayerModel: ObservableObject {
         player.insert(AVPlayerItem(url: asset.url), after: nil)
     }
 
-    deinit { NotificationCenter.default.removeObserver(self) }
+    deinit {
+        player.removeObserver(self, forKeyPath: "currentItem")
+        routeDetector.removeObserver(self, forKeyPath: "multipleRoutesDetected")
+        routeDetector.isRouteDetectionEnabled = false
+        NotificationCenter.default.removeObserver(self)
+    }
+}
+
+/// SwiftUI wrapper around the system AirPlay route picker. Tapping it shows the
+/// AirPlay device list and routes playback to the chosen device.
+struct AirPlayButton: UIViewRepresentable {
+    func makeUIView(context: Context) -> AVRoutePickerView {
+        let v = AVRoutePickerView()
+        v.tintColor = .white
+        v.activeTintColor = UIColor(red: 0.30, green: 0.70, blue: 1.0, alpha: 1.0)
+        v.prioritizesVideoDevices = true
+        return v
+    }
+
+    func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
 /// Bridges AVPlayerViewController (chrome-free, aspect-fill) into SwiftUI.

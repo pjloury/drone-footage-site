@@ -11,8 +11,16 @@ struct ContentView: View {
 
             // Category switcher — single button that reveals options on tap.
             VStack {
-                HStack {
+                HStack(spacing: 10) {
                     Spacer()
+                    // AirPlay button — revealed only when nearby devices exist.
+                    if model.airplayAvailable {
+                        AirPlayButton()
+                            .frame(width: 34, height: 34)
+                            .padding(.horizontal, 6)
+                            .background(Capsule().fill(Color.black.opacity(0.35)))
+                            .transition(.opacity)
+                    }
                     Menu {
                         ForEach(PlaybackMode.allCases) { m in
                             Button {
