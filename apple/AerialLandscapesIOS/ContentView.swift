@@ -2,12 +2,30 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var model = AerialPlayerModel()
+    @State private var coverOpacity = 0.0
+
+    /// Switch categories with a smooth dip-to-black dissolve: fade the screen
+    /// out, swap the playlist while hidden, then fade the new footage in.
+    private func selectMode(_ m: PlaybackMode) {
+        guard m != model.mode else { return }
+        withAnimation(.easeInOut(duration: 0.35)) { coverOpacity = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            model.setMode(m)
+            withAnimation(.easeInOut(duration: 0.55)) { coverOpacity = 0 }
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             AerialPlayerView(player: model.player)
                 .ignoresSafeArea()
                 .background(Color.black)
+
+            // Dissolve cover for category transitions.
+            Color.black
+                .opacity(coverOpacity)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             // Category switcher — single button that reveals options on tap.
             VStack {
@@ -24,7 +42,7 @@ struct ContentView: View {
                     Menu {
                         ForEach(PlaybackMode.allCases) { m in
                             Button {
-                                model.setMode(m)
+                                selectMode(m)
                             } label: {
                                 if model.mode == m {
                                     Label(m.label, systemImage: "checkmark")
