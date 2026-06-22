@@ -67,7 +67,7 @@ struct ContentView: View {
                         Rectangle().fill(Color.white.opacity(0.12))
                         Rectangle().fill(Color.white.opacity(0.55))
                             .frame(width: max(0, geo.size.width * CGFloat(model.playbackProgress)))
-                            .animation(.linear(duration: 0.25), value: model.playbackProgress)
+                            .animation(.linear(duration: 0.5), value: model.playbackProgress)
                     }
                 }
                 .frame(height: 3)
@@ -126,7 +126,7 @@ struct ContentView: View {
                 .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 2)
                 .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
                 .padding(.leading, 20)
-                .padding(.bottom, 48)
+                .padding(.bottom, 20)
         }
     }
 }

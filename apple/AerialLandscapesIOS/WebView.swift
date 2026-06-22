@@ -129,7 +129,7 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     private var isCrossfading = false
     private var timeObserver: Any?
 
-    static let crossfadeDuration: TimeInterval = 0.8
+    static let crossfadeDuration: TimeInterval = 1.8
 
     override init() {
         super.init()
@@ -230,7 +230,8 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     private func startTimeObserver() {
         removeTimeObserver()
-        let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+        // 0.5s interval + 0.5s linear animation = bar glides continuously with no stutter.
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
         let observed = frontPlayer
         timeObserver = observed.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self, let item = observed.currentItem else { return }
