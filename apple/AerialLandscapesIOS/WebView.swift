@@ -115,11 +115,18 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     /// True when AirPlay-eligible external routes are detected nearby — drives
     /// the reveal of the AirPlay button.
     @Published private(set) var airplayAvailable = false
+    /// Arrow flash state for nav feedback — mirrors tvOS NavArrowView convention.
+    @Published private(set) var leftFlash  = false
+    @Published private(set) var rightFlash = false
 
     private let routeDetector = AVRouteDetector()
     /// URLs valid for the active mode — guards itemDidEnd against re-appending
     /// a stale clip from a previous mode after the queue is rebuilt.
     private var activeURLs: Set<URL> = []
+    /// Ordered list for the current mode — lets us seek backward.
+    private var playlist: [URL] = []
+    /// Index of the item currently at the head of the queue.
+    private var currentIndex: Int = 0
 
     override init() {
         super.init()
@@ -176,10 +183,42 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     func setMode(_ newMode: PlaybackMode) {
         mode = newMode
         let urls = newMode.clipNumbers.map(AerialCatalog.mobileURL)
+        playlist = urls
         activeURLs = Set(urls)
+        currentIndex = 0
         player.removeAllItems()
         for url in urls { player.insert(AVPlayerItem(url: url), after: nil) }
         player.play()
+    }
+
+    func skipForward() {
+        guard !playlist.isEmpty else { return }
+        let skippedURL = playlist[currentIndex]
+        currentIndex = (currentIndex + 1) % playlist.count
+        flashRight()
+        player.advanceToNextItem()
+        // Re-append the skipped clip to the tail so the queue stays infinite.
+        player.insert(AVPlayerItem(url: skippedURL), after: nil)
+    }
+
+    func skipBackward() {
+        guard !playlist.isEmpty else { return }
+        currentIndex = (currentIndex - 1 + playlist.count) % playlist.count
+        flashLeft()
+        let remaining = Array(playlist[currentIndex...]) + Array(playlist[..<currentIndex])
+        player.removeAllItems()
+        for u in remaining { player.insert(AVPlayerItem(url: u), after: nil) }
+        player.play()
+    }
+
+    private func flashLeft() {
+        leftFlash = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { self.leftFlash = false }
+    }
+
+    private func flashRight() {
+        rightFlash = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { self.rightFlash = false }
     }
 
     @objc private func appWillEnterForeground() {
@@ -190,6 +229,7 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         guard let finished = note.object as? AVPlayerItem,
               let asset = finished.asset as? AVURLAsset,
               activeURLs.contains(asset.url) else { return }
+        currentIndex = (currentIndex + 1) % playlist.count
         // Re-append the finished clip so playback loops indefinitely.
         player.insert(AVPlayerItem(url: asset.url), after: nil)
     }
@@ -199,6 +239,65 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         routeDetector.removeObserver(self, forKeyPath: "multipleRoutesDetected")
         routeDetector.isRouteDetectionEnabled = false
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+// MARK: - Nav arrow (mirrors tvOS PlayerOverlayView style)
+
+struct IOSNavArrowView: View {
+    let pointsLeft: Bool
+    let lit: Bool
+
+    @State private var opacity: Double = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            VStack {
+                Spacer()
+                ZStack {
+                    IOSTaperedArrowShape(pointsLeft: pointsLeft).fill(.ultraThinMaterial).opacity(0.55)
+                    IOSTaperedArrowShape(pointsLeft: pointsLeft).fill(.white.opacity(0.06))
+                    IOSTaperedArrowShape(pointsLeft: pointsLeft).stroke(.white.opacity(0.18), lineWidth: 1)
+                    Image(systemName: pointsLeft ? "chevron.left" : "chevron.right")
+                        .font(.system(size: 18, weight: .light))
+                        .foregroundColor(.white.opacity(0.9))
+                        .shadow(color: .black.opacity(0.5), radius: 4)
+                        .offset(x: pointsLeft ? 3 : -3)
+                }
+                .frame(width: 48, height: geo.size.height * 0.38)
+                .opacity(opacity)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: pointsLeft ? .leading : .trailing)
+        }
+        .onChange(of: lit) {
+            guard lit else { return }
+            withAnimation(.easeOut(duration: 0.24)) { opacity = 1.0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.32) {
+                withAnimation(.easeOut(duration: 1.08)) { opacity = 0.0 }
+            }
+        }
+    }
+}
+
+struct IOSTaperedArrowShape: Shape {
+    let pointsLeft: Bool
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let pinch = rect.height * 0.15
+        if pointsLeft {
+            p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + pinch))
+            p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - pinch))
+            p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        } else {
+            p.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+            p.addLine(to: CGPoint(x: rect.minX, y: rect.minY + pinch))
+            p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - pinch))
+            p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        }
+        p.closeSubpath()
+        return p
     }
 }
 

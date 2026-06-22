@@ -21,6 +21,35 @@ struct ContentView: View {
                 .ignoresSafeArea()
                 .background(Color.black)
 
+            // Tap zones: left half = back, right half = forward.
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.skipBackward() }
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.skipForward() }
+                }
+            }
+            .ignoresSafeArea()
+            // Swipe left = forward, swipe right = back (matches natural reading direction).
+            .gesture(DragGesture(minimumDistance: 30, coordinateSpace: .local)
+                .onEnded { v in
+                    if v.translation.width < -30 { model.skipForward() }
+                    else if v.translation.width > 30 { model.skipBackward() }
+                }
+            )
+
+            // Nav arrow flash feedback — mirrors tvOS style.
+            HStack(spacing: 0) {
+                IOSNavArrowView(pointsLeft: true,  lit: model.leftFlash)
+                Spacer()
+                IOSNavArrowView(pointsLeft: false, lit: model.rightFlash)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
             // Dissolve cover for category transitions.
             Color.black
                 .opacity(coverOpacity)
