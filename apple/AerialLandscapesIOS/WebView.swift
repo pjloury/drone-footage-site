@@ -123,7 +123,12 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        try? AVAudioSession.sharedInstance().setCategory(.playback)
+        // .longFormVideo route-sharing policy makes AVRouteDetector report only
+        // video-capable routes (Apple TV / AirPlay displays), so the AirPlay
+        // button stays hidden when only audio devices (HomePods, speakers) are
+        // nearby. .moviePlayback mode pairs with it for video playback.
+        try? AVAudioSession.sharedInstance().setCategory(
+            .playback, mode: .moviePlayback, policy: .longFormVideo)
         player.isMuted = true
         player.allowsExternalPlayback = true
         player.actionAtItemEnd = .advance
