@@ -1,17 +1,16 @@
 //  AerialPlayerView  (kept as WebView.swift to preserve the existing target membership)
 //
-//  Minimal native iOS player: one AVQueuePlayer streams the R2 mobile catalog
-//  in shuffled order and loops forever with hard cuts. No crossfade, no
-//  controls — the lightweight native equivalent of the web/tvOS aerial feel,
-//  without WKWebView's video-freeze problems. Publishes the current clip's
-//  title for the bottom-left caption overlay.
+//  Two-player crossfade engine for iOS. playerA and playerB are fixed instances
+//  permanently bound to two AVPlayerViewController layers in the ZStack.
+//  opacityA / opacityB drive SwiftUI crossfade animations without ever
+//  swapping the player reference inside a live view controller.
 
 import SwiftUI
 import AVFoundation
 import AVKit
 
-/// R2 catalog — number + title mirror VideoConfig.allVideos. Mobile encodes
-/// (1080p, fixed 2s keyframes) are streamed for phone/cellular reliability.
+// MARK: - Catalog
+
 enum AerialCatalog {
     static let base = "https://videos.pjloury.com"
 
@@ -61,11 +60,9 @@ enum AerialCatalog {
         URL(string: String(format: "%@/video-%02d-mobile.mp4", base, num))!
     }
 
-    /// Map from the streamed URL back to its display title for caption lookup.
     static let titlesByURL: [URL: String] = Dictionary(
         clips.map { (mobileURL($0.num), $0.title) }, uniquingKeysWith: { a, _ in a })
 
-    /// Clip numbers per section (mirrors VideoConfig grouping).
     static let sectionNumbers: [String: Set<Int>] = [
         "cities":    [2, 5, 6, 7, 8, 10, 12, 13, 14, 17, 18, 20, 21, 22, 26, 32,
                       34, 42, 50, 59, 60, 61, 62, 66, 68, 74, 76, 81],
@@ -77,7 +74,8 @@ enum AerialCatalog {
     ]
 }
 
-/// Playback modes — "Shuffle All" plus one per section, mirroring the web app.
+// MARK: - Playback mode
+
 enum PlaybackMode: String, CaseIterable, Identifiable {
     case shuffle, cities, coastal, mountains, desert
     var id: String { rawValue }
@@ -92,7 +90,6 @@ enum PlaybackMode: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Shuffled clip numbers for this mode.
     var clipNumbers: [Int] {
         let nums: [Int]
         if self == .shuffle {
@@ -105,47 +102,47 @@ enum PlaybackMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// Owns the AVQueuePlayer and keeps it playing forever: when a clip finishes,
-/// its URL is re-appended to the tail so the queue never drains. Publishes the
-/// current clip's title via KVO on `currentItem`.
+// MARK: - Model
+
 final class AerialPlayerModel: NSObject, ObservableObject {
-    let player = AVQueuePlayer()
+
+    // Two fixed players — each permanently bound to one ZStack layer.
+    let playerA = AVPlayer()
+    let playerB = AVPlayer()
+    // Which player is currently the "front" (visible) one.
+    private var isFrontA = true
+    private var frontPlayer: AVPlayer { isFrontA ? playerA : playerB }
+    private var backPlayer:  AVPlayer { isFrontA ? playerB : playerA }
+
     @Published private(set) var currentTitle = ""
     @Published private(set) var mode: PlaybackMode = .shuffle
-    /// Arrow flash state for nav feedback — mirrors tvOS NavArrowView convention.
     @Published private(set) var leftFlash  = false
     @Published private(set) var rightFlash = false
-    /// URLs valid for the active mode — guards itemDidEnd against re-appending
-    /// a stale clip from a previous mode after the queue is rebuilt.
-    private var activeURLs: Set<URL> = []
-    /// Ordered list for the current mode — lets us seek backward.
+    // Layer opacities — SwiftUI animates these for the crossfade.
+    @Published private(set) var opacityA: Double = 1.0
+    @Published private(set) var opacityB: Double = 0.0
+    @Published private(set) var playbackProgress: Double = 0.0
+
     private var playlist: [URL] = []
-    /// Index of the item currently at the head of the queue.
-    private var currentIndex: Int = 0
+    private var activeURLs: Set<URL> = []
+    private var currentIndex = 0
+    private var isCrossfading = false
+    private var timeObserver: Any?
+
+    static let crossfadeDuration: TimeInterval = 0.8
 
     override init() {
         super.init()
-        // .longFormVideo route-sharing policy makes AVRouteDetector report only
-        // video-capable routes (Apple TV / AirPlay displays), so the AirPlay
-        // button stays hidden when only audio devices (HomePods, speakers) are
-        // nearby. .moviePlayback mode pairs with it for video playback.
         try? AVAudioSession.sharedInstance().setCategory(
             .playback, mode: .moviePlayback, policy: .longFormVideo)
-        player.isMuted = true
-        player.allowsExternalPlayback = true
-        player.actionAtItemEnd = .advance
-
-        // Manual (Obj-C) KVO throughout — Swift's typed observe(_:options:)
-        // traps on these AVFoundation properties in the simulator. Read the
-        // live value inside observeValue instead.
-        //
-        // currentItem can be nil/NSNull while the queue is empty.
-        player.addObserver(self, forKeyPath: "currentItem", options: [.initial, .new], context: nil)
+        for p in [playerA, playerB] {
+            p.isMuted = true
+            p.allowsExternalPlayback = true
+        }
 
         NotificationCenter.default.addObserver(
             self, selector: #selector(itemDidEnd(_:)),
             name: .AVPlayerItemDidPlayToEndTime, object: nil)
-
         NotificationCenter.default.addObserver(
             self, selector: #selector(appWillEnterForeground),
             name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -153,50 +150,101 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         setMode(.shuffle)
     }
 
-    override func observeValue(forKeyPath keyPath: String?, of object: Any?,
-                              change: [NSKeyValueChangeKey: Any]?, context: UnsafeMutableRawPointer?) {
-        switch keyPath {
-        case "currentItem":
-            let title = (player.currentItem?.asset as? AVURLAsset)
-                .flatMap { AerialCatalog.titlesByURL[$0.url] } ?? ""
-            DispatchQueue.main.async {
-                withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
-            }
-        default:
-            break
-        }
-    }
+    // MARK: Public
 
-    /// Rebuild the queue for the given mode and start playing.
     func setMode(_ newMode: PlaybackMode) {
         mode = newMode
         let urls = newMode.clipNumbers.map(AerialCatalog.mobileURL)
         playlist = urls
         activeURLs = Set(urls)
         currentIndex = 0
-        player.removeAllItems()
-        for url in urls { player.insert(AVPlayerItem(url: url), after: nil) }
-        player.play()
+        isCrossfading = false
+        isFrontA = true
+
+        // Instantly reset opacities without animation.
+        var t = Transaction(); t.disablesAnimations = true
+        withTransaction(t) { opacityA = 1; opacityB = 0 }
+
+        frontPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[0]))
+        frontPlayer.seek(to: .zero)
+        frontPlayer.play()
+        updateTitle(for: urls[0])
+        startTimeObserver()
+
+        if urls.count > 1 {
+            backPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[1]))
+        }
     }
 
     func skipForward() {
-        guard !playlist.isEmpty else { return }
-        let skippedURL = playlist[currentIndex]
+        guard !isCrossfading, !playlist.isEmpty else { return }
         currentIndex = (currentIndex + 1) % playlist.count
         flashRight()
-        player.advanceToNextItem()
-        // Re-append the skipped clip to the tail so the queue stays infinite.
-        player.insert(AVPlayerItem(url: skippedURL), after: nil)
+        crossfade(to: playlist[currentIndex])
     }
 
     func skipBackward() {
-        guard !playlist.isEmpty else { return }
+        guard !isCrossfading, !playlist.isEmpty else { return }
         currentIndex = (currentIndex - 1 + playlist.count) % playlist.count
         flashLeft()
-        let remaining = Array(playlist[currentIndex...]) + Array(playlist[..<currentIndex])
-        player.removeAllItems()
-        for u in remaining { player.insert(AVPlayerItem(url: u), after: nil) }
-        player.play()
+        crossfade(to: playlist[currentIndex])
+    }
+
+    // MARK: Private
+
+    private func crossfade(to url: URL) {
+        isCrossfading = true
+        removeTimeObserver()
+        playbackProgress = 0
+
+        backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
+        backPlayer.seek(to: .zero)
+        backPlayer.play()
+        updateTitle(for: url)
+
+        withAnimation(.easeInOut(duration: Self.crossfadeDuration)) {
+            if isFrontA { opacityA = 0; opacityB = 1 }
+            else        { opacityB = 0; opacityA = 1 }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossfadeDuration) { [weak self] in
+            guard let self else { return }
+            self.frontPlayer.pause()
+            self.frontPlayer.replaceCurrentItem(with: nil)
+            self.isFrontA.toggle()
+            self.isCrossfading = false
+            self.startTimeObserver()
+
+            // Preload the clip after the one we just switched to.
+            let nextIdx = (self.currentIndex + 1) % self.playlist.count
+            self.backPlayer.replaceCurrentItem(with: AVPlayerItem(url: self.playlist[nextIdx]))
+        }
+    }
+
+    private func updateTitle(for url: URL) {
+        let title = AerialCatalog.titlesByURL[url] ?? ""
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
+        }
+    }
+
+    private func startTimeObserver() {
+        removeTimeObserver()
+        let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
+        let observed = frontPlayer
+        timeObserver = observed.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            guard let self, let item = observed.currentItem else { return }
+            let dur = item.duration.seconds
+            guard dur > 0, !dur.isNaN, !dur.isInfinite else { return }
+            self.playbackProgress = min(time.seconds / dur, 1.0)
+        }
+    }
+
+    private func removeTimeObserver() {
+        if let obs = timeObserver {
+            frontPlayer.removeTimeObserver(obs)
+            timeObserver = nil
+        }
     }
 
     private func flashLeft() {
@@ -210,20 +258,21 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     }
 
     @objc private func appWillEnterForeground() {
-        player.play()
+        frontPlayer.play()
     }
 
     @objc private func itemDidEnd(_ note: Notification) {
         guard let finished = note.object as? AVPlayerItem,
               let asset = finished.asset as? AVURLAsset,
-              activeURLs.contains(asset.url) else { return }
+              activeURLs.contains(asset.url),
+              frontPlayer.currentItem === finished,
+              !isCrossfading else { return }
         currentIndex = (currentIndex + 1) % playlist.count
-        // Re-append the finished clip so playback loops indefinitely.
-        player.insert(AVPlayerItem(url: asset.url), after: nil)
+        crossfade(to: playlist[currentIndex])
     }
 
     deinit {
-        player.removeObserver(self, forKeyPath: "currentItem")
+        removeTimeObserver()
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -287,8 +336,8 @@ struct IOSTaperedArrowShape: Shape {
     }
 }
 
-/// SwiftUI wrapper around the system AirPlay route picker. Tapping it shows the
-/// AirPlay device list and routes playback to the chosen device.
+// MARK: - AirPlay button
+
 struct AirPlayButton: UIViewRepresentable {
     func makeUIView(context: Context) -> AVRoutePickerView {
         let v = AVRoutePickerView()
@@ -297,11 +346,11 @@ struct AirPlayButton: UIViewRepresentable {
         v.prioritizesVideoDevices = true
         return v
     }
-
     func updateUIView(_ view: AVRoutePickerView, context: Context) {}
 }
 
-/// Bridges AVPlayerViewController (chrome-free, aspect-fill) into SwiftUI.
+// MARK: - Player view
+
 struct AerialPlayerView: UIViewControllerRepresentable {
     let player: AVPlayer
 
@@ -313,5 +362,7 @@ struct AerialPlayerView: UIViewControllerRepresentable {
         return vc
     }
 
-    func updateUIViewController(_ vc: AVPlayerViewController, context: Context) {}
+    func updateUIViewController(_ vc: AVPlayerViewController, context: Context) {
+        if vc.player !== player { vc.player = player }
+    }
 }
