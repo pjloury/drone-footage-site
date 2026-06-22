@@ -144,7 +144,12 @@ class StreamingPlayerModel: ObservableObject {
     // MARK: Init
 
     init() {
-        playerA.isMuted = false
+        // Mix with whatever is already playing (e.g. AirPlay audio from another
+        // app) rather than interrupting it. The aerial footage is visual-only —
+        // both players stay muted for the lifetime of the app.
+        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        playerA.isMuted = true
         playerB.isMuted = true
         loadSection(nil)
     }
@@ -238,8 +243,6 @@ class StreamingPlayerModel: ObservableObject {
         isCrossfading = false
         autoFadeArmed = false
         resetLayersCallback?()
-        frontPlayer.isMuted = false
-
         if !reusePreloaded {
             backPlayer.pause()
             backPlayer.replaceCurrentItem(with: nil)
@@ -354,8 +357,7 @@ class StreamingPlayerModel: ObservableObject {
         frontPlayer.replaceCurrentItem(with: nil)
 
         isFrontA.toggle()                   // swap players
-        frontPlayer.isMuted = false         // new front gets audio
-        backPlayer.isMuted  = true
+        // both players stay muted — visual-only app, audio must not interrupt AirPlay
 
         currentQueueIndex = targetIdx
         isCrossfading = false
@@ -380,9 +382,7 @@ class StreamingPlayerModel: ObservableObject {
         autoFadeArmed = false
         backPlayer.pause()
         backPlayer.replaceCurrentItem(with: nil)
-        backPlayer.isMuted = true
         resetLayersCallback?()
-        frontPlayer.isMuted = false
         if frontPlayer.timeControlStatus == .paused { frontPlayer.play() }
     }
 
@@ -484,10 +484,7 @@ class StreamingPlayerModel: ObservableObject {
         guard let url = video.remoteVideoURL else { return }
         player.replaceCurrentItem(with: AVPlayerItem(url: url))
         if onFront {
-            player.isMuted = false
             if startPlaying { player.seek(to: .zero); player.play() }
-        } else {
-            player.isMuted = true
         }
     }
 

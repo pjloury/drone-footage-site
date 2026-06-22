@@ -108,8 +108,8 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 2)
                 .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
-                .padding(.leading, 24)
-                .padding(.bottom, 32)
+                .padding(.leading, 20)
+                .padding(.bottom, 48)
         }
     }
 }
