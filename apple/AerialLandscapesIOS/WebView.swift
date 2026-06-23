@@ -122,6 +122,8 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     @Published private(set) var opacityA: Double = 1.0
     @Published private(set) var opacityB: Double = 0.0
     @Published private(set) var playbackProgress: Double = 0.0
+    /// False during a crossfade — hides the progress bar while it resets to 0.
+    @Published private(set) var progressVisible: Bool = true
 
     private var playlist: [URL] = []
     private var activeURLs: Set<URL> = []
@@ -129,7 +131,8 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     private var isCrossfading = false
     private var timeObserver: Any?
 
-    static let crossfadeDuration: TimeInterval = 1.8
+    static let manualCrossfadeDuration: TimeInterval = 1.5
+    static let autoCrossfadeDuration:   TimeInterval = 4.0
 
     override init() {
         super.init()
@@ -180,40 +183,45 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         guard !isCrossfading, !playlist.isEmpty else { return }
         currentIndex = (currentIndex + 1) % playlist.count
         flashRight()
-        crossfade(to: playlist[currentIndex])
+        crossfade(to: playlist[currentIndex], duration: Self.manualCrossfadeDuration)
     }
 
     func skipBackward() {
         guard !isCrossfading, !playlist.isEmpty else { return }
         currentIndex = (currentIndex - 1 + playlist.count) % playlist.count
         flashLeft()
-        crossfade(to: playlist[currentIndex])
+        crossfade(to: playlist[currentIndex], duration: Self.manualCrossfadeDuration)
     }
 
     // MARK: Private
 
-    private func crossfade(to url: URL) {
+    private func crossfade(to url: URL, duration: TimeInterval) {
         isCrossfading = true
         removeTimeObserver()
-        playbackProgress = 0
+
+        // Fade bar out before resetting — mirrors tvOS overlayVisible pattern.
+        withAnimation(.easeInOut(duration: 0.3)) { progressVisible = false }
 
         backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
         backPlayer.seek(to: .zero)
         backPlayer.play()
         updateTitle(for: url)
 
-        withAnimation(.easeInOut(duration: Self.crossfadeDuration)) {
+        withAnimation(.easeInOut(duration: duration)) {
             if isFrontA { opacityA = 0; opacityB = 1 }
             else        { opacityB = 0; opacityA = 1 }
         }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.crossfadeDuration) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
             guard let self else { return }
             self.frontPlayer.pause()
             self.frontPlayer.replaceCurrentItem(with: nil)
             self.isFrontA.toggle()
             self.isCrossfading = false
+            self.playbackProgress = 0
             self.startTimeObserver()
+            // Fade bar back in after reset.
+            withAnimation(.easeInOut(duration: 0.3)) { self.progressVisible = true }
 
             // Preload the clip after the one we just switched to.
             let nextIdx = (self.currentIndex + 1) % self.playlist.count
@@ -230,8 +238,7 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     private func startTimeObserver() {
         removeTimeObserver()
-        // 0.5s interval + 0.5s linear animation = bar glides continuously with no stutter.
-        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
         let observed = frontPlayer
         timeObserver = observed.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self, let item = observed.currentItem else { return }
@@ -269,7 +276,7 @@ final class AerialPlayerModel: NSObject, ObservableObject {
               frontPlayer.currentItem === finished,
               !isCrossfading else { return }
         currentIndex = (currentIndex + 1) % playlist.count
-        crossfade(to: playlist[currentIndex])
+        crossfade(to: playlist[currentIndex], duration: Self.autoCrossfadeDuration)
     }
 
     deinit {
