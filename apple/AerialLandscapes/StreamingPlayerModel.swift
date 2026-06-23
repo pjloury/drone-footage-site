@@ -151,10 +151,20 @@ class StreamingPlayerModel: ObservableObject {
         try? AVAudioSession.sharedInstance().setActive(true)
         playerA.isMuted = true
         playerB.isMuted = true
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(appDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification, object: nil)
+
         loadSection(nil)
     }
 
+    @objc private func appDidBecomeActive() {
+        frontPlayer.play()
+    }
+
     deinit {
+        NotificationCenter.default.removeObserver(self)
         removeTimeObserver()
         bufferingObservation?.invalidate()
     }
