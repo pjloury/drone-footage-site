@@ -72,6 +72,8 @@ struct MinimapView: View {
             }
         }
         .frame(width: zone.displaySize.width, height: zone.displaySize.height)
+        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.3), radius: 4,  x: 0, y: 2)
         .accessibilityIdentifier("minimap")
         .accessibilityValue("\(lat),\(lng)")
         .onAppear { loadMapImage() }
