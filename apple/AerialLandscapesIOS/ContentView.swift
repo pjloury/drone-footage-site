@@ -27,6 +27,8 @@ struct ContentView: View {
             .background(Color.black)
 
             // Edge tap strips (20% each side) + full-screen swipe.
+            // Use simultaneousGesture for drag so the Menu button above is
+            // never blocked by gesture-recognizer competition.
             GeometryReader { geo in
                 let stripW = geo.size.width * 0.2
                 ZStack {
@@ -43,7 +45,7 @@ struct ContentView: View {
                 }
             }
             .ignoresSafeArea()
-            .gesture(DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .simultaneousGesture(DragGesture(minimumDistance: 30, coordinateSpace: .local)
                 .onEnded { v in
                     if v.translation.width < -30 { model.skipForward() }
                     else if v.translation.width > 30 { model.skipBackward() }
@@ -82,6 +84,8 @@ struct ContentView: View {
                 .allowsHitTesting(false)
 
             // Category switcher — top right.
+            // .animation(nil) prevents crossfade animations bleeding into the
+            // Menu label and popover options, which caused flickering.
             VStack {
                 HStack(spacing: 10) {
                     Spacer()
@@ -118,6 +122,7 @@ struct ContentView: View {
                 .padding(.top, 8)
                 Spacer()
             }
+            .transaction { $0.animation = nil }
 
             // Title caption — bottom-left.
             Text(model.currentTitle)
