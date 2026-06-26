@@ -2,6 +2,9 @@
 .env
 .DS_Store
 .playwright-mcp/
+apple/build/
+apple/build-mas/
+apple/**/*.xcarchive
 og-image.html
 og-image.png
 android-tv-assets/

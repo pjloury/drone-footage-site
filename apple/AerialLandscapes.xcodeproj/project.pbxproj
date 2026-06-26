@@ -70,6 +70,11 @@
 						<key>CreatedOnToolsVersion</key>
 						<string>16.0</string>
 					</dict>
+					<key>DD0001070000000000000001</key>
+					<dict>
+						<key>CreatedOnToolsVersion</key>
+						<string>16.0</string>
+					</dict>
 				</dict>
 			</dict>
 			<key>buildConfigurationList</key>
@@ -105,6 +110,7 @@
 				<string>AA0001062D238122004DA734</string>
 				<string>BB0001100000000000000001</string>
 				<string>CC0001090000000000000001</string>
+				<string>DD0001070000000000000001</string>
 			</array>
 		</dict>
 		<key>604BFF692D238120004DA734</key>
@@ -208,6 +214,7 @@
 				<string>AA0001012D238122004DA734</string>
 				<string>BB0001010000000000000001</string>
 				<string>CC0001020000000000000001</string>
+				<string>DD0001000000000000000001</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -1075,6 +1082,8 @@
 				<key>DEAD_CODE_STRIPPING</key>
 				<string>YES</string>
 				<key>ENABLE_APP_SANDBOX</key>
+				<string>NO</string>
+				<key>ENABLE_HARDENED_RUNTIME</key>
 				<string>YES</string>
 				<key>ENABLE_OUTGOING_NETWORK_CONNECTIONS</key>
 				<string>YES</string>
@@ -1128,6 +1137,8 @@
 				<key>DEAD_CODE_STRIPPING</key>
 				<string>YES</string>
 				<key>ENABLE_APP_SANDBOX</key>
+				<string>NO</string>
+				<key>ENABLE_HARDENED_RUNTIME</key>
 				<string>YES</string>
 				<key>ENABLE_OUTGOING_NETWORK_CONNECTIONS</key>
 				<string>YES</string>
@@ -1768,6 +1779,220 @@
 			<string>CC0001090000000000000001</string>
 			<key>remoteInfo</key>
 			<string>AerialLandscapesSaver</string>
+		</dict>
+		<key>DD0001000000000000000001</key>
+		<dict>
+			<key>explicitFileType</key>
+			<string>wrapper.application</string>
+			<key>includeInIndex</key>
+			<string>0</string>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>path</key>
+			<string>Aerial Landscapes.app</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
+		<key>DD0001010000000000000001</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>DD0001020000000000000001</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>DD0001030000000000000001</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXResourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>DD0001040000000000000001</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
+				<string>AppIcon</string>
+				<key>CODE_SIGN_ENTITLEMENTS</key>
+				<string>MacWallpaper/Resources/MacWallpaper-MAS.entitlements</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>D2GRT69L42</string>
+				<key>ENABLE_APP_SANDBOX</key>
+				<string>YES</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
+				<string>Aerial Landscapes</string>
+				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
+				<string>public.app-category.entertainment</string>
+				<key>INFOPLIST_KEY_LSUIElement</key>
+				<string>YES</string>
+				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
+				<key>INFOPLIST_KEY_NSPrincipalClass</key>
+				<string>NSApplication</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/../Frameworks</string>
+				</array>
+				<key>MACOSX_DEPLOYMENT_TARGET</key>
+				<string>13.0</string>
+				<key>MARKETING_VERSION</key>
+				<string>1.0</string>
+				<key>OBJROOT</key>
+				<string>$(PROJECT_DIR)/build-mas</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.pjloury.aerial-landscapes</string>
+				<key>PRODUCT_MODULE_NAME</key>
+				<string>AerialLandscapesMAS</string>
+				<key>PRODUCT_NAME</key>
+				<string>Aerial Landscapes</string>
+				<key>SDKROOT</key>
+				<string>macosx</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string>$(inherited) DEBUG MAS</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>SYMROOT</key>
+				<string>$(PROJECT_DIR)/build-mas</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
+		<key>DD0001050000000000000001</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
+				<string>AppIcon</string>
+				<key>CODE_SIGN_ENTITLEMENTS</key>
+				<string>MacWallpaper/Resources/MacWallpaper-MAS.entitlements</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>CURRENT_PROJECT_VERSION</key>
+				<string>1</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>D2GRT69L42</string>
+				<key>ENABLE_APP_SANDBOX</key>
+				<string>YES</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
+				<string>Aerial Landscapes</string>
+				<key>INFOPLIST_KEY_LSApplicationCategoryType</key>
+				<string>public.app-category.entertainment</string>
+				<key>INFOPLIST_KEY_LSUIElement</key>
+				<string>YES</string>
+				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
+				<key>INFOPLIST_KEY_NSPrincipalClass</key>
+				<string>NSApplication</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/../Frameworks</string>
+				</array>
+				<key>MACOSX_DEPLOYMENT_TARGET</key>
+				<string>13.0</string>
+				<key>MARKETING_VERSION</key>
+				<string>1.0</string>
+				<key>OBJROOT</key>
+				<string>$(PROJECT_DIR)/build-mas</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>com.pjloury.aerial-landscapes</string>
+				<key>PRODUCT_MODULE_NAME</key>
+				<string>AerialLandscapesMAS</string>
+				<key>PRODUCT_NAME</key>
+				<string>Aerial Landscapes</string>
+				<key>SDKROOT</key>
+				<string>macosx</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string>$(inherited) MAS</string>
+				<key>SWIFT_COMPILATION_MODE</key>
+				<string>wholemodule</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>SYMROOT</key>
+				<string>$(PROJECT_DIR)/build-mas</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
+		<key>DD0001060000000000000001</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>DD0001040000000000000001</string>
+				<string>DD0001050000000000000001</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<string>0</string>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
+		<key>DD0001070000000000000001</key>
+		<dict>
+			<key>buildConfigurationList</key>
+			<string>DD0001060000000000000001</string>
+			<key>buildPhases</key>
+			<array>
+				<string>DD0001010000000000000001</string>
+				<string>DD0001020000000000000001</string>
+				<string>DD0001030000000000000001</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array/>
+			<key>fileSystemSynchronizedGroups</key>
+			<array>
+				<string>AA0001022D238122004DA734</string>
+				<string>CC0001000000000000000001</string>
+			</array>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>name</key>
+			<string>AerialLandscapesMacMAS</string>
+			<key>productName</key>
+			<string>AerialLandscapesMacMAS</string>
+			<key>productReference</key>
+			<string>DD0001000000000000000001</string>
+			<key>productType</key>
+			<string>com.apple.product-type.application</string>
 		</dict>
 	</dict>
 	<key>rootObject</key>

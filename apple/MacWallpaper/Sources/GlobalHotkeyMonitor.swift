@@ -7,6 +7,10 @@
 //   ⌃⌥ ←   Previous video
 //   ⌃⌥ Space   Pause / Resume
 
+// Compiled out of the Mac App Store build: global event monitors need Input
+// Monitoring, which the sandbox forbids, and the addGlobalMonitorForEvents
+// symbol alone can trip App Review static analysis.
+#if !MAS
 import AppKit
 
 private let kRight: UInt16 = 124
@@ -51,3 +55,4 @@ final class GlobalHotkeyMonitor {
         if let m = localMonitor  { NSEvent.removeMonitor(m); localMonitor  = nil }
     }
 }
+#endif

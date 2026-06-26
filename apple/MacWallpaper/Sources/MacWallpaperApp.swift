@@ -14,7 +14,11 @@ struct MacWallpaperApp {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var wallpaper: WallpaperWindowController?
     private var statusBar: StatusBarController?
+    // Global hotkeys need Input Monitoring, which the App Store sandbox forbids,
+    // so the MAS build ships without them (menu-bar controls still work).
+    #if !MAS
     private var hotkeys:   GlobalHotkeyMonitor?
+    #endif
 
     private var heartbeatTimer: Timer?
 
@@ -23,17 +27,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let model      = WallpaperPlayerModel()
         let controller = WallpaperWindowController(model: model)
         let bar        = StatusBarController(wallpaper: controller)
-        let monitor    = GlobalHotkeyMonitor()
 
+        wallpaper = controller
+        statusBar = bar
+
+        #if !MAS
+        let monitor = GlobalHotkeyMonitor()
         monitor.start(
             onNext:   { controller.next() },
             onPrev:   { controller.prev() },
             onToggle: { controller.isPlaying ? controller.pause() : controller.resume() }
         )
-
-        wallpaper = controller
-        statusBar = bar
-        hotkeys   = monitor
+        hotkeys = monitor
+        #endif
 
         // Heartbeat: a memory + state line every 30s. If the app dies, the last
         // heartbeat plus any lifecycle lines after it bracket the crash window.

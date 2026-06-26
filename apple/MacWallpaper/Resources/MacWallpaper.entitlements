@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
-    <key>com.apple.security.app-sandbox</key>
-    <true/>
-    <key>com.apple.security.network.client</key>
-    <true/>
-</dict>
+<!--
+  Developer ID (notarized) build: NOT sandboxed, so the global hotkeys
+  (Input Monitoring) and the screen-saver install (~/Library/Screen Savers)
+  work. Hardened runtime is enabled via build settings for notarization; no
+  special entitlements are required for non-sandboxed global event monitoring.
+  The Mac App Store build uses MacWallpaper-MAS.entitlements instead.
+-->
+<dict/>
 </plist>

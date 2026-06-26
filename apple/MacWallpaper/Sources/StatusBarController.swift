@@ -54,17 +54,23 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         // desktop-level windows while it runs; the screen saver is a .saver the
         // OS loads when idle. This installs the bundled .saver and opens the
         // Screen Saver settings pane so the user can pick it.
+        //
+        // The App Store sandbox can't write to ~/Library/Screen Savers and won't
+        // pass review with a bundled plugin, so the MAS build omits this entirely.
+        #if !MAS
         let install = NSMenuItem(title: "Install Screen Saver…",
                                  action: #selector(installScreenSaver), keyEquivalent: "")
         install.target = self
         menu.addItem(install)
 
         menu.addItem(.separator())
+        #endif
         menu.addItem(NSMenuItem(title: "Quit",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
     }
 
+    #if !MAS
     /// Locate the bundled/sibling .saver, copy it into ~/Library/Screen Savers,
     /// then open System Settings → Screen Saver.
     @objc private func installScreenSaver() {
@@ -114,6 +120,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         alert.informativeText = info
         alert.runModal()
     }
+    #endif
 
     private func disabled(_ title: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
