@@ -93,15 +93,18 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             info: "“Aerial Landscapes” is now available in System Settings → Screen Saver.")
     }
 
+    /// Find the bundled .saver without depending on its exact filename:
     /// 1) embedded in the app's PlugIns, 2) sibling in the build dir (dev).
     private static func locateSaver() -> URL? {
-        let name = "AerialLandscapesSaver"
-        if let p = Bundle.main.builtInPlugInsURL?.appendingPathComponent("\(name).saver"),
-           FileManager.default.fileExists(atPath: p.path) { return p }
-        let sibling = Bundle.main.bundleURL.deletingLastPathComponent()
-            .appendingPathComponent("\(name).saver")
-        if FileManager.default.fileExists(atPath: sibling.path) { return sibling }
-        return nil
+        let fm = FileManager.default
+        func firstSaver(in dir: URL?) -> URL? {
+            guard let dir,
+                  let items = try? fm.contentsOfDirectory(at: dir,
+                      includingPropertiesForKeys: nil) else { return nil }
+            return items.first { $0.pathExtension == "saver" }
+        }
+        if let p = firstSaver(in: Bundle.main.builtInPlugInsURL) { return p }
+        return firstSaver(in: Bundle.main.bundleURL.deletingLastPathComponent())
     }
 
     private func presentAlert(style: NSAlert.Style, title: String, info: String) {

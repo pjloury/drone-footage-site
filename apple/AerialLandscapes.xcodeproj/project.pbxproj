@@ -1086,6 +1086,8 @@
 				<string>public.app-category.entertainment</string>
 				<key>INFOPLIST_KEY_LSUIElement</key>
 				<string>YES</string>
+				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>
 				<string>NSApplication</string>
 				<key>LD_RUNPATH_SEARCH_PATHS</key>
@@ -1100,7 +1102,7 @@
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.pjloury.aerial-landscapes-wallpaper</string>
 				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesMac</string>
+				<string>Aerial Landscapes</string>
 				<key>SDKROOT</key>
 				<string>macosx</string>
 				<key>SWIFT_VERSION</key>
@@ -1137,6 +1139,8 @@
 				<string>public.app-category.entertainment</string>
 				<key>INFOPLIST_KEY_LSUIElement</key>
 				<string>YES</string>
+				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>
 				<string>NSApplication</string>
 				<key>LD_RUNPATH_SEARCH_PATHS</key>
@@ -1151,7 +1155,7 @@
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.pjloury.aerial-landscapes-wallpaper</string>
 				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesMac</string>
+				<string>Aerial Landscapes</string>
 				<key>SDKROOT</key>
 				<string>macosx</string>
 				<key>SWIFT_COMPILATION_MODE</key>
@@ -1580,7 +1584,7 @@
 				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
 				<string>Aerial Landscapes</string>
 				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
-				<string>Aerial Landscapes</string>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>
 				<string>AerialScreenSaverView</string>
 				<key>LD_RUNPATH_SEARCH_PATHS</key>
@@ -1596,7 +1600,7 @@
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.pjloury.aerial-landscapes-saver</string>
 				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesSaver</string>
+				<string>Aerial Landscapes Screen Saver</string>
 				<key>SDKROOT</key>
 				<string>macosx</string>
 				<key>SKIP_INSTALL</key>
@@ -1632,7 +1636,7 @@
 				<key>INFOPLIST_KEY_CFBundleDisplayName</key>
 				<string>Aerial Landscapes</string>
 				<key>INFOPLIST_KEY_NSHumanReadableCopyright</key>
-				<string>Aerial Landscapes</string>
+				<string>Copyright © 2026 PJ Loury. All rights reserved.</string>
 				<key>INFOPLIST_KEY_NSPrincipalClass</key>
 				<string>AerialScreenSaverView</string>
 				<key>LD_RUNPATH_SEARCH_PATHS</key>
@@ -1648,7 +1652,7 @@
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.pjloury.aerial-landscapes-saver</string>
 				<key>PRODUCT_NAME</key>
-				<string>AerialLandscapesSaver</string>
+				<string>Aerial Landscapes Screen Saver</string>
 				<key>SDKROOT</key>
 				<string>macosx</string>
 				<key>SKIP_INSTALL</key>
