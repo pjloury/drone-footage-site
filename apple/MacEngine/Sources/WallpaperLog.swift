@@ -40,7 +40,7 @@ final class WallpaperLog: @unchecked Sendable {
 
     static let shared = WallpaperLog()
 
-    private let handle: FileHandle?
+    private let fd: Int32
     private let queue = DispatchQueue(label: "com.aeriallandscapes.wallpaperlog")
     private let isoFormatter: ISO8601DateFormatter
 
@@ -55,26 +55,27 @@ final class WallpaperLog: @unchecked Sendable {
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         fileURL = dir.appendingPathComponent("wallpaper.log")
 
-        if !FileManager.default.fileExists(atPath: fileURL.path) {
-            FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-        }
-        let h = try? FileHandle(forWritingTo: fileURL)
-        _ = try? h?.seekToEnd()
-        handle = h
+        // O_APPEND makes each write() atomically append at the true end of file.
+        // This is what keeps the log readable when the wallpaper app and the
+        // screensaver — separate processes sharing this file — log concurrently;
+        // without it both seek to the same offset and corrupt each other's lines.
+        fd = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
 
-        // Open a raw fd for the crash handler and install signal traps.
+        // The crash handler writes via its own raw fd (also O_APPEND).
         gCrashFD = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
         for sig in [SIGSEGV, SIGABRT, SIGILL, SIGBUS, SIGTRAP, SIGFPE] {
             signal(sig, crashSignalHandler)
         }
     }
 
-    /// Append one line. Synchronous to the kernel so it survives a crash.
+    /// Append one line. A single O_APPEND write() per line is atomic vs. other
+    /// processes, and the bytes reach the kernel immediately so they survive a
+    /// crash a moment later.
     func log(_ category: String, _ message: String) {
         let line = "\(isoFormatter.string(from: Date())) [\(category)] \(message)\n"
         queue.sync {
-            guard let data = line.data(using: .utf8), let handle else { return }
-            try? handle.write(contentsOf: data)
+            guard fd >= 0, let data = line.data(using: .utf8) else { return }
+            data.withUnsafeBytes { _ = write(fd, $0.baseAddress, $0.count) }
         }
     }
 
