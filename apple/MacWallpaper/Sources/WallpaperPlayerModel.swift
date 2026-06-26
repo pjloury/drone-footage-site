@@ -121,6 +121,7 @@ final class WallpaperPlayerModel: NSObject {
 
         crossfadeGeneration += 1
         let gen = crossfadeGeneration
+        WallpaperLog.shared.log("xfade", "START gen=\(gen) to idx=\(targetIdx) video=\(queue[targetIdx].caption) dur=\(duration) isFrontA=\(isFrontA)")
 
         removeTimeObserver()
         bufferingObservation?.invalidate()
@@ -150,6 +151,7 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     private func completeFade(to targetIdx: Int, video: DroneVideo) {
+        WallpaperLog.shared.log("xfade", "COMPLETE to idx=\(targetIdx) video=\(video.caption) togglingFrontA \(isFrontA)->\(!isFrontA)")
         frontPlayer.pause()
         frontPlayer.replaceCurrentItem(with: nil)
 
@@ -201,6 +203,7 @@ final class WallpaperPlayerModel: NSObject {
             guard let self, self.crossfadeGeneration == gen else { return }
             guard let item = self.backPlayer.currentItem, !item.isPlaybackLikelyToKeepUp else { return }
             // Desktop URL is stalling — switch to mobile
+            WallpaperLog.shared.log("xfade", "MOBILE FALLBACK gen=\(gen) video=\(video.caption) — desktop stalled \(desktopFallbackDelay)s")
             self.bufferingObservation?.invalidate()
             self.loadClip(video, on: self.backPlayer, useMobile: true)
             self.backPlayer.seek(to: .zero)
