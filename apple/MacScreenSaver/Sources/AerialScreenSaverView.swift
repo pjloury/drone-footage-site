@@ -29,7 +29,10 @@ final class AerialScreenSaverView: ScreenSaverView {
     private var layerA = AVPlayerLayer()
     private var layerB = AVPlayerLayer()
     private let posterLayer = CALayer()
+    private let captionLayer = CATextLayer()
     private var didStart = false
+
+    private static let captionFadeDuration: TimeInterval = 0.6
 
     // MARK: Init
 
@@ -65,10 +68,65 @@ final class AerialScreenSaverView: ScreenSaverView {
             root.addSublayer(l)
         }
         setLayerOpacities()
+
+        // Caption sits on top of everything, bottom-left, like the tvOS app.
+        configureCaption(on: root)
         wireCallbacks()
 
         // We don't draw frames ourselves — AVPlayer does. Keep the timer slow.
         animationTimeInterval = 1.0 / 5.0
+    }
+
+    // MARK: Caption (bottom-left, drop shadow — mirrors tvOS PlayerOverlayView)
+
+    private func configureCaption(on root: CALayer) {
+        captionLayer.alignmentMode = .left
+        captionLayer.truncationMode = .end
+        captionLayer.isWrapped = false
+        captionLayer.foregroundColor = NSColor.white.cgColor
+        captionLayer.opacity = 0   // fades in once the first clip is known
+        // A single soft drop shadow approximates the tvOS stacked shadows so the
+        // title floats clearly over any footage. (Negative y casts downward in
+        // CoreAnimation's default non-flipped layer geometry.)
+        captionLayer.shadowColor = NSColor.black.cgColor
+        captionLayer.shadowOpacity = 0.9
+        captionLayer.shadowRadius = 6
+        captionLayer.shadowOffset = CGSize(width: 0, height: -2)
+        root.addSublayer(captionLayer)
+        layoutCaption()
+    }
+
+    private func layoutCaption() {
+        // Scale with the display: ~3.3% of height, clamped to a sensible range.
+        let fontSize = min(64, max(20, bounds.height * 0.033))
+        let leftPad   = max(40, bounds.width  * 0.045)
+        let bottomPad = max(28, bounds.height * 0.060)
+        captionLayer.font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
+        captionLayer.fontSize = fontSize
+        captionLayer.contentsScale = window?.backingScaleFactor ?? 2
+        captionLayer.frame = CGRect(x: leftPad, y: bottomPad,
+                                    width: bounds.width - leftPad * 2,
+                                    height: fontSize * 1.4)
+    }
+
+    private func updateCaption(_ text: String?, fadeIn: Bool) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        captionLayer.string = text ?? ""
+        CATransaction.commit()
+        if fadeIn { fadeCaption(to: 1) }
+    }
+
+    private func fadeCaption(to opacity: Float) {
+        let a = CABasicAnimation(keyPath: "opacity")
+        a.fromValue = captionLayer.presentation()?.opacity ?? captionLayer.opacity
+        a.toValue = opacity
+        a.duration = Self.captionFadeDuration
+        a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        a.fillMode = .forwards
+        a.isRemovedOnCompletion = false
+        captionLayer.add(a, forKey: "captionFade")
+        captionLayer.opacity = opacity
     }
 
     // MARK: ScreenSaver lifecycle
@@ -80,6 +138,7 @@ final class AerialScreenSaverView: ScreenSaverView {
         WallpaperLog.shared.log("saver", "startAnimation")
         model.start()
         loadPoster(for: model.currentVideo)
+        updateCaption(model.currentVideo?.caption, fadeIn: true)
     }
 
     override func stopAnimation() {
@@ -100,6 +159,7 @@ final class AerialScreenSaverView: ScreenSaverView {
         posterLayer.frame = bounds
         layerA.frame = bounds
         layerB.frame = bounds
+        layoutCaption()
         CATransaction.commit()
     }
 
@@ -125,12 +185,17 @@ final class AerialScreenSaverView: ScreenSaverView {
     private func wireCallbacks() {
         model.crossfadeCallback = { [weak self] duration in
             self?.performCrossfade(duration: duration)
+            // Fade the old caption out as the crossfade begins (matches website
+            // / tvOS behaviour); the new title fades in when the fade completes.
+            self?.fadeCaption(to: 0)
         }
         model.resetLayersCallback = { [weak self] in
             self?.setLayerOpacities()
         }
         model.finalizeLayersCallback = { [weak self] in
-            self?.setLayerOpacities()
+            guard let self else { return }
+            self.setLayerOpacities()
+            self.updateCaption(self.model.currentVideo?.caption, fadeIn: true)
         }
     }
 
