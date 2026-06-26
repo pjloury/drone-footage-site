@@ -48,9 +48,68 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(toggle)
 
         menu.addItem(.separator())
+
+        // The desktop wallpaper (this running app) and the screen saver are two
+        // separate macOS mechanisms, so there's no single toggle: the app draws
+        // desktop-level windows while it runs; the screen saver is a .saver the
+        // OS loads when idle. This installs the bundled .saver and opens the
+        // Screen Saver settings pane so the user can pick it.
+        let install = NSMenuItem(title: "Install Screen Saver…",
+                                 action: #selector(installScreenSaver), keyEquivalent: "")
+        install.target = self
+        menu.addItem(install)
+
+        menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
+    }
+
+    /// Locate the bundled/sibling .saver, copy it into ~/Library/Screen Savers,
+    /// then open System Settings → Screen Saver.
+    @objc private func installScreenSaver() {
+        guard let src = Self.locateSaver() else {
+            return presentAlert(style: .warning,
+                title: "Screen Saver not found",
+                info: "The Aerial Landscapes screen saver bundle could not be located next to or inside the app.")
+        }
+        let fm = FileManager.default
+        let dir = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Screen Savers", isDirectory: true)
+        let dest = dir.appendingPathComponent(src.lastPathComponent)
+        do {
+            try fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
+            try fm.copyItem(at: src, to: dest)
+        } catch {
+            return presentAlert(style: .critical,
+                title: "Install failed", info: error.localizedDescription)
+        }
+        // Open the Screen Saver settings pane (Ventura+ Settings URL).
+        if let url = URL(string: "x-apple.systempreferences:com.apple.ScreenSaver-Settings.extension") {
+            NSWorkspace.shared.open(url)
+        }
+        presentAlert(style: .informational,
+            title: "Screen Saver installed",
+            info: "“Aerial Landscapes” is now available in System Settings → Screen Saver.")
+    }
+
+    /// 1) embedded in the app's PlugIns, 2) sibling in the build dir (dev).
+    private static func locateSaver() -> URL? {
+        let name = "AerialLandscapesSaver"
+        if let p = Bundle.main.builtInPlugInsURL?.appendingPathComponent("\(name).saver"),
+           FileManager.default.fileExists(atPath: p.path) { return p }
+        let sibling = Bundle.main.bundleURL.deletingLastPathComponent()
+            .appendingPathComponent("\(name).saver")
+        if FileManager.default.fileExists(atPath: sibling.path) { return sibling }
+        return nil
+    }
+
+    private func presentAlert(style: NSAlert.Style, title: String, info: String) {
+        let alert = NSAlert()
+        alert.alertStyle = style
+        alert.messageText = title
+        alert.informativeText = info
+        alert.runModal()
     }
 
     private func disabled(_ title: String) -> NSMenuItem {

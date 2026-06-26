@@ -114,6 +114,17 @@ final class WallpaperPlayerModel: NSObject {
     func resume() { frontPlayer.play();  updateStatus() }
     var isPlaying: Bool { frontPlayer.rate != 0 }
 
+    /// Pause both players and stop the time observer. Used by the screensaver
+    /// host when macOS calls stopAnimation() (saver dismissed / display woke).
+    func suspend() {
+        removeTimeObserver()
+        fallbackTimer?.invalidate()
+        bufferingObservation?.invalidate()
+        playerA.pause()
+        playerB.pause()
+        updateStatus()
+    }
+
     // MARK: - Crossfade engine (ported from tvOS StreamingPlayerModel)
 
     private func startCrossfade(to targetIdx: Int, duration: TimeInterval) {

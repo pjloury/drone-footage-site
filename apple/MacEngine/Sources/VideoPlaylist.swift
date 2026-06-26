@@ -6,6 +6,7 @@ struct DroneVideo: Sendable {
     private var base: String { "https://videos.pjloury.com/video-\(String(format: "%02d", id))" }
     var desktopURL: URL { URL(string: "\(base).mp4")! }
     var mobileURL:  URL { URL(string: "\(base)-mobile.mp4")! }
+    var posterURL:  URL { URL(string: "\(base)-poster.jpg")! }
 }
 
 enum VideoPlaylist {
