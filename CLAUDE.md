@@ -247,17 +247,20 @@ video wallpaper and is standard for Mac live-wallpaper apps.
 
 ### Playback robustness (shared engine)
 
-`WallpaperPlayerModel` guards against stuck playback two ways:
-- **Stall watchdog** — the periodic time observer detects a front clip that is
-  "playing" but whose `currentTime` isn't advancing and skips to the next clip
-  after ~4s. This is essential because auto-advance is driven by `currentTime`
-  nearing the clip end, so a frozen clip would otherwise never advance (it
-  froze forever — first hit on "Almaden Green", a 50 Mbps desktop file).
-- **Heavy-clip mobile preference** — the 8 Tier-1 high-bitrate desktop clips
-  (`heavyDesktopIDs`, the same list as the deferred re-encode TODO) stream as
-  the 720p mobile encode instead of the desktop file: smooth ambient playback
-  beats a frozen 4K frame. Re-encoding those clips (see TODO) is the proper
-  fix that would let them play at full res again.
+**Mac always streams the full-resolution desktop encode — never the 720p
+mobile version** (explicit product decision: low-res is worse than skipping).
+There is no mobile fallback in the macOS engine. Stuck playback is handled by:
+- **Excluding the choke-up clips** — the 8 Tier-1 high-bitrate desktop clips
+  (≥40 Mbps; `VideoPlaylist.excludedHeavyIDs`, same list as the re-encode TODO)
+  are filtered out of the Mac playlist entirely, since they can't stream
+  reliably and we won't degrade them. Re-encoding them to a streamable bitrate
+  (see TODO) is what would bring them back.
+- **Stall watchdog** — for any *other* clip that chokes on a given network, the
+  periodic time observer detects a front clip that is "playing" but whose
+  `currentTime` isn't advancing and skips to the next clip after ~4s. This is
+  essential because auto-advance is driven by `currentTime` nearing the clip
+  end, so a frozen clip would otherwise never advance (first hit on "Almaden
+  Green", a 50 Mbps desktop file, now excluded).
 
 ### macOS crash diagnostics: `WallpaperLog`
 

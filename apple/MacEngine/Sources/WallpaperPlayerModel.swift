@@ -59,10 +59,6 @@ final class WallpaperPlayerModel: NSObject {
     private var timeObserver: Any?
     private var timeObserverOwner: AVPlayer?
 
-    // Mobile-fallback state
-    private var fallbackTimer: Timer?
-    private var loadingVideoForMobile: DroneVideo?
-
     // Stall-watchdog state. Auto-advance is driven by currentTime approaching
     // the clip end, so a frozen currentTime would otherwise NEVER advance —
     // a stalled clip (e.g. a heavy high-bitrate desktop file underbuffering)
@@ -126,7 +122,6 @@ final class WallpaperPlayerModel: NSObject {
     /// host when macOS calls stopAnimation() (saver dismissed / display woke).
     func suspend() {
         removeTimeObserver()
-        fallbackTimer?.invalidate()
         bufferingObservation?.invalidate()
         playerA.pause()
         playerB.pause()
@@ -144,19 +139,19 @@ final class WallpaperPlayerModel: NSObject {
 
         removeTimeObserver()
         bufferingObservation?.invalidate()
-        fallbackTimer?.invalidate()
         isCrossfading = false
         autoFadeArmed = false
         resetLayersCallback?()          // snap layers to clean baseline immediately
 
         let video = queue[targetIdx]
-        loadClip(video, on: backPlayer, useMobile: false)
+        loadClip(video, on: backPlayer)
         backPlayer.seek(to: .zero)
         backPlayer.play()
 
-        // Start mobile fallback timer for slow connections
-        startMobileFallback(for: video, gen: gen)
-
+        // Mac always streams the full-resolution desktop encode (never the 720p
+        // mobile version). If a clip can't keep up it is skipped by the stall
+        // watchdog rather than degraded; known heavy clips are excluded from the
+        // playlist up front (see VideoPlaylist).
         waitUntilReady(gen: gen, maxWait: desktopFallbackDelay + 2) { [weak self] in
             guard let self, self.crossfadeGeneration == gen else { return }
             self.isCrossfading = true
@@ -212,23 +207,6 @@ final class WallpaperPlayerModel: NSObject {
         let work = DispatchWorkItem { fireOnce() }
         timeoutWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + maxWait, execute: work)
-    }
-
-    // MARK: - Mobile fallback
-
-    private func startMobileFallback(for video: DroneVideo, gen: Int) {
-        fallbackTimer?.invalidate()
-        fallbackTimer = Timer.scheduledTimer(withTimeInterval: desktopFallbackDelay, repeats: false) { [weak self] _ in
-            guard let self, self.crossfadeGeneration == gen else { return }
-            guard let item = self.backPlayer.currentItem, !item.isPlaybackLikelyToKeepUp else { return }
-            // Desktop URL is stalling — switch to mobile
-            WallpaperLog.shared.log("xfade", "MOBILE FALLBACK gen=\(gen) video=\(video.caption) — desktop stalled \(desktopFallbackDelay)s")
-            self.bufferingObservation?.invalidate()
-            self.loadClip(video, on: self.backPlayer, useMobile: true)
-            self.backPlayer.seek(to: .zero)
-            self.backPlayer.play()
-            // Let waitUntilReady's timeout handle the rest from here
-        }
     }
 
     // MARK: - Auto crossfade (time observer, same as tvOS)
@@ -308,17 +286,8 @@ final class WallpaperPlayerModel: NSObject {
 
     // MARK: - Helpers
 
-    // Clips whose desktop encodes are so high-bitrate (≥40 Mbps avg, up to
-    // 130) that they underbuffer and stall when streamed — see the Tier-1 list
-    // in CLAUDE.md. Until they're re-encoded we stream the rock-solid 720p
-    // mobile version: smooth ambient playback beats a frozen 4K frame. The
-    // stall watchdog still covers any other clip that stalls unexpectedly.
-    private static let heavyDesktopIDs: Set<Int> = [18, 19, 22, 30, 32, 37, 50, 62]
-
-    private func loadClip(_ video: DroneVideo, on player: AVPlayer, useMobile: Bool = false) {
-        let mobile = useMobile || Self.heavyDesktopIDs.contains(video.id)
-        let url = mobile ? video.mobileURL : video.desktopURL
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+    private func loadClip(_ video: DroneVideo, on player: AVPlayer) {
+        player.replaceCurrentItem(with: AVPlayerItem(url: video.desktopURL))
         player.isMuted = true
     }
 
