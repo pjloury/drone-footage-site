@@ -161,6 +161,19 @@ class StreamingPlayerModel: ObservableObject {
 
     @objc private func appDidBecomeActive() {
         frontPlayer.play()
+        // After a background stint the player's buffer may have been evicted.
+        // Give AVPlayer a moment to resume; if it's still not playing, reload
+        // the current clip from the top so we're never stuck on a frozen frame.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+            guard let self else { return }
+            let tcs = self.frontPlayer.timeControlStatus
+            let itemBroken = self.frontPlayer.currentItem == nil
+                || self.frontPlayer.currentItem?.status == .failed
+            if tcs != .playing || itemBroken {
+                xfadeLog.notice("appDidBecomeActive: player still not playing after 1.5s (tcs=\(tcs.rawValue)) — reloading clip idx=\(self.currentQueueIndex)")
+                self.loadClip(at: self.currentQueueIndex, onFront: true, startPlaying: true)
+            }
+        }
     }
 
     deinit {
@@ -432,6 +445,12 @@ class StreamingPlayerModel: ObservableObject {
                     loggedStuck = true
                     stuckEventCount += 1
                     xfadeLog.error("STUCK front frozen at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex) title=\(self.currentTitle, privacy: .public) frontA=\(self.isFrontA) rate=\(self.frontPlayer.rate) tcs=\(self.frontPlayer.timeControlStatus.rawValue) reason=\(self.frontPlayer.reasonForWaitingToPlay?.rawValue ?? "nil", privacy: .public) likelyKeepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
+                }
+                if stalledTicks >= 12 {  // ~3s stuck — reload the clip
+                    xfadeLog.error("STUCK 3s — reloading clip idx=\(self.currentQueueIndex)")
+                    stalledTicks = 0
+                    loggedStuck = false
+                    loadClip(at: currentQueueIndex, onFront: true, startPlaying: true)
                 }
             } else if advanced >= 0.05 {
                 if loggedStuck {
