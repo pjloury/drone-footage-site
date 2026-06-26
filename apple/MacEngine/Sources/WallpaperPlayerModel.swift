@@ -63,6 +63,14 @@ final class WallpaperPlayerModel: NSObject {
     private var fallbackTimer: Timer?
     private var loadingVideoForMobile: DroneVideo?
 
+    // Stall-watchdog state. Auto-advance is driven by currentTime approaching
+    // the clip end, so a frozen currentTime would otherwise NEVER advance —
+    // a stalled clip (e.g. a heavy high-bitrate desktop file underbuffering)
+    // freezes forever. This detects no-progress and skips to the next clip.
+    private var lastWatchdogTime: Double = -1
+    private var stalledTicks = 0
+    private var loggedStall = false
+
     override init() {
         super.init()
         playerA.isMuted = true
@@ -232,7 +240,48 @@ final class WallpaperPlayerModel: NSObject {
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             self?.updateStatus()
             self?.checkAutoFade()
+            self?.stallWatchdog()
         }
+        // Reset the watchdog baseline for the newly-front clip.
+        lastWatchdogTime = -1
+        stalledTicks = 0
+        loggedStall = false
+    }
+
+    /// Detect a frozen front clip (playing, but currentTime not advancing) and
+    /// skip past it. Without this a stalled heavy clip freezes indefinitely,
+    /// because auto-advance only fires as currentTime nears the clip end.
+    private func stallWatchdog() {
+        guard !isCrossfading else { lastWatchdogTime = -1; stalledTicks = 0; return }
+        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return }
+        let now = frontPlayer.currentTime().seconds
+        guard now.isFinite else { return }
+
+        if lastWatchdogTime >= 0 {
+            let advanced = now - lastWatchdogTime
+            // We want it playing (rate > 0) but currentTime isn't moving.
+            if frontPlayer.rate > 0 && advanced < 0.05 {
+                stalledTicks += 1
+                if stalledTicks == 4 && !loggedStall {   // ~1s
+                    loggedStall = true
+                    WallpaperLog.shared.log("stall",
+                        "front frozen at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) keepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
+                }
+                if stalledTicks >= 16 {                  // ~4s stuck → skip it
+                    WallpaperLog.shared.log("stall",
+                        "skipping frozen clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
+                    stalledTicks = 0
+                    loggedStall = false
+                    let nextIdx = (currentIndex + 1) % queue.count
+                    startCrossfade(to: nextIdx, duration: manualFadeDuration)
+                    return
+                }
+            } else if advanced >= 0.05 {
+                stalledTicks = 0
+                loggedStall = false
+            }
+        }
+        lastWatchdogTime = now
     }
 
     private func checkAutoFade() {
@@ -259,8 +308,16 @@ final class WallpaperPlayerModel: NSObject {
 
     // MARK: - Helpers
 
+    // Clips whose desktop encodes are so high-bitrate (≥40 Mbps avg, up to
+    // 130) that they underbuffer and stall when streamed — see the Tier-1 list
+    // in CLAUDE.md. Until they're re-encoded we stream the rock-solid 720p
+    // mobile version: smooth ambient playback beats a frozen 4K frame. The
+    // stall watchdog still covers any other clip that stalls unexpectedly.
+    private static let heavyDesktopIDs: Set<Int> = [18, 19, 22, 30, 32, 37, 50, 62]
+
     private func loadClip(_ video: DroneVideo, on player: AVPlayer, useMobile: Bool = false) {
-        let url = useMobile ? video.mobileURL : video.desktopURL
+        let mobile = useMobile || Self.heavyDesktopIDs.contains(video.id)
+        let url = mobile ? video.mobileURL : video.desktopURL
         player.replaceCurrentItem(with: AVPlayerItem(url: url))
         player.isMuted = true
     }

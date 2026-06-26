@@ -245,6 +245,20 @@ wallpaper provider, don't appear in the Wallpaper settings pane, and simply
 cover whatever the OS/Irvue set. This overlay approach is the only option for
 video wallpaper and is standard for Mac live-wallpaper apps.
 
+### Playback robustness (shared engine)
+
+`WallpaperPlayerModel` guards against stuck playback two ways:
+- **Stall watchdog** — the periodic time observer detects a front clip that is
+  "playing" but whose `currentTime` isn't advancing and skips to the next clip
+  after ~4s. This is essential because auto-advance is driven by `currentTime`
+  nearing the clip end, so a frozen clip would otherwise never advance (it
+  froze forever — first hit on "Almaden Green", a 50 Mbps desktop file).
+- **Heavy-clip mobile preference** — the 8 Tier-1 high-bitrate desktop clips
+  (`heavyDesktopIDs`, the same list as the deferred re-encode TODO) stream as
+  the 720p mobile encode instead of the desktop file: smooth ambient playback
+  beats a frozen 4K frame. Re-encoding those clips (see TODO) is the proper
+  fix that would let them play at full res again.
+
 ### macOS crash diagnostics: `WallpaperLog`
 
 `WallpaperLog` (shared by app + saver) appends a crash-resilient lifecycle
