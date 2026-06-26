@@ -214,6 +214,49 @@ script handles 60 fps correctly.
 Currently-known 60 fps clips (all already re-encoded with the fix):
 `06 14 16 23 26 29 30 35 38 42 45 46 47`.
 
+## macOS apps (in `apple/`, project `AerialLandscapes.xcodeproj`)
+
+The same R2/Cloudflare streaming catalog (`videos.pjloury.com`) feeds three
+Apple targets that share a crossfade engine:
+
+- **AerialLandscapesMac** — the desktop **video wallpaper** (`LSUIElement`
+  menu-bar agent). `MacWallpaper/` holds the app/window code.
+- **AerialLandscapesSaver** — the **screensaver** (`.saver` bundle).
+  `MacScreenSaver/` holds the `ScreenSaverView` host. Built as a loadable
+  bundle, embedded into the app's `Contents/PlugIns`, and installed to
+  `~/Library/Screen Savers` via the menu bar "Install Screen Saver…" item.
+- **MacEngine/** — shared engine (`WallpaperPlayerModel` crossfade,
+  `VideoPlaylist`, `WallpaperLog`) compiled by **both** targets.
+
+New Xcode targets here were added by scripted pbxproj patches
+(`add_ios_target.py`, `add_saver_target.py`, `add_saver_embed.py`) — mirror
+that pattern rather than hand-editing the project.
+
+### Wallpaper is an overlay, NOT the macOS wallpaper API
+
+The wallpaper app does **not** call `NSWorkspace.setDesktopImageURL` (the
+official API other apps like Irvue register through, and why they appear in
+System Settings → Wallpaper). It **cannot**: macOS has no public API to set a
+*video* wallpaper (Sonoma/Tahoe aerial wallpapers are Apple-private via
+`com.apple.idleassetsd`). Instead `WallpaperWindowController` draws borderless
+`NSWindow`s at `CGWindowLevelForKey(.desktopWindow) + 1` — above the real
+wallpaper, below desktop icons. Consequences: we don't register as the
+wallpaper provider, don't appear in the Wallpaper settings pane, and simply
+cover whatever the OS/Irvue set. This overlay approach is the only option for
+video wallpaper and is standard for Mac live-wallpaper apps.
+
+### macOS crash diagnostics: `WallpaperLog`
+
+`WallpaperLog` (shared by app + saver) appends a crash-resilient lifecycle
+trail to `~/Library/Logs/AerialLandscapes/wallpaper.log`: every line is an
+atomic `O_APPEND` `write()` (survives a crash, safe for the two processes
+logging concurrently), plus a signal handler that writes `*** FATAL signal N`
+and a 30s memory/state heartbeat. When chasing a "silent" background crash,
+read the tail of that log first, then the matching `.ips` in
+`~/Library/Logs/DiagnosticReports/`. This is how the screen-reconfiguration
+over-release crash (`_NSWindowTransformAnimation` during a CA commit) was found
+and fixed — see commit `e1fc9c6`.
+
 ## Conventions
 
 - Commits: short imperative subject prefixed with `feat:`, `fix:`, or
