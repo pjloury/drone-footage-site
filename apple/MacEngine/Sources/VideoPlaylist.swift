@@ -93,12 +93,12 @@ enum VideoPlaylist {
         DroneVideo(id: 85, caption: "Yosemite Valley"),
     ]
 
-    /// The 8 Tier-1 high-bitrate desktop clips (≥40 Mbps avg, up to 130) that
-    /// underbuffer and choke when streamed. Mac never falls back to 720p, so we
-    /// exclude these outright rather than show them stalling — re-encoding them
-    /// to a streamable bitrate (CLAUDE.md TODO) is what would bring them back.
-    /// Any other clip that chokes on a given network is caught at runtime by
-    /// the stall watchdog in WallpaperPlayerModel.
+    /// Clips excluded from the Mac playlist because their desktop encodes are
+    /// too high-bitrate to stream reliably (Mac never falls back to 720p).
+    /// These 8 Tier-1 clips are re-encoded to ~24–28 Mbps H.264 4K by
+    /// reencode_heavy.sh; flip this to empty once the new files are uploaded to
+    /// R2 (currently blocked on refreshing the R2 token). Any other clip that
+    /// chokes on a given network is caught by the stall watchdog at runtime.
     static let excludedHeavyIDs: Set<Int> = [18, 19, 22, 30, 32, 37, 50, 62]
 
     static func shuffled() -> [DroneVideo] {
