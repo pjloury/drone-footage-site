@@ -1864,7 +1864,7 @@
 				<key>MACOSX_DEPLOYMENT_TARGET</key>
 				<string>13.0</string>
 				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
+				<string>1.1</string>
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
@@ -1925,7 +1925,7 @@
 				<key>MACOSX_DEPLOYMENT_TARGET</key>
 				<string>13.0</string>
 				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
+				<string>1.1</string>
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
