@@ -55,22 +55,57 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         // OS loads when idle. This installs the bundled .saver and opens the
         // Screen Saver settings pane so the user can pick it.
         //
-        // The App Store sandbox can't write to ~/Library/Screen Savers and won't
-        // pass review with a bundled plugin, so the MAS build omits this entirely.
-        #if !MAS
+        // The App Store sandbox can't write to ~/Library/Screen Savers directly,
+        // so the two builds offer different verbs:
+        //   • Dev ID  — "Install Screen Saver…" copies the .saver into
+        //     ~/Library/Screen Savers itself and opens the settings pane.
+        //   • MAS     — "Set Up Screen Saver…" copies the bundled .saver into
+        //     ~/Downloads and reveals it; the user double-clicks it so macOS
+        //     (not the sandboxed app) performs the install.
+        #if MAS
+        let install = NSMenuItem(title: "Set Up Screen Saver…",
+                                 action: #selector(setUpScreenSaver), keyEquivalent: "")
+        #else
         let install = NSMenuItem(title: "Install Screen Saver…",
                                  action: #selector(installScreenSaver), keyEquivalent: "")
+        #endif
         install.target = self
         menu.addItem(install)
 
         menu.addItem(.separator())
-        #endif
         menu.addItem(NSMenuItem(title: "Quit",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
     }
 
-    #if !MAS
+    #if MAS
+    /// Sandboxed (App Store) flow: the app can't write to ~/Library/Screen
+    /// Savers, so copy the bundled .saver into ~/Downloads, reveal it in
+    /// Finder, and tell the user to double-click it. macOS then performs the
+    /// install with its own confirmation dialog — the sandbox is never crossed.
+    @objc private func setUpScreenSaver() {
+        guard let src = Self.locateSaver() else {
+            return presentAlert(style: .warning,
+                title: "Screen Saver not found",
+                info: "The Aerial Landscapes screen saver bundle could not be located inside the app.")
+        }
+        let fm = FileManager.default
+        let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first
+            ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Downloads", isDirectory: true)
+        let dest = downloads.appendingPathComponent(src.lastPathComponent)
+        do {
+            if fm.fileExists(atPath: dest.path) { try fm.removeItem(at: dest) }
+            try fm.copyItem(at: src, to: dest)
+        } catch {
+            return presentAlert(style: .critical,
+                title: "Couldn’t copy the screen saver", info: error.localizedDescription)
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([dest])
+        presentAlert(style: .informational,
+            title: "Finish setting up the screen saver",
+            info: "“\(src.lastPathComponent)” was saved to your Downloads folder and revealed in Finder.\n\nDouble-click it and confirm when macOS asks to install the screen saver. It will then appear in System Settings → Screen Saver.")
+    }
+    #else
     /// Locate the bundled/sibling .saver, copy it into ~/Library/Screen Savers,
     /// then open System Settings → Screen Saver.
     @objc private func installScreenSaver() {
@@ -98,6 +133,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             title: "Screen Saver installed",
             info: "“Aerial Landscapes” is now available in System Settings → Screen Saver.")
     }
+    #endif
 
     /// Find the bundled .saver without depending on its exact filename:
     /// 1) embedded in the app's PlugIns, 2) sibling in the build dir (dev).
@@ -120,7 +156,6 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         alert.informativeText = info
         alert.runModal()
     }
-    #endif
 
     private func disabled(_ title: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")

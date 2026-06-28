@@ -1973,11 +1973,14 @@
 				<string>DD0001010000000000000001</string>
 				<string>DD0001020000000000000001</string>
 				<string>DD0001030000000000000001</string>
+				<string>DD0002000000000000000001</string>
 			</array>
 			<key>buildRules</key>
 			<array/>
 			<key>dependencies</key>
-			<array/>
+			<array>
+				<string>DD0002020000000000000001</string>
+			</array>
 			<key>fileSystemSynchronizedGroups</key>
 			<array>
 				<string>AA0001022D238122004DA734</string>
@@ -1993,6 +1996,62 @@
 			<string>DD0001000000000000000001</string>
 			<key>productType</key>
 			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>DD0002000000000000000001</key>
+		<dict>
+			<key>buildActionMask</key>
+			<string>2147483647</string>
+			<key>dstPath</key>
+			<string></string>
+			<key>dstSubfolderSpec</key>
+			<string>13</string>
+			<key>files</key>
+			<array>
+				<string>DD0002010000000000000001</string>
+			</array>
+			<key>isa</key>
+			<string>PBXCopyFilesBuildPhase</string>
+			<key>name</key>
+			<string>Embed Screen Saver</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<string>0</string>
+		</dict>
+		<key>DD0002010000000000000001</key>
+		<dict>
+			<key>fileRef</key>
+			<string>CC0001020000000000000001</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>settings</key>
+			<dict>
+				<key>ATTRIBUTES</key>
+				<array>
+					<string>CodeSignOnCopy</string>
+					<string>RemoveHeadersOnCopy</string>
+				</array>
+			</dict>
+		</dict>
+		<key>DD0002020000000000000001</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXTargetDependency</string>
+			<key>target</key>
+			<string>CC0001090000000000000001</string>
+			<key>targetProxy</key>
+			<string>DD0002030000000000000001</string>
+		</dict>
+		<key>DD0002030000000000000001</key>
+		<dict>
+			<key>containerPortal</key>
+			<string>604BFF662D238120004DA734</string>
+			<key>isa</key>
+			<string>PBXContainerItemProxy</string>
+			<key>proxyType</key>
+			<string>1</string>
+			<key>remoteGlobalIDString</key>
+			<string>CC0001090000000000000001</string>
+			<key>remoteInfo</key>
+			<string>AerialLandscapesSaver</string>
 		</dict>
 	</dict>
 	<key>rootObject</key>

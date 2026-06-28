@@ -223,14 +223,27 @@ Apple targets that share a crossfade engine:
   menu-bar agent). `MacWallpaper/` holds the app/window code.
 - **AerialLandscapesSaver** — the **screensaver** (`.saver` bundle).
   `MacScreenSaver/` holds the `ScreenSaverView` host. Built as a loadable
-  bundle, embedded into the app's `Contents/PlugIns`, and installed to
-  `~/Library/Screen Savers` via the menu bar "Install Screen Saver…" item.
+  bundle and embedded into **both** Mac app builds' `Contents/PlugIns`. How
+  it gets installed differs by distribution channel (`StatusBarController`):
+    - **Dev ID build** (`#if !MAS`) — "Install Screen Saver…" copies the
+      `.saver` into `~/Library/Screen Savers` itself and opens the settings
+      pane. One-click; the non-sandboxed app can write there.
+    - **App Store build** (`#if MAS`) — the sandbox can't write to
+      `~/Library/Screen Savers`, so "Set Up Screen Saver…" copies the
+      embedded `.saver` to `~/Downloads` (needs the
+      `com.apple.security.files.downloads.read-write` entitlement in
+      `MacWallpaper-MAS.entitlements`) and reveals it in Finder. The user
+      double-clicks it and **macOS** performs the install — the sandbox is
+      never crossed. Gatekeeper relies on Apple's server-side notarization of
+      the submission (no developer-stapled ticket); see the header of
+      `packaging/package_mas.sh` for the empirical caveat to verify.
 - **MacEngine/** — shared engine (`WallpaperPlayerModel` crossfade,
   `VideoPlaylist`, `WallpaperLog`) compiled by **both** targets.
 
 New Xcode targets here were added by scripted pbxproj patches
-(`add_ios_target.py`, `add_saver_target.py`, `add_saver_embed.py`) — mirror
-that pattern rather than hand-editing the project.
+(`add_ios_target.py`, `add_saver_target.py`, `add_saver_embed.py`,
+`add_saver_embed_mas.py`) — mirror that pattern rather than hand-editing the
+project.
 
 ### Wallpaper is an overlay, NOT the macOS wallpaper API
 

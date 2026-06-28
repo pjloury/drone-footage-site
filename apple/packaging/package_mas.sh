@@ -1,7 +1,21 @@
 #!/usr/bin/env bash
 # Build, sign, and export the Mac App Store build of "Aerial Landscapes.app"
-# (sandboxed, MAS compile flag — no global hotkeys, no screen-saver install),
-# then optionally upload to App Store Connect.
+# (sandboxed, MAS compile flag — no global hotkeys), then optionally upload to
+# App Store Connect.
+#
+# Screen saver in the App Store build:
+#   The sandbox can't write to ~/Library/Screen Savers, so the app ships the
+#   .saver embedded in Contents/PlugIns and the menu-bar "Set Up Screen Saver…"
+#   item copies it to ~/Downloads + reveals it. The user double-clicks it and
+#   macOS performs the install. Gatekeeper assesses that double-clicked .saver:
+#   we DON'T staple a notarization ticket ourselves (you don't get the binary
+#   back from App Store processing to staple). Instead Apple notarizes the whole
+#   submission server-side, which registers the nested saver's cdhash, so an
+#   ONLINE Gatekeeper check passes on first launch. VERIFY THIS EMPIRICALLY from
+#   a TestFlight/App Store build before relying on it: install the app, run
+#   "Set Up Screen Saver…", double-click the file in Downloads, and confirm
+#   macOS installs it without an "unidentified developer"/"cannot be opened"
+#   block. (Offline first-use is the risk case, since there's no stapled ticket.)
 #
 # Prereqs:
 #   * An app record in App Store Connect with bundle id

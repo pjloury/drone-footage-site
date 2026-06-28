@@ -21,9 +21,10 @@ struct PlayerOverlayView: View {
         }
     }
 
-    // ── Thin translucent progress bar pinned to the bottom edge ───────────
-    // Mirrors the website: 4px track at 12% white, fill at 55% white, width
-    // = playback progress, eased linearly so it advances smoothly.
+    // ── Translucent progress bar pinned to the bottom edge ────────────────
+    // 14px track at 12% white, fill at 55% white, width = playback progress,
+    // eased linearly so it advances smoothly. Sized thicker than the website's
+    // 4px so it stays clearly visible across a room on a large TV.
     //
     // Fades out/in with the rest of the overlay via `overlayVisible` (see the
     // convention on StreamingPlayerModel.overlayVisible) so it disappears
@@ -40,7 +41,7 @@ struct PlayerOverlayView: View {
                         .animation(.linear(duration: 0.25), value: model.playbackProgress)
                 }
             }
-            .frame(height: 4)
+            .frame(height: 14)
         }
         .ignoresSafeArea()
         .opacity(model.overlayVisible ? 1 : 0)
