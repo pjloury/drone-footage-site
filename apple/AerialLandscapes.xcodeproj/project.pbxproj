@@ -1868,7 +1868,7 @@
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes</string>
+				<string>com.pjloury.aerial-landscapes-wallpaper</string>
 				<key>PRODUCT_MODULE_NAME</key>
 				<string>AerialLandscapesMAS</string>
 				<key>PRODUCT_NAME</key>
@@ -1929,7 +1929,7 @@
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>com.pjloury.aerial-landscapes</string>
+				<string>com.pjloury.aerial-landscapes-wallpaper</string>
 				<key>PRODUCT_MODULE_NAME</key>
 				<string>AerialLandscapesMAS</string>
 				<key>PRODUCT_NAME</key>

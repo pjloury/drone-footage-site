@@ -62,7 +62,7 @@ struct VideoConfig {
         r2(39, "Mont Saint-Michel",               "coastal",  48.64,   -1.51),
         r2(43, "Balearic Islands, Spain",         "coastal",  39.57,    2.65),
         r2(44, "Mont Saint-Michel",               "coastal",  48.64,   -1.51),
-        r2(45, "Drifting Away",                   "coastal",  36.60, -121.90),
+        r2(45, "Drifting Away",                   "coastal", -50.34,  -72.27),  // near El Calafate, Patagonia, Argentina
         r2(48, "Ka\u{02BB}anapali Surf, Maui",    "coastal",  20.93, -156.69),
         r2(49, "Copacabana, Brazil",              "coastal", -22.97,  -43.18),
         r2(53, "Carmel-by-the-Sea",               "coastal",  36.55, -121.92),
