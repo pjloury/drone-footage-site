@@ -95,11 +95,11 @@ enum VideoPlaylist {
 
     /// Clips excluded from the Mac playlist because their desktop encodes are
     /// too high-bitrate to stream reliably (Mac never falls back to 720p).
-    /// These 8 Tier-1 clips are re-encoded to ~24–28 Mbps H.264 4K by
-    /// reencode_heavy.sh; flip this to empty once the new files are uploaded to
-    /// R2 (currently blocked on refreshing the R2 token). Any other clip that
-    /// chokes on a given network is caught by the stall watchdog at runtime.
-    static let excludedHeavyIDs: Set<Int> = [18, 19, 22, 30, 32, 37, 50, 62]
+    /// The original 8 Tier-1 clips (18,19,22,30,32,37,50,62) were re-encoded to
+    /// ~24 Mbps H.264 4K with clean 2s keyframes (reencode_heavy.sh) and
+    /// re-uploaded to R2, so they're back in rotation — this is empty. Any clip
+    /// that still chokes on a given network is caught by the stall watchdog.
+    static let excludedHeavyIDs: Set<Int> = []
 
     static func shuffled() -> [DroneVideo] {
         all.filter { !excludedHeavyIDs.contains($0.id) }.shuffled()
