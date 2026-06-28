@@ -71,6 +71,14 @@ final class WallpaperPlayerModel: NSObject {
         super.init()
         playerA.isMuted = true
         playerB.isMuted = true
+        // Start playing the moment the first frames are decodable instead of
+        // waiting to pre-buffer a stall-proof window. The default (true) makes
+        // AVPlayer build a buffer sized for the clip's bitrate before it begins
+        // — for a heavy desktop encode cold from R2 that's a multi-second to
+        // ~30s black wait on first launch. We trade that for an immediate start;
+        // the stall watchdog already skips a clip that can't sustain playback.
+        playerA.automaticallyWaitsToMinimizeStalling = false
+        playerB.automaticallyWaitsToMinimizeStalling = false
         // start() is called by WallpaperWindowController after windows are ready
     }
 
