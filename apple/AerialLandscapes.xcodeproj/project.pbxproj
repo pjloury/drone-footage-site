@@ -1349,7 +1349,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
+				<string>2</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
@@ -1380,7 +1380,7 @@
 					<string>@executable_path/Frameworks</string>
 				</array>
 				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
+				<string>1.1</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>pjloury.AerialLandscapes</string>
 				<key>PRODUCT_NAME</key>
@@ -1414,7 +1414,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>1</string>
+				<string>2</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf-with-dsym</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
@@ -1445,7 +1445,7 @@
 					<string>@executable_path/Frameworks</string>
 				</array>
 				<key>MARKETING_VERSION</key>
-				<string>1.0</string>
+				<string>1.1</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>pjloury.AerialLandscapes</string>
 				<key>PRODUCT_NAME</key>
