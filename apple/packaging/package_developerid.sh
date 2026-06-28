@@ -41,5 +41,23 @@ echo "▸ Stapling ticket …"
 xcrun stapler staple "$APP"
 xcrun stapler staple "$APP/Contents/PlugIns/"*.saver 2>/dev/null || true
 
-echo "✅  Notarized app at: $APP"
-echo "   Distribute the stapled .app (zip or in a DMG) from your site."
+# ── Build a drag-to-Applications DMG around the stapled app ────────────────
+# The .app is already notarized+stapled (works offline on first launch). We
+# also notarize+staple the DMG itself so the downloaded file passes Gatekeeper
+# cleanly before it's even opened.
+DMG="build/DeveloperID/Aerial Landscapes.dmg"
+echo "▸ Building DMG …"
+rm -f "$DMG"
+STAGE="$(mktemp -d)"
+cp -R "$APP" "$STAGE/"
+ln -s /Applications "$STAGE/Applications"
+hdiutil create -volname "Aerial Landscapes" -srcfolder "$STAGE" \
+    -ov -format UDZO "$DMG"
+rm -rf "$STAGE"
+
+echo "▸ Notarizing + stapling the DMG …"
+xcrun notarytool submit "$DMG" --keychain-profile "$PROFILE" --wait
+xcrun stapler staple "$DMG"
+
+echo "✅  Distributable DMG: $DMG"
+echo "   Host it anywhere; users drag “Aerial Landscapes” into Applications."

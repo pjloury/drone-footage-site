@@ -716,7 +716,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
+				<string>5</string>
 				<key>DEVELOPMENT_ASSET_PATHS</key>
 				<string>"AerialLandscapes/Preview Content"</string>
 				<key>ENABLE_PREVIEWS</key>
@@ -733,7 +733,7 @@
 					<string>@executable_path/Frameworks</string>
 				</array>
 				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
+				<string>2.1</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>pjloury.AerialLandscapes</string>
 				<key>PRODUCT_NAME</key>
@@ -761,7 +761,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>4</string>
+				<string>5</string>
 				<key>DEVELOPMENT_ASSET_PATHS</key>
 				<string>"AerialLandscapes/Preview Content"</string>
 				<key>ENABLE_PREVIEWS</key>
@@ -778,7 +778,7 @@
 					<string>@executable_path/Frameworks</string>
 				</array>
 				<key>MARKETING_VERSION</key>
-				<string>1.1</string>
+				<string>2.1</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>pjloury.AerialLandscapes</string>
 				<key>PRODUCT_NAME</key>
