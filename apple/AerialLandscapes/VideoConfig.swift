@@ -16,9 +16,45 @@ private func r2(_ num: Int, _ title: String, _ section: String,
     )
 }
 
+private struct CatalogVideo: Decodable {
+    let id: Int
+    let caption: String
+    let category: String?
+    let lat: Double?
+    let lng: Double?
+}
+private struct CatalogFile: Decodable { let videos: [CatalogVideo] }
+
 struct VideoConfig {
 
-    static let allVideos: [Video] = [
+    /// Live catalog for the minimap + playlist — starts from the bundled
+    /// fallback below, then replaced by the shared cloud manifest
+    /// (videos.pjloury.com/catalog.json, same data the website + Mac apps use)
+    /// via load() at startup, so coordinate/label edits ship with no app update.
+    static var allVideos: [Video] = fallbackVideos
+
+    /// Fetch the shared cloud catalog; keep the current data on any failure.
+    /// Returns true if the set of video ids changed (worth rebuilding the queue).
+    @discardableResult
+    static func load() async -> Bool {
+        guard let url = URL(string: "\(R2)/catalog.json") else { return false }
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.timeoutInterval = 5
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            let file = try JSONDecoder().decode(CatalogFile.self, from: data)
+            guard !file.videos.isEmpty else { return false }
+            let mapped = file.videos.map {
+                r2($0.id, $0.caption, $0.category ?? "", $0.lat, $0.lng)
+            }
+            let changed = Set(mapped.map(\.id)) != Set(allVideos.map(\.id))
+            allVideos = mapped
+            return changed
+        } catch { return false }
+    }
+
+    static let fallbackVideos: [Video] = [
         // Cities
         r2(2,  "Good Morning Stanford",           "cities",   37.43, -122.17),
         r2(5,  "Financial District",              "cities",   37.72, -122.42),

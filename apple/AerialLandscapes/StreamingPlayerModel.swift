@@ -157,6 +157,15 @@ class StreamingPlayerModel: ObservableObject {
             name: UIApplication.didBecomeActiveNotification, object: nil)
 
         loadSection(nil)
+
+        // Upgrade to the shared cloud catalog in the background; if it brings
+        // new videos, rebuild the current section's queue. Falls back silently
+        // to the bundled catalog on any failure.
+        Task { @MainActor [weak self] in
+            let changed = await VideoConfig.load()
+            guard let self, changed else { return }
+            self.loadSection(self.committedSection)
+        }
     }
 
     @objc private func appDidBecomeActive() {
