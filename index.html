@@ -848,6 +848,9 @@ let VIDEOS = [
 ];
 
 const CROSSFADE_MS = 4000;
+// Cap every clip at MAX_PLAY_SECONDS so long clips don't linger. Default on.
+const LIMIT_PLAY_TIME  = true;
+const MAX_PLAY_SECONDS = 60;
 
 // ═══════════════════════════════════════════════════════════
 //  Telemetry (client-side; optional POST to TELEMETRY_URL)
@@ -1154,7 +1157,16 @@ function updateDots() {
   });
 }
 function updateBar(vid) {
-  if (vid.duration) barEl.style.width = (vid.currentTime / vid.duration * 100) + "%";
+  if (!vid.duration) return;
+  // When the play-time limit is on, the bar fills over the capped window and
+  // the clip crossfades to the next once the cap is reached (shorter clips end
+  // naturally via onended). Longer clips never run past the cap.
+  const effDur = LIMIT_PLAY_TIME ? Math.min(vid.duration, MAX_PLAY_SECONDS) : vid.duration;
+  barEl.style.width = (vid.currentTime / effDur * 100) + "%";
+  if (LIMIT_PLAY_TIME && vid.duration > MAX_PLAY_SECONDS &&
+      vid.currentTime >= MAX_PLAY_SECONDS && !transitioning) {
+    goTo(current + 1);
+  }
 }
 function resetBar() { barEl.style.width = "0%"; }
 

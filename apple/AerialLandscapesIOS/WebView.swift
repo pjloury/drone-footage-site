@@ -221,6 +221,9 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     static let manualCrossfadeDuration: TimeInterval = 1.5
     static let autoCrossfadeDuration:   TimeInterval = 4.0
+    // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
+    static let limitPlayTime = true
+    static let maxPlaySeconds: TimeInterval = 60
 
     override init() {
         super.init()
@@ -356,7 +359,17 @@ final class AerialPlayerModel: NSObject, ObservableObject {
             guard let self, let item = observed.currentItem else { return }
             let dur = item.duration.seconds
             guard dur > 0, !dur.isNaN, !dur.isInfinite else { return }
-            self.playbackProgress = min(time.seconds / dur, 1.0)
+            // Cap each clip at maxPlaySeconds when the play-time limit is on:
+            // the progress bar fills over the capped window, and we auto-advance
+            // when it's reached (clips shorter than the cap end naturally).
+            let cap = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+            self.playbackProgress = min(time.seconds / cap, 1.0)
+            if Self.limitPlayTime, dur > Self.maxPlaySeconds,
+               time.seconds >= Self.maxPlaySeconds, !self.isCrossfading {
+                self.currentIndex = (self.currentIndex + 1) % self.playlist.count
+                self.crossfade(to: self.playlist[self.currentIndex],
+                               duration: Self.autoCrossfadeDuration)
+            }
         }
     }
 

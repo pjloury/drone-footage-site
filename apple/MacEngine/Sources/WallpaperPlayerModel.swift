@@ -12,6 +12,9 @@ import Foundation
 
 private let autoFadeDuration:   TimeInterval = 5.0
 private let manualFadeDuration: TimeInterval = 2.0
+// Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
+private let limitPlayTime = true
+private let maxPlaySeconds: TimeInterval = 60
 private let desktopFallbackDelay: TimeInterval = 5.0
 
 enum StreamStatus: Equatable {
@@ -287,7 +290,10 @@ final class WallpaperPlayerModel: NSObject {
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
         guard dur.isFinite, dur > 0, elapsed > 0 else { return }
-        let remaining = dur - elapsed
+        // Cap each clip at maxPlaySeconds when the play-time limit is on, so a
+        // long clip auto-fades at the cap instead of running its full length.
+        let effectiveDur = limitPlayTime ? min(dur, maxPlaySeconds) : dur
+        let remaining = effectiveDur - elapsed
         guard remaining <= autoFadeDuration + 0.2, remaining > 0 else { return }
 
         autoFadeArmed = true

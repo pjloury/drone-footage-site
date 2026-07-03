@@ -131,6 +131,9 @@ class StreamingPlayerModel: ObservableObject {
 
     static let autoDuration:   TimeInterval = 4.0
     static let manualDuration: TimeInterval = 1.5   // slightly longer for buffering headroom
+    // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
+    static let limitPlayTime = true
+    static let maxPlaySeconds: TimeInterval = 60
 
     // UI-test accelerant: when launched with "UITEST_FAST_AUTOFADE", the
     // end-of-clip auto-crossfade fires a few seconds in (instead of ~4 s
@@ -480,7 +483,9 @@ class StreamingPlayerModel: ObservableObject {
         let dur = item.duration.seconds
         let cur = frontPlayer.currentTime().seconds
         guard dur.isFinite, dur > 0 else { return }
-        playbackProgress = min(1, max(0, cur / dur))
+        // Fill the bar over the capped window when the play-time limit is on.
+        let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+        playbackProgress = min(1, max(0, cur / effectiveDur))
     }
 
     private func removeTimeObserver() {
@@ -497,7 +502,10 @@ class StreamingPlayerModel: ObservableObject {
               item.status == .readyToPlay else { return }
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
-        let rem = dur - elapsed
+        // Cap each clip at maxPlaySeconds when the play-time limit is on, so the
+        // auto-fade arms before the cap and the crossfade completes at it.
+        let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+        let rem = effectiveDur - elapsed
         guard dur.isFinite, dur > 0, rem > 0 else { return }
 
         // Production: fire ~4 s before the clip's natural end.
