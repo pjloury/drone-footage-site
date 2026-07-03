@@ -2,10 +2,14 @@
 // System-wide hotkeys via NSEvent global monitor.
 // Requires Input Monitoring permission — macOS prompts automatically on first use.
 //
-// Bindings (⌃⌥ chosen because macOS does not use this combo for any system shortcut):
+// Bindings:
 //   ⌃⌥ →   Next video
 //   ⌃⌥ ←   Previous video
-//   ⌃⌥ Space   Pause / Resume
+//   ⌃⌥ P   Pause / Resume
+// ⌃⌥Space was the original toggle, but it collides with macOS's default
+// "Select next source in Input menu" shortcut — the wallpaper silently paused
+// whenever the user switched keyboard layouts, which (combined with the stale
+// isUserPaused watchdog bug) caused permanent freezes. P has no system default.
 
 // Compiled out of the Mac App Store build: global event monitors need Input
 // Monitoring, which the sandbox forbids, and the addGlobalMonitorForEvents
@@ -15,7 +19,7 @@ import AppKit
 
 private let kRight: UInt16 = 124
 private let kLeft:  UInt16 = 123
-private let kSpace: UInt16 = 49
+private let kKeyP: UInt16 = 35
 private let kTarget: NSEvent.ModifierFlags = [.control, .option]
 
 @MainActor
@@ -35,7 +39,7 @@ final class GlobalHotkeyMonitor {
                 switch event.keyCode {
                 case kRight: onNext()
                 case kLeft:  onPrev()
-                case kSpace: onToggle()
+                case kKeyP: onToggle()
                 default: break
                 }
             }

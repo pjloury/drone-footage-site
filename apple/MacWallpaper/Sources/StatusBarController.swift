@@ -40,7 +40,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(next)
 
         let toggle = NSMenuItem(
-            title: (wallpaper.isPlaying ? "Pause" : "Resume") + "  ⌃⌥Space",
+            title: (wallpaper.isPlaying ? "Pause" : "Resume") + "  ⌃⌥P",
             action: #selector(togglePlayback),
             keyEquivalent: ""
         )
