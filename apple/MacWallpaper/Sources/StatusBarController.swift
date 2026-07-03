@@ -29,18 +29,25 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(disabled(caption))
         menu.addItem(.separator())
 
-        // Menu-click targets (no key equivalents here — hotkeys are global ⌃⌥ combos)
-        let prev = NSMenuItem(title: "Previous  ⌃⌥←", action: #selector(prevVideo), keyEquivalent: "")
+        // Menu-click targets (no key equivalents here — hotkeys are global ⌃⌥
+        // combos). The MAS build has no global hotkeys (sandbox forbids Input
+        // Monitoring), so don't advertise shortcuts that don't exist there.
+        #if MAS
+        let hkPrev = "", hkNext = "", hkToggle = ""
+        #else
+        let hkPrev = "  ⌃⌥←", hkNext = "  ⌃⌥→", hkToggle = "  ⌃⌥P"
+        #endif
+        let prev = NSMenuItem(title: "Previous" + hkPrev, action: #selector(prevVideo), keyEquivalent: "")
         prev.target = self
         prev.isEnabled = wallpaper.historyCount > 0
         menu.addItem(prev)
 
-        let next = NSMenuItem(title: "Next  ⌃⌥→", action: #selector(nextVideo), keyEquivalent: "")
+        let next = NSMenuItem(title: "Next" + hkNext, action: #selector(nextVideo), keyEquivalent: "")
         next.target = self
         menu.addItem(next)
 
         let toggle = NSMenuItem(
-            title: (wallpaper.isPlaying ? "Pause" : "Resume") + "  ⌃⌥P",
+            title: (wallpaper.isPlaying ? "Pause" : "Resume") + hkToggle,
             action: #selector(togglePlayback),
             keyEquivalent: ""
         )
