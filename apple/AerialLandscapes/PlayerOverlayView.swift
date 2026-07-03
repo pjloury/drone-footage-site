@@ -22,7 +22,7 @@ struct PlayerOverlayView: View {
     }
 
     // ── Translucent progress bar pinned to the bottom edge ────────────────
-    // 14px track at 12% white, fill at 55% white, width = playback progress,
+    // 10px track at 12% white, fill at 55% white, width = playback progress,
     // eased linearly so it advances smoothly. Sized thicker than the website's
     // 4px so it stays clearly visible across a room on a large TV.
     //
@@ -46,7 +46,7 @@ struct PlayerOverlayView: View {
                                    value: model.playbackProgress)
                 }
             }
-            .frame(height: 14)
+            .frame(height: 10)
         }
         .ignoresSafeArea()
         .opacity(model.overlayVisible ? 1 : 0)
