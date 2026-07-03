@@ -718,7 +718,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Manual</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>5</string>
+				<string>6</string>
 				<key>DEVELOPMENT_ASSET_PATHS</key>
 				<string>"AerialLandscapes/Preview Content"</string>
 				<key>DEVELOPMENT_TEAM</key>
@@ -773,7 +773,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Manual</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>5</string>
+				<string>6</string>
 				<key>DEVELOPMENT_ASSET_PATHS</key>
 				<string>"AerialLandscapes/Preview Content"</string>
 				<key>DEVELOPMENT_TEAM</key>

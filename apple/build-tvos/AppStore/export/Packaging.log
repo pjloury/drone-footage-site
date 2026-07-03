@@ -1,0 +1,182 @@
+2026-07-03 05:38:15 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x96c104c00; archive(resolved)="<IDEArchive: 0x96c024380>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team(resolved)="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	Chain (15, self inclusive):
+	<IDEDistributionProcessingPipelineContext: 0x96c104c00; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionProcessingPipelineContext: 0x96c104f00; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86f80; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86a80; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86800; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86580; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86300; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd86080; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd85e00; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd84a00; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd84780; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd84500; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="<IDEProvisioningBasicTeam: 0x96abc6000; teamID='D2GRT69L42', teamName='(null)'>">
+	<IDEDistributionContext: 0x96bd84280; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="(null)">
+	<IDEDistributionContext: 0x96bd84000; archive = "<IDEArchive: 0x96c024380>", distributionMethod="<IDEDistributionMethodTVOSAppStoreDistribution: 0x96bc394f0>", team="(null)">
+	<IDEDistributionContext: 0x1049962d0; archive = "<IDEArchive: 0x96c024380>", distributionMethod="(null)", team="(null)">
+</IDEDistributionProcessingPipelineContext: 0x96c104c00>
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionCopyItemStep
+2026-07-03 05:38:15 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root/Payload/AerialLandscapes.app'
+2026-07-03 05:38:15 +0000  >>> Copying /Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app 
+2026-07-03 05:38:15 +0000  copying file ./_CodeSignature/CodeResources ... 
+2026-07-03 05:38:15 +0000  4689 bytes for ./_CodeSignature/CodeResources
+2026-07-03 05:38:15 +0000  copying file ./map-world-mask.png ... 
+2026-07-03 05:38:15 +0000  31316 bytes for ./map-world-mask.png
+2026-07-03 05:38:15 +0000  copying file ./map-bay-mask.png ... 
+2026-07-03 05:38:15 +0000  9995 bytes for ./map-bay-mask.png
+2026-07-03 05:38:15 +0000  copying file ./map-us-mask.png ... 
+2026-07-03 05:38:15 +0000  6715 bytes for ./map-us-mask.png
+2026-07-03 05:38:15 +0000  copying file ./map-europe-mask.png ... 
+2026-07-03 05:38:15 +0000  9599 bytes for ./map-europe-mask.png
+2026-07-03 05:38:15 +0000  copying file ./map-us.png ... 
+2026-07-03 05:38:15 +0000  36311 bytes for ./map-us.png
+2026-07-03 05:38:15 +0000  copying file ./map-world.png ... 
+2026-07-03 05:38:15 +0000  53384 bytes for ./map-world.png
+2026-07-03 05:38:15 +0000  copying file ./Assets.car ... 
+2026-07-03 05:38:15 +0000  26934360 bytes for ./Assets.car
+2026-07-03 05:38:15 +0000  copying file ./map-europe.png ... 
+2026-07-03 05:38:15 +0000  27035 bytes for ./map-europe.png
+2026-07-03 05:38:15 +0000  copying file ./map-ca-mask.png ... 
+2026-07-03 05:38:15 +0000  4864 bytes for ./map-ca-mask.png
+2026-07-03 05:38:15 +0000  copying file ./map-bay.png ... 
+2026-07-03 05:38:15 +0000  34287 bytes for ./map-bay.png
+2026-07-03 05:38:15 +0000  copying file ./map-ca.png ... 
+2026-07-03 05:38:15 +0000  2490 bytes for ./map-ca.png
+2026-07-03 05:38:15 +0000  copying file ./AerialLandscapes ... 
+2026-07-03 05:38:15 +0000  421248 bytes for ./AerialLandscapes
+2026-07-03 05:38:15 +0000  copying file ./ThumbnailGeneration.py ... 
+2026-07-03 05:38:15 +0000  3059 bytes for ./ThumbnailGeneration.py
+2026-07-03 05:38:15 +0000  copying file ./embedded.mobileprovision ... 
+2026-07-03 05:38:15 +0000  11993 bytes for ./embedded.mobileprovision
+2026-07-03 05:38:15 +0000  copying file ./Info.plist ... 
+2026-07-03 05:38:15 +0000  1064 bytes for ./Info.plist
+2026-07-03 05:38:15 +0000  copying file ./PkgInfo ... 
+2026-07-03 05:38:15 +0000  8 bytes for ./PkgInfo
+2026-07-03 05:38:15 +0000 [MT] /usr/bin/ditto exited with 0
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
+2026-07-03 05:38:15 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionItemRemovalStep
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
+2026-07-03 05:38:15 +0000 [MT] Skipping step: IDEDistributionAppThinningPlistStep because it said so
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionSymbolsStep
+2026-07-03 05:38:15 +0000 [MT] Writing /var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Symbols/55CE6FD6-F5FD-3252-8E4B-76DF481A16F4.symbols
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionCopyAppleProvidedContentStep
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionAppThinningStep
+2026-07-03 05:38:15 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionArchThinningStep
+2026-07-03 05:38:15 +0000 [MT] Archs to thin for item /Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app are []
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionODRStep
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
+2026-07-03 05:38:15 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionCodesignStep
+2026-07-03 05:38:15 +0000 [MT] Entitlements for <IDEDistributionItem: 0x96ab6db60; bundleID='pjloury.AerialLandscapes', path='<DVTFilePath:0x96c0243f0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x96ab6cea0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x96905aa00; name='Apple Distribution: Philip Loury (D2GRT69L42)', hash='1B66BA4BADCDC300608FC6D8FB711ABA06D1B686', serialNumber='410DECA3BDA6AE85B2412C1046EBBB45', certificateKinds='(
+    "1.2.840.113635.100.6.1.7",
+    "1.2.840.113635.100.6.1.4"
+), issueDate='2025-07-06 19:45:48 +0000''>', entitlements='{
+    "application-identifier" = "D2GRT69L42.pjloury.AerialLandscapes";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = D2GRT69L42;
+    "get-task-allow" = 0;
+}', teamID='D2GRT69L42', identifier='pjloury.AerialLandscapes', executablePath='<DVTFilePath:0x96bcc75d0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app/AerialLandscapes'>', hardenedRuntime='0'>'>: {
+    "application-identifier" = "D2GRT69L42.pjloury.AerialLandscapes";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = D2GRT69L42;
+    "get-task-allow" = 0;
+}
+2026-07-03 05:38:15 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-07-03 05:38:15 +0000 [MT] Entitlements for <IDEDistributionItem: 0x96ab6db60; bundleID='pjloury.AerialLandscapes', path='<DVTFilePath:0x96c0243f0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x96ab6cea0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x969058240; name='Apple Distribution: Philip Loury (D2GRT69L42)', hash='1B66BA4BADCDC300608FC6D8FB711ABA06D1B686', serialNumber='410DECA3BDA6AE85B2412C1046EBBB45', certificateKinds='(
+    "1.2.840.113635.100.6.1.7",
+    "1.2.840.113635.100.6.1.4"
+), issueDate='2025-07-06 19:45:48 +0000''>', entitlements='{
+    "application-identifier" = "D2GRT69L42.pjloury.AerialLandscapes";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = D2GRT69L42;
+    "get-task-allow" = 0;
+}', teamID='D2GRT69L42', identifier='pjloury.AerialLandscapes', executablePath='<DVTFilePath:0x96bcc75d0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app/AerialLandscapes'>', hardenedRuntime='0'>'> are: {
+    "application-identifier" = "D2GRT69L42.pjloury.AerialLandscapes";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = D2GRT69L42;
+    "get-task-allow" = 0;
+}
+2026-07-03 05:38:15 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x96ab6db60; bundleID='pjloury.AerialLandscapes', path='<DVTFilePath:0x96c0243f0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x96ab6cea0; isSigned='1', isAdHocSigned='0', signingCertificate='<DVTSigningCertificate: 0x969058240; name='Apple Distribution: Philip Loury (D2GRT69L42)', hash='1B66BA4BADCDC300608FC6D8FB711ABA06D1B686', serialNumber='410DECA3BDA6AE85B2412C1046EBBB45', certificateKinds='(
+    "1.2.840.113635.100.6.1.7",
+    "1.2.840.113635.100.6.1.4"
+), issueDate='2025-07-06 19:45:48 +0000''>', entitlements='{
+    "application-identifier" = "D2GRT69L42.pjloury.AerialLandscapes";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = D2GRT69L42;
+    "get-task-allow" = 0;
+}', teamID='D2GRT69L42', identifier='pjloury.AerialLandscapes', executablePath='<DVTFilePath:0x96bcc75d0:'/Users/pjloury/Code/drone-footage-site/apple/build-tvos/AppStore/AerialLandscapes.xcarchive/Products/Applications/AerialLandscapes.app/AerialLandscapes'>', hardenedRuntime='0'>'> to: /var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/entitlements~~~xtM470
+2026-07-03 05:38:15 +0000 [MT] invoking codesign: <NSConcreteTask: 0x96c2f40f0; launchPath='/usr/bin/codesign', arguments='(
+    "-f",
+    "-s",
+    1B66BA4BADCDC300608FC6D8FB711ABA06D1B686,
+    "--entitlements",
+    "/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/entitlements~~~xtM470",
+    "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
+    "--generate-entitlement-der",
+    "--strip-disallowed-xattrs",
+    "-vvv",
+    "/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root/Payload/AerialLandscapes.app"
+)'>
+2026-07-03 05:38:15 +0000 [MT] codesign output: /var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root/Payload/AerialLandscapes.app: replacing existing signature
+/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root/Payload/AerialLandscapes.app: signed app bundle with Mach-O thin (arm64) [pjloury.AerialLandscapes]
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
+2026-07-03 05:38:15 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-07-03 05:38:15 +0000 [MT] Processing step: IDEDistributionCreateIPAStep
+2026-07-03 05:38:15 +0000 [MT] Running /usr/bin/rsync '-8aPhhE' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Symbols' '--link-dest' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root'
+2026-07-03 05:38:15 +0000  Symbols/
+._Symbols
+            163 170%    1.85MB/s   00:00:00 (xfer#1, to-check=0/4)
+2026-07-03 05:38:15 +0000  Symbols/55CE6FD6-F5FD-3252-8E4B-76DF481A16F4.symbols
+Symbols/._55CE6FD6-F5FD-3252-8E4B-76DF481A16F4.symbols
+            163   0%   45.25KB/s   00:00:00 (xfer#2, to-check=2/4)
+2026-07-03 05:38:15 +0000 [MT] /usr/bin/rsync exited with 0
+2026-07-03 05:38:15 +0000 [MT] Running /usr/bin/ditto '-V' '-c' '-k' '--norsrc' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root' '/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Packages/AerialLandscapes.ipa'
+2026-07-03 05:38:15 +0000  >>> Copying /var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root 
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/_CodeSignature/CodeResources ... 
+2026-07-03 05:38:15 +0000  4689 bytes for ./Payload/AerialLandscapes.app/_CodeSignature/CodeResources
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-world-mask.png ... 
+2026-07-03 05:38:15 +0000  31316 bytes for ./Payload/AerialLandscapes.app/map-world-mask.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-bay-mask.png ... 
+2026-07-03 05:38:15 +0000  9995 bytes for ./Payload/AerialLandscapes.app/map-bay-mask.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-us-mask.png ... 
+2026-07-03 05:38:15 +0000  6715 bytes for ./Payload/AerialLandscapes.app/map-us-mask.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-europe-mask.png ... 
+2026-07-03 05:38:15 +0000  9599 bytes for ./Payload/AerialLandscapes.app/map-europe-mask.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-us.png ... 
+2026-07-03 05:38:15 +0000  36311 bytes for ./Payload/AerialLandscapes.app/map-us.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/map-world.png ... 
+2026-07-03 05:38:15 +0000  53384 bytes for ./Payload/AerialLandscapes.app/map-world.png
+2026-07-03 05:38:15 +0000  copying file ./Payload/AerialLandscapes.app/Assets.car ... 
+2026-07-03 05:38:16 +0000  26934360 bytes for ./Payload/AerialLandscapes.app/Assets.car
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/map-europe.png ... 
+2026-07-03 05:38:16 +0000  27035 bytes for ./Payload/AerialLandscapes.app/map-europe.png
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/map-ca-mask.png ... 
+2026-07-03 05:38:16 +0000  4864 bytes for ./Payload/AerialLandscapes.app/map-ca-mask.png
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/map-bay.png ... 
+2026-07-03 05:38:16 +0000  34287 bytes for ./Payload/AerialLandscapes.app/map-bay.png
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/map-ca.png ... 
+2026-07-03 05:38:16 +0000  2490 bytes for ./Payload/AerialLandscapes.app/map-ca.png
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/AerialLandscapes ... 
+2026-07-03 05:38:16 +0000  421248 bytes for ./Payload/AerialLandscapes.app/AerialLandscapes
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/ThumbnailGeneration.py ... 
+2026-07-03 05:38:16 +0000  3059 bytes for ./Payload/AerialLandscapes.app/ThumbnailGeneration.py
+copying file ./Payload/AerialLandscapes.app/embedded.mobileprovision ... 
+2026-07-03 05:38:16 +0000  14127 bytes for ./Payload/AerialLandscapes.app/embedded.mobileprovision
+2026-07-03 05:38:16 +0000  copying file ./Payload/AerialLandscapes.app/Info.plist ... 
+2026-07-03 05:38:16 +0000  1064 bytes for ./Payload/AerialLandscapes.app/Info.plist
+copying file ./Payload/AerialLandscapes.app/PkgInfo ... 
+2026-07-03 05:38:16 +0000  8 bytes for ./Payload/AerialLandscapes.app/PkgInfo
+2026-07-03 05:38:16 +0000  copying file ./Symbols/55CE6FD6-F5FD-3252-8E4B-76DF481A16F4.symbols ... 
+2026-07-03 05:38:16 +0000  688100 bytes for ./Symbols/55CE6FD6-F5FD-3252-8E4B-76DF481A16F4.symbols
+2026-07-03 05:38:16 +0000 [MT] /usr/bin/ditto exited with 0
+2026-07-03 05:38:16 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
+2026-07-03 05:38:16 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2026-07-03 05:38:16 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
+2026-07-03 05:38:16 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x96c389b90:'/var/folders/0r/q0sp8c_904j4ddnj5cd8rl5m0000gn/T/XcodeDistPipeline.~~~VnDoZ3/Root/Payload/AerialLandscapes.app'>
+2026-07-03 05:38:16 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
+2026-07-03 05:38:16 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so

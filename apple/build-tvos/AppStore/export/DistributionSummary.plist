@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AerialLandscapes.ipa</key>
+	<array>
+		<dict>
+			<key>architectures</key>
+			<array>
+				<string>arm64</string>
+			</array>
+			<key>buildNumber</key>
+			<string>6</string>
+			<key>certificate</key>
+			<dict>
+				<key>SHA1</key>
+				<string>1B66BA4BADCDC300608FC6D8FB711ABA06D1B686</string>
+				<key>dateExpires</key>
+				<string>7/6/26</string>
+				<key>type</key>
+				<string>Apple Distribution</string>
+			</dict>
+			<key>entitlements</key>
+			<dict>
+				<key>application-identifier</key>
+				<string>D2GRT69L42.pjloury.AerialLandscapes</string>
+				<key>beta-reports-active</key>
+				<true/>
+				<key>com.apple.developer.team-identifier</key>
+				<string>D2GRT69L42</string>
+				<key>get-task-allow</key>
+				<false/>
+			</dict>
+			<key>name</key>
+			<string>AerialLandscapes.app</string>
+			<key>profile</key>
+			<dict>
+				<key>UUID</key>
+				<string>5e6e12da-8097-44dd-ba0c-99ed0d0bf962</string>
+				<key>dateExpires</key>
+				<string>6/17/27</string>
+				<key>name</key>
+				<string>tvOS Team Store Provisioning Profile: pjloury.AerialLandscapes</string>
+			</dict>
+			<key>symbols</key>
+			<true/>
+			<key>team</key>
+			<dict>
+				<key>id</key>
+				<string>D2GRT69L42</string>
+				<key>name</key>
+				<string></string>
+			</dict>
+			<key>versionNumber</key>
+			<string>2.2</string>
+		</dict>
+	</array>
+</dict>
+</plist>
