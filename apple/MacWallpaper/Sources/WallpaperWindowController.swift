@@ -158,10 +158,28 @@ final class WallpaperWindowController: NSObject {
                 selector: #selector(self.screensChanged),
                 name: NSApplication.didChangeScreenParametersNotification,
                 object: nil)
+            // macOS pauses the AVPlayers while the machine/display sleeps and
+            // never un-pauses them at login — resume explicitly on every wake
+            // signal (the stall watchdog is only the 8s fallback).
+            let wake = NSWorkspace.shared.notificationCenter
+            for name in [NSWorkspace.didWakeNotification,
+                         NSWorkspace.screensDidWakeNotification,
+                         NSWorkspace.sessionDidBecomeActiveNotification] {
+                wake.addObserver(self, selector: #selector(self.systemWoke(_:)),
+                                 name: name, object: nil)
+            }
         }
     }
 
-    deinit { NotificationCenter.default.removeObserver(self) }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
+    @objc private func systemWoke(_ note: Notification) {
+        WallpaperLog.shared.log("windows", "wake signal \(note.name.rawValue) — resuming \(displays.count) display(s)")
+        displays.forEach { $0.model.systemWake() }
+    }
 
     // Controls apply to every display (each advances its own shuffle).
     func next()   { displays.forEach { $0.model.next() } }

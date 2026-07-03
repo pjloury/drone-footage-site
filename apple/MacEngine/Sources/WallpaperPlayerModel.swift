@@ -72,6 +72,7 @@ final class WallpaperPlayerModel: NSObject {
     private var lastProgressTime: Double = -1
     private var lastProgressWall = Date()
     private var loggedStall = false
+    private var kickedStall = false
     private var progressLogTick = 0
 
     // Per-instance tag for the shared log — with one model per display, log
@@ -150,9 +151,40 @@ final class WallpaperPlayerModel: NSObject {
     // The watchdog must ignore a pause the USER asked for, but a pause the
     // system imposed (e.g. clip ran to its end because auto-fade never armed)
     // is a freeze it must recover from — so track user intent explicitly.
+    // Pause must stop BOTH players: a crossfade in flight has already play()ed
+    // the back player, and completeFade would promote it to front — playback
+    // visibly continued while isUserPaused stayed true, which permanently
+    // disabled the stall watchdog. The next system pause (display sleep/lock)
+    // then froze the wallpaper forever (found via lldb on a live freeze:
+    // every checkStall bailed on the stale isUserPaused guard).
     private(set) var isUserPaused = false
-    func pause()  { isUserPaused = true;  frontPlayer.pause(); updateStatus() }
-    func resume() { isUserPaused = false; frontPlayer.play();  updateStatus() }
+    func pause() {
+        isUserPaused = true
+        playerA.pause()
+        playerB.pause()
+        WallpaperLog.shared.log("m\(mid)", "user pause")
+        updateStatus()
+    }
+    func resume() {
+        isUserPaused = false
+        WallpaperLog.shared.log("m\(mid)", "user resume")
+        frontPlayer.play()
+        resetStallBaseline()
+        updateStatus()
+    }
+
+    /// Called on system wake / screen unlock: macOS pauses AVPlayers while the
+    /// display sleeps, and nothing un-pauses them at login. Resume the front
+    /// clip in place (unless the user paused deliberately); the stall watchdog
+    /// remains the fallback if playback can't actually restart.
+    func systemWake() {
+        guard !isUserPaused else { return }
+        WallpaperLog.shared.log("m\(mid)",
+            "systemWake tcs=\(frontPlayer.timeControlStatus.rawValue) video=\(currentVideo?.caption ?? "—")")
+        frontPlayer.play()
+        resetStallBaseline()
+        updateStatus()
+    }
     var isPlaying: Bool { frontPlayer.rate != 0 }
 
     /// Pause both players and stop the time observer. Used by the screensaver
@@ -269,6 +301,7 @@ final class WallpaperPlayerModel: NSObject {
         lastProgressTime = -1
         lastProgressWall = Date()
         loggedStall = false
+        kickedStall = false
     }
 
     /// Wall-clock stall check: if the front clip should be showing motion but
@@ -312,6 +345,13 @@ final class WallpaperPlayerModel: NSObject {
             WallpaperLog.shared.log("stall",
                 "m\(mid) not advancing ~\(Int(stuckFor))s at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) ready=\(ready) keepUp=\(item?.isPlaybackLikelyToKeepUp ?? false) bufEmpty=\(item?.isPlaybackBufferEmpty ?? false)")
         }
+        // A system-imposed pause (display sleep, lock screen) is best fixed by
+        // resuming the same clip in place — try one play() kick before skipping.
+        if stuckFor >= 4, !kickedStall, frontPlayer.timeControlStatus == .paused {
+            kickedStall = true
+            WallpaperLog.shared.log("stall", "m\(mid) kick: system-paused front, retrying play()")
+            frontPlayer.play()
+        }
         if stuckFor >= 8 {                          // stuck 8s → skip it
             WallpaperLog.shared.log("stall",
                 "m\(mid) skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
@@ -322,7 +362,9 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     private func checkAutoFade() {
-        guard !autoFadeArmed, !isCrossfading,
+        // A user pause must actually hold: without this guard an armed
+        // crossfade resumed playback behind the user's back (see pause()).
+        guard !autoFadeArmed, !isCrossfading, !isUserPaused,
               let item = frontPlayer.currentItem, item.status == .readyToPlay else { return }
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
