@@ -38,7 +38,12 @@ struct PlayerOverlayView: View {
                     Rectangle().fill(Color.white.opacity(0.12))
                     Rectangle().fill(Color.white.opacity(0.55))
                         .frame(width: max(0, geo.size.width * CGFloat(model.playbackProgress)))
-                        .animation(.linear(duration: 0.25), value: model.playbackProgress)
+                        // One continuous linear sweep across the whole clip
+                        // window (duration supplied by the model), rather than a
+                        // 0.25s catch-up per tick — glides instead of jerking.
+                        // Snaps instantly (duration 0) on stall freeze/re-sync.
+                        .animation(.linear(duration: model.progressAnimDuration),
+                                   value: model.playbackProgress)
                 }
             }
             .frame(height: 14)

@@ -100,7 +100,24 @@ class StreamingPlayerModel: ObservableObject {
 
     /// Playback progress (0…1) of the current front clip, driving the thin
     /// bottom progress bar — mirrors the website's #bar width.
+    ///
+    /// The bar is animated as ONE continuous linear sweep from 0→1 over the
+    /// clip's expected play window (full length, or `maxPlaySeconds` when the
+    /// play-time cap is on), rather than being nudged every time-observer tick.
+    /// This makes it glide smoothly instead of stepping/jerking. It is only
+    /// re-synced to the true `currentTime` (and frozen) when the video feed
+    /// actually stalls — see `pauseSmoothProgress`/`resumeSmoothProgress`.
     @Published var playbackProgress: Double = 0
+
+    /// Duration the view uses for the progress-bar fill animation. Set to the
+    /// remaining play time when kicking off the smooth sweep, and to 0 to snap
+    /// the bar instantly (on freeze / re-sync).
+    @Published var progressAnimDuration: TimeInterval = 0
+
+    /// Whether the continuous sweep has been armed for the current front clip.
+    private var progressStarted = false
+    /// Whether the sweep is currently frozen because the feed stalled.
+    private var progressPaused = false
 
     // ── Sections ──────────────────────────────────────────────────────────
     static let sections: [(id: String, name: String)] = [
@@ -437,6 +454,10 @@ class StreamingPlayerModel: ObservableObject {
         lastWatchdogTime = -1
         stalledTicks = 0
         loggedStuck = false
+        // Re-arm the smooth progress sweep for the new clip.
+        progressStarted = false
+        progressPaused = false
+        progressAnimDuration = 0
     }
 
     /// Detects the real "stuck video" symptom: front player should be playing
@@ -453,6 +474,10 @@ class StreamingPlayerModel: ObservableObject {
             // meaningfully across a tick (0.25s) it's stalled.
             if frontPlayer.rate > 0 && advanced < 0.05 {
                 stalledTicks += 1
+                // Freeze the smooth progress bar as soon as the feed looks
+                // stopped (~0.5s of no movement) so it doesn't glide ahead of
+                // a video that isn't actually playing.
+                if stalledTicks >= 2 { pauseSmoothProgress() }
                 if stalledTicks >= 4 && !loggedStuck {   // ~1s of no movement
                     loggedStuck = true
                     stuckEventCount += 1
@@ -468,6 +493,9 @@ class StreamingPlayerModel: ObservableObject {
                 if loggedStuck {
                     xfadeLog.notice("RECOVERED front advancing again at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex)")
                 }
+                // Feed is moving again — resume the smooth sweep from the true
+                // position if we had frozen it.
+                if progressPaused { resumeSmoothProgress() }
                 stalledTicks = 0
                 loggedStuck = false
             }
@@ -475,17 +503,69 @@ class StreamingPlayerModel: ObservableObject {
         lastWatchdogTime = now
     }
 
+    /// The play window the bar fills across: the clip's full length, or the
+    /// play-time cap when it's on. Returns nil until the duration is known.
+    private func effectivePlayDuration() -> Double? {
+        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return nil }
+        let dur = item.duration.seconds
+        guard dur.isFinite, dur > 0 else { return nil }
+        return Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+    }
+
+    /// Kicks off a single continuous 0→1 linear animation over the remaining
+    /// play window once the front clip's duration is known. Called on each
+    /// time-observer tick but no-ops after the first arm.
     private func updateProgress() {
         // Frozen during a crossfade — the bar is reset to 0 and fades back in
         // from empty when the new clip commits (see startCrossfade/completeFade).
-        guard !isCrossfading else { return }
-        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return }
-        let dur = item.duration.seconds
+        guard !isCrossfading, !progressStarted else { return }
+        guard let effectiveDur = effectivePlayDuration() else { return }
         let cur = frontPlayer.currentTime().seconds
-        guard dur.isFinite, dur > 0 else { return }
-        // Fill the bar over the capped window when the play-time limit is on.
-        let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
-        playbackProgress = min(1, max(0, cur / effectiveDur))
+        guard cur.isFinite else { return }
+        progressStarted = true
+
+        let frac = min(1, max(0, cur / effectiveDur))
+        let remaining = max(0, effectiveDur - cur)
+        // Snap instantly to the current position, then, on the next runloop,
+        // animate to full over the remaining window so SwiftUI treats the two
+        // writes as separate transactions (the snap must not be animated).
+        progressAnimDuration = 0
+        playbackProgress = frac
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.progressStarted, !self.progressPaused else { return }
+            self.progressAnimDuration = remaining
+            self.playbackProgress = 1
+        }
+    }
+
+    /// Freezes the bar at the video's true position when the feed stalls, so it
+    /// stops gliding while nothing is actually playing.
+    private func pauseSmoothProgress() {
+        guard progressStarted, !progressPaused else { return }
+        guard let effectiveDur = effectivePlayDuration() else { return }
+        let cur = frontPlayer.currentTime().seconds
+        guard cur.isFinite else { return }
+        progressPaused = true
+        progressAnimDuration = 0
+        playbackProgress = min(1, max(0, cur / effectiveDur))   // re-sync + freeze
+    }
+
+    /// Resumes the smooth sweep from the true position after the feed recovers.
+    private func resumeSmoothProgress() {
+        guard progressStarted, progressPaused else { return }
+        guard let effectiveDur = effectivePlayDuration() else { return }
+        let cur = frontPlayer.currentTime().seconds
+        guard cur.isFinite else { return }
+        progressPaused = false
+        let frac = min(1, max(0, cur / effectiveDur))
+        let remaining = max(0, effectiveDur - cur)
+        progressAnimDuration = 0
+        playbackProgress = frac
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.progressStarted, !self.progressPaused else { return }
+            self.progressAnimDuration = remaining
+            self.playbackProgress = 1
+        }
     }
 
     private func removeTimeObserver() {
