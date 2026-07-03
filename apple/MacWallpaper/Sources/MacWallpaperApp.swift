@@ -24,8 +24,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         WallpaperLog.shared.log("app", "=== launch === pid=\(ProcessInfo.processInfo.processIdentifier) screens=\(NSScreen.screens.count) log=\(WallpaperLog.shared.fileURL.path)")
-        let model      = WallpaperPlayerModel()
-        let controller = WallpaperWindowController(model: model)
+        // One independent player model per display is created inside the
+        // controller, so every monitor shows video (each its own shuffle).
+        let controller = WallpaperWindowController()
         let bar        = StatusBarController(wallpaper: controller)
 
         wallpaper = controller

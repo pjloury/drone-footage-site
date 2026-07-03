@@ -72,8 +72,16 @@ final class WallpaperPlayerModel: NSObject {
     private var lastProgressTime: Double = -1
     private var lastProgressWall = Date()
     private var loggedStall = false
+    private var progressLogTick = 0
+
+    // Per-instance tag for the shared log — with one model per display, log
+    // lines are useless unless we can tell which display they came from.
+    private static var nextInstanceId = 0
+    let mid: Int
 
     override init() {
+        Self.nextInstanceId += 1
+        mid = Self.nextInstanceId
         super.init()
         playerA.isMuted = true
         playerB.isMuted = true
@@ -139,8 +147,12 @@ final class WallpaperPlayerModel: NSObject {
         startCrossfade(to: idx, duration: manualFadeDuration)
     }
 
-    func pause()  { frontPlayer.pause(); updateStatus() }
-    func resume() { frontPlayer.play();  updateStatus() }
+    // The watchdog must ignore a pause the USER asked for, but a pause the
+    // system imposed (e.g. clip ran to its end because auto-fade never armed)
+    // is a freeze it must recover from — so track user intent explicitly.
+    private(set) var isUserPaused = false
+    func pause()  { isUserPaused = true;  frontPlayer.pause(); updateStatus() }
+    func resume() { isUserPaused = false; frontPlayer.play();  updateStatus() }
     var isPlaying: Bool { frontPlayer.rate != 0 }
 
     /// Pause both players and stop the time observer. Used by the screensaver
@@ -160,7 +172,7 @@ final class WallpaperPlayerModel: NSObject {
 
         crossfadeGeneration += 1
         let gen = crossfadeGeneration
-        WallpaperLog.shared.log("xfade", "START gen=\(gen) to idx=\(targetIdx) video=\(queue[targetIdx].caption) dur=\(duration) isFrontA=\(isFrontA)")
+        WallpaperLog.shared.log("xfade", "m\(mid) START gen=\(gen) to idx=\(targetIdx) video=\(queue[targetIdx].caption) dur=\(duration) isFrontA=\(isFrontA)")
 
         removeTimeObserver()
         bufferingObservation?.invalidate()
@@ -190,7 +202,7 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     private func completeFade(to targetIdx: Int, video: DroneVideo) {
-        WallpaperLog.shared.log("xfade", "COMPLETE to idx=\(targetIdx) video=\(video.caption) togglingFrontA \(isFrontA)->\(!isFrontA)")
+        WallpaperLog.shared.log("xfade", "m\(mid) COMPLETE to idx=\(targetIdx) video=\(video.caption) togglingFrontA \(isFrontA)->\(!isFrontA)")
         frontPlayer.pause()
         frontPlayer.replaceCurrentItem(with: nil)
 
@@ -259,35 +271,50 @@ final class WallpaperPlayerModel: NSObject {
         loggedStall = false
     }
 
-    /// Wall-clock stall check: if the front clip should be playing but its
-    /// currentTime hasn't advanced for a few seconds, skip to the next clip.
+    /// Wall-clock stall check: if the front clip should be showing motion but
+    /// currentTime isn't advancing, skip to the next clip. Covers every
+    /// non-advancing state EXCEPT a deliberate user pause:
+    ///  - buffering underrun (rate>0, time frozen)
+    ///  - item that never reaches .readyToPlay (load wedged — must NOT reset
+    ///    the baseline here, or the watchdog can never fire; that hole caused
+    ///    a days-long freeze)
+    ///  - clip ran to its end because auto-fade never armed (system pause)
     private func checkStall() {
         guard !isCrossfading else { resetStallBaseline(); return }
-        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else {
-            resetStallBaseline(); return
-        }
-        // A deliberately paused player (user hit Pause) isn't a stall.
-        guard frontPlayer.timeControlStatus != .paused else { return }
+        guard frontPlayer.currentItem != nil else { resetStallBaseline(); return }
+        guard !isUserPaused else { return }
 
+        let item = frontPlayer.currentItem
+        let ready = item?.status == .readyToPlay
         let now = frontPlayer.currentTime().seconds
-        guard now.isFinite else { return }
 
-        if now > lastProgressTime + 0.1 {          // advancing — reset the clock
+        // Periodic progress trace (~30s) so the log shows per-display truth.
+        progressLogTick += 1
+        if progressLogTick % 30 == 1 {
+            let dur = item?.duration.seconds ?? .nan
+            WallpaperLog.shared.log("m\(mid)",
+                "progress t=\(String(format: "%.1f", now))/\(String(format: "%.1f", dur)) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) rate=\(frontPlayer.rate) ready=\(ready) keepUp=\(item?.isPlaybackLikelyToKeepUp ?? false)")
+        }
+
+        // Advancing (and finite) — reset the clock and we're healthy.
+        if ready, now.isFinite, now > lastProgressTime + 0.1 {
             lastProgressTime = now
             lastProgressWall = Date()
             loggedStall = false
             return
         }
 
+        // Not advancing (buffer-starved, never-ready, or ended): let wall-clock
+        // time accumulate toward the skip.
         let stuckFor = Date().timeIntervalSince(lastProgressWall)
         if stuckFor >= 2 && !loggedStall {
             loggedStall = true
             WallpaperLog.shared.log("stall",
-                "front not advancing ~\(Int(stuckFor))s at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) keepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
+                "m\(mid) not advancing ~\(Int(stuckFor))s at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) ready=\(ready) keepUp=\(item?.isPlaybackLikelyToKeepUp ?? false) bufEmpty=\(item?.isPlaybackBufferEmpty ?? false)")
         }
-        if stuckFor >= 6 {                          // stuck 6s → skip it
+        if stuckFor >= 8 {                          // stuck 8s → skip it
             WallpaperLog.shared.log("stall",
-                "skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
+                "m\(mid) skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
             resetStallBaseline()
             let nextIdx = (currentIndex + 1) % queue.count
             startCrossfade(to: nextIdx, duration: manualFadeDuration)
