@@ -1,0 +1,592 @@
+{
+  "version": 1,
+  "videos": [
+    {
+      "id": 2,
+      "caption": "Good Morning Stanford",
+      "category": "cities",
+      "lat": 37.43,
+      "lng": -122.17,
+      "noPin": true
+    },
+    {
+      "id": 3,
+      "caption": "Snowy Tahoe Treetops",
+      "category": "mountains",
+      "lat": 39.1,
+      "lng": -120.04
+    },
+    {
+      "id": 4,
+      "caption": "Carmel Waves at Dusk",
+      "category": "coastal",
+      "lat": 36.55,
+      "lng": -121.92
+    },
+    {
+      "id": 5,
+      "caption": "Financial District",
+      "category": "cities",
+      "lat": 37.72,
+      "lng": -122.42
+    },
+    {
+      "id": 6,
+      "caption": "Heavenly Palo Alto",
+      "category": "cities",
+      "lat": 37.44,
+      "lng": -122.14,
+      "noPin": true
+    },
+    {
+      "id": 7,
+      "caption": "Telegraph Hill",
+      "category": "cities",
+      "lat": 37.8,
+      "lng": -122.41,
+      "noPin": true
+    },
+    {
+      "id": 8,
+      "caption": "Stanford Sunset",
+      "category": "cities",
+      "lat": 37.43,
+      "lng": -122.17,
+      "noPin": true
+    },
+    {
+      "id": 10,
+      "caption": "Los Altos Hills",
+      "category": "cities",
+      "lat": 37.38,
+      "lng": -122.14,
+      "noPin": true
+    },
+    {
+      "id": 11,
+      "caption": "Sterling Vineyard",
+      "category": "mountains",
+      "lat": 38.59,
+      "lng": -122.6
+    },
+    {
+      "id": 12,
+      "caption": "Washington Square, North Beach",
+      "category": "cities",
+      "lat": 37.8,
+      "lng": -122.41,
+      "noPin": true
+    },
+    {
+      "id": 13,
+      "caption": "New Office Site",
+      "category": "cities",
+      "lat": 37.4,
+      "lng": -122.11,
+      "noPin": true
+    },
+    {
+      "id": 14,
+      "caption": "Bay to Breakers",
+      "category": "cities",
+      "lat": 37.77,
+      "lng": -122.45,
+      "noPin": true
+    },
+    {
+      "id": 15,
+      "caption": "Wailea, Maui",
+      "category": "coastal",
+      "lat": 20.69,
+      "lng": -156.44
+    },
+    {
+      "id": 16,
+      "caption": "Hvar, Croatia",
+      "category": "coastal",
+      "lat": 43.17,
+      "lng": 16.44
+    },
+    {
+      "id": 17,
+      "caption": "Sather Tower, Berkeley",
+      "category": "cities",
+      "lat": 37.87,
+      "lng": -122.26
+    },
+    {
+      "id": 18,
+      "caption": "Villa Collina",
+      "category": "cities",
+      "lat": 37.4,
+      "lng": -122.12,
+      "noPin": true
+    },
+    {
+      "id": 19,
+      "caption": "Waves",
+      "category": "coastal",
+      "lat": 36.55,
+      "lng": -121.95,
+      "noPin": true
+    },
+    {
+      "id": 20,
+      "caption": "Venice Canals",
+      "category": "cities",
+      "lat": 33.98,
+      "lng": -118.47
+    },
+    {
+      "id": 21,
+      "caption": "University of San Francisco",
+      "category": "cities",
+      "lat": 37.78,
+      "lng": -122.45,
+      "noPin": true
+    },
+    {
+      "id": 22,
+      "caption": "Old Valencia, Spain",
+      "category": "cities",
+      "lat": 39.47,
+      "lng": -0.38
+    },
+    {
+      "id": 23,
+      "caption": "Arches National Park",
+      "category": "desert",
+      "lat": 38.73,
+      "lng": -109.59
+    },
+    {
+      "id": 24,
+      "caption": "Mont Saint-Michel, France",
+      "category": "coastal",
+      "lat": 48.64,
+      "lng": -1.51
+    },
+    {
+      "id": 26,
+      "caption": "Salzburg, Austria",
+      "category": "cities",
+      "lat": 47.8,
+      "lng": 13.04
+    },
+    {
+      "id": 27,
+      "caption": "Park City Morning, Utah",
+      "category": "mountains",
+      "lat": 40.65,
+      "lng": -111.5
+    },
+    {
+      "id": 29,
+      "caption": "Canyonlands National Park",
+      "category": "desert",
+      "lat": 38.33,
+      "lng": -109.88
+    },
+    {
+      "id": 30,
+      "caption": "Vogelsang Lake, Yosemite",
+      "category": "mountains",
+      "lat": 37.78,
+      "lng": -119.35
+    },
+    {
+      "id": 31,
+      "caption": "Austria",
+      "category": "mountains",
+      "lat": 47.5,
+      "lng": 13.5
+    },
+    {
+      "id": 32,
+      "caption": "Almaden Green",
+      "category": "cities",
+      "lat": 37.24,
+      "lng": -121.86,
+      "noPin": true
+    },
+    {
+      "id": 33,
+      "caption": "Mont Saint-Michel",
+      "category": "coastal",
+      "lat": 48.64,
+      "lng": -1.51
+    },
+    {
+      "id": 34,
+      "caption": "SF Lunar New Year",
+      "category": "cities",
+      "lat": 37.79,
+      "lng": -122.41,
+      "noPin": true
+    },
+    {
+      "id": 35,
+      "caption": "Big Sur Hills",
+      "category": "coastal",
+      "lat": 36.27,
+      "lng": -121.81
+    },
+    {
+      "id": 36,
+      "caption": "Fort Funston",
+      "category": "coastal",
+      "lat": 37.72,
+      "lng": -122.5
+    },
+    {
+      "id": 37,
+      "caption": "Fort Funston & Golden Gate",
+      "category": "coastal",
+      "lat": 37.72,
+      "lng": -122.5
+    },
+    {
+      "id": 39,
+      "caption": "Mont Saint-Michel",
+      "category": "coastal",
+      "lat": 48.64,
+      "lng": -1.51
+    },
+    {
+      "id": 40,
+      "caption": "Neuschwanstein Castle, Germany",
+      "category": "mountains",
+      "lat": 47.56,
+      "lng": 10.75
+    },
+    {
+      "id": 41,
+      "caption": "Park City, Utah",
+      "category": "mountains",
+      "lat": 40.65,
+      "lng": -111.5
+    },
+    {
+      "id": 42,
+      "caption": "Golden Gate Bridge",
+      "category": "cities",
+      "lat": 37.82,
+      "lng": -122.48,
+      "noPin": true
+    },
+    {
+      "id": 43,
+      "caption": "Balearic Islands, Spain",
+      "category": "coastal",
+      "lat": 39.57,
+      "lng": 2.65
+    },
+    {
+      "id": 44,
+      "caption": "Mont Saint-Michel",
+      "category": "coastal",
+      "lat": 48.64,
+      "lng": -1.51
+    },
+    {
+      "id": 45,
+      "caption": "Drifting Away",
+      "category": "coastal",
+      "lat": -50.34,
+      "lng": -72.27
+    },
+    {
+      "id": 46,
+      "caption": "Laguna de los Tres, Patagonia",
+      "category": "mountains",
+      "lat": -49.33,
+      "lng": -72.99
+    },
+    {
+      "id": 47,
+      "caption": "Canyonlands",
+      "category": "desert",
+      "lat": 38.33,
+      "lng": -109.88
+    },
+    {
+      "id": 48,
+      "caption": "Ka\\u02bbanapali Surf, Maui",
+      "category": "coastal",
+      "lat": 20.93,
+      "lng": -156.69
+    },
+    {
+      "id": 49,
+      "caption": "Copacabana, Brazil",
+      "category": "coastal",
+      "lat": -22.97,
+      "lng": -43.18
+    },
+    {
+      "id": 50,
+      "caption": "Palma, Mallorca",
+      "category": "cities",
+      "lat": 39.57,
+      "lng": 2.65
+    },
+    {
+      "id": 51,
+      "caption": "Fuschl am See, Austria",
+      "category": "mountains",
+      "lat": 47.8,
+      "lng": 13.29
+    },
+    {
+      "id": 52,
+      "caption": "Moab, Utah",
+      "category": "desert",
+      "lat": 38.57,
+      "lng": -109.55
+    },
+    {
+      "id": 53,
+      "caption": "Carmel-by-the-Sea",
+      "category": "coastal",
+      "lat": 36.55,
+      "lng": -121.92
+    },
+    {
+      "id": 54,
+      "caption": "Garrapata State Park",
+      "category": "coastal",
+      "lat": 36.47,
+      "lng": -121.92
+    },
+    {
+      "id": 55,
+      "caption": "Arches National Park",
+      "category": "desert",
+      "lat": 38.73,
+      "lng": -109.59
+    },
+    {
+      "id": 56,
+      "caption": "Wailea South, Maui",
+      "category": "coastal",
+      "lat": 20.67,
+      "lng": -156.44
+    },
+    {
+      "id": 57,
+      "caption": "Red Rocks",
+      "category": "desert",
+      "lat": 39.67,
+      "lng": -105.2
+    },
+    {
+      "id": 58,
+      "caption": "Alviso Salt Marsh",
+      "category": "desert",
+      "lat": 37.43,
+      "lng": -121.97,
+      "noPin": true
+    },
+    {
+      "id": 59,
+      "caption": "UC Berkeley Campus",
+      "category": "cities",
+      "lat": 37.87,
+      "lng": -122.26,
+      "noPin": true
+    },
+    {
+      "id": 60,
+      "caption": "SF Embarcadero",
+      "category": "cities",
+      "lat": 37.85,
+      "lng": -122.38
+    },
+    {
+      "id": 61,
+      "caption": "Stanford Main Quad",
+      "category": "cities",
+      "lat": 37.43,
+      "lng": -122.17
+    },
+    {
+      "id": 62,
+      "caption": "Sather Tower, Berkeley",
+      "category": "cities",
+      "lat": 37.87,
+      "lng": -122.26,
+      "noPin": true
+    },
+    {
+      "id": 63,
+      "caption": "Albanian Alps",
+      "category": "mountains",
+      "lat": 42.41,
+      "lng": 19.79,
+      "noPin": true
+    },
+    {
+      "id": 64,
+      "caption": "Kotor, Montenegro",
+      "category": "coastal",
+      "lat": 42.43,
+      "lng": 18.77
+    },
+    {
+      "id": 65,
+      "caption": "Deer Valley, Utah",
+      "category": "mountains",
+      "lat": 40.63,
+      "lng": -111.48
+    },
+    {
+      "id": 66,
+      "caption": "Denver, Colorado",
+      "category": "cities",
+      "lat": 39.74,
+      "lng": -104.98
+    },
+    {
+      "id": 67,
+      "caption": "Dubrovnik, Croatia",
+      "category": "coastal",
+      "lat": 42.65,
+      "lng": 18.09
+    },
+    {
+      "id": 68,
+      "caption": "Grand Baths, Budapest",
+      "category": "cities",
+      "lat": 47.51,
+      "lng": 19.05
+    },
+    {
+      "id": 69,
+      "caption": "Hoʻokipa Beach, Maui",
+      "category": "coastal",
+      "lat": 20.94,
+      "lng": -156.34
+    },
+    {
+      "id": 70,
+      "caption": "Bay of Kotor, Montenegro",
+      "category": "coastal",
+      "lat": 42.43,
+      "lng": 18.77,
+      "noPin": true
+    },
+    {
+      "id": 71,
+      "caption": "Lands End, San Francisco",
+      "category": "coastal",
+      "lat": 37.78,
+      "lng": -122.51,
+      "noPin": true
+    },
+    {
+      "id": 72,
+      "caption": "Maui Lava Coast",
+      "category": "coastal",
+      "lat": 20.8,
+      "lng": -156.5,
+      "noPin": true
+    },
+    {
+      "id": 73,
+      "caption": "Ocean Beach, San Francisco",
+      "category": "coastal",
+      "lat": 37.76,
+      "lng": -122.51
+    },
+    {
+      "id": 74,
+      "caption": "Old Town Dubrovnik",
+      "category": "cities",
+      "lat": 42.65,
+      "lng": 18.09,
+      "noPin": true
+    },
+    {
+      "id": 75,
+      "caption": "Port Novi, Montenegro",
+      "category": "coastal",
+      "lat": 42.45,
+      "lng": 18.68
+    },
+    {
+      "id": 76,
+      "caption": "Schönbrunn Palace, Vienna",
+      "category": "cities",
+      "lat": 48.18,
+      "lng": 16.31
+    },
+    {
+      "id": 77,
+      "caption": "Theth, Albania at Sunset",
+      "category": "mountains",
+      "lat": 42.41,
+      "lng": 19.79,
+      "noPin": true
+    },
+    {
+      "id": 78,
+      "caption": "Theth Summit, Albania",
+      "category": "mountains",
+      "lat": 42.45,
+      "lng": 19.85
+    },
+    {
+      "id": 79,
+      "caption": "Theth Sunrise, Albania",
+      "category": "mountains",
+      "lat": 42.41,
+      "lng": 19.79,
+      "noPin": true
+    },
+    {
+      "id": 80,
+      "caption": "Tivat, Montenegro",
+      "category": "coastal",
+      "lat": 42.44,
+      "lng": 18.7,
+      "noPin": true
+    },
+    {
+      "id": 81,
+      "caption": "Walled City of Dubrovnik",
+      "category": "cities",
+      "lat": 42.64,
+      "lng": 18.11,
+      "noPin": true
+    },
+    {
+      "id": 82,
+      "caption": "West Maui Coastline",
+      "category": "coastal",
+      "lat": 20.88,
+      "lng": -156.5
+    },
+    {
+      "id": 83,
+      "caption": "Yosemite Falls",
+      "category": "mountains",
+      "lat": 37.754,
+      "lng": -119.597
+    },
+    {
+      "id": 84,
+      "caption": "Yosemite Valley at Twilight",
+      "category": "mountains",
+      "lat": 37.745,
+      "lng": -119.587,
+      "noPin": true
+    },
+    {
+      "id": 85,
+      "caption": "Yosemite Valley",
+      "category": "mountains",
+      "lat": 37.745,
+      "lng": -119.587
+    }
+  ]
+}

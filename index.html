@@ -759,7 +759,7 @@ const BASE_URL = "https://videos.pjloury.com";
 const POSTHOG_KEY  = "phc_701yGTQYGk4qFNHVrtD7OkkRUTKC430N7psMw524Rl3";
 const POSTHOG_HOST = "https://us.i.posthog.com"; // EU: "https://eu.i.posthog.com"
 
-const VIDEOS = [
+let VIDEOS = [
   // { file: "video-01.mp4", caption: "Woodside Mansion"                  },
   { file: "video-02.mp4", caption: "Good Morning Stanford"              },
   { file: "video-03.mp4", caption: "Snowy Tahoe Treetops"               },
@@ -1856,14 +1856,14 @@ if (DEBUG_MODE) {
 //  SECTIONS & MINI MAP
 // ═══════════════════════════════════════════════════════════
 
-const SECTIONS = [
+let SECTIONS = [
   { id: "cities",    name: "Cities" },
   { id: "coastal",   name: "Coastal" },
   { id: "mountains", name: "Mountains" },
   { id: "desert",    name: "Desert" },
 ];
 
-const VIDEO_META = {
+let VIDEO_META = {
   // ── Coastal ──────────────────────────────────────────────
   "video-04.mp4": { section: "coastal",   lat: 36.55,  lng: -121.92 },  // Carmel Waves at Dusk
   "video-15.mp4": { section: "coastal",   lat: 20.69,  lng: -156.44 },  // Wailea, Maui
@@ -1953,11 +1953,62 @@ const VIDEO_META = {
   "video-85.mp4": { section: "mountains", lat: 37.745, lng: -119.587 },  // Yosemite Valley ✓ pin
 };
 
-// Enrich VIDEOS with section + coordinates
-VIDEOS.forEach(v => { const m = VIDEO_META[v.file]; if (m) Object.assign(v, m); });
+// Master copy for reordering (shuffle mutates VIDEOS in-place).
+// Rebuilt by buildCatalog() after the cloud manifest loads (or from the
+// bundled fallback literals above if the fetch fails).
+let MASTER_VIDEOS = [];
 
-// Master copy for reordering (shuffle mutates VIDEOS in-place)
-const MASTER_VIDEOS = VIDEOS.map(v => ({...v}));
+const fileForId = id => `video-${String(id).padStart(2, "0")}.mp4`;
+
+// Replace the hardcoded VIDEOS / VIDEO_META / SECTIONS with the cloud
+// manifest (catalog.json on R2). On any failure we keep the bundled
+// fallback literals, so the app is never empty. See tools/upload_catalog.sh.
+async function loadCatalog() {
+  try {
+    // Same-origin: catalog.json is deployed alongside the site (and also
+    // uploaded to R2 for the native apps). Same-origin avoids a CORS
+    // dependency on the R2 bucket. Updates ship with the site deploy.
+    const res = await fetch("catalog.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (!data || !Array.isArray(data.videos) || !data.videos.length)
+      throw new Error("empty catalog");
+
+    VIDEOS = data.videos.map(v => ({ file: fileForId(v.id), caption: v.caption }));
+    VIDEO_META = {};
+    for (const v of data.videos) {
+      VIDEO_META[fileForId(v.id)] = {
+        section: v.category, lat: v.lat, lng: v.lng,
+        ...(v.noPin ? { noPin: true } : {}),
+      };
+    }
+    // Data-driven categories: distinct category values in first-seen order.
+    const seen = new Set();
+    SECTIONS = [];
+    for (const v of data.videos) {
+      if (v.category && !seen.has(v.category)) {
+        seen.add(v.category);
+        SECTIONS.push({ id: v.category,
+          name: v.category.charAt(0).toUpperCase() + v.category.slice(1) });
+      }
+    }
+    console.log(`[catalog] loaded ${VIDEOS.length} videos from cloud`);
+  } catch (e) {
+    console.warn("[catalog] fetch failed, using bundled fallback:", e);
+  }
+}
+
+// Enrich VIDEOS with section + coordinates and rebuild the master copy.
+function buildCatalog() {
+  VIDEOS.forEach(v => { const m = VIDEO_META[v.file]; if (m) Object.assign(v, m); });
+  MASTER_VIDEOS = VIDEOS.map(v => ({ ...v }));
+  window.VIDEOS = VIDEOS;
+}
+
+// Build synchronously from the bundled fallback right away, so all the
+// module-load startup code (applyPlaybackMode, _startIdx, …) has a populated
+// catalog. The bootstrap below rebuilds this from the cloud manifest.
+buildCatalog();
 
 let playbackMode = "shuffle";
 let sectionMenuOpen = false;
@@ -2517,7 +2568,14 @@ function init() {
   setTimeout(() => { spinner.classList.add("gone"); begin(); }, 6000);
 }
 
-init();
+// Load the cloud manifest (falls back to the bundled literals on failure),
+// rebuild the catalog + re-apply the current mode order, then start the app.
+(async () => {
+  await loadCatalog();
+  buildCatalog();
+  applyPlaybackMode(playbackMode);
+  init();
+})();
 
 // ── Welcome overlay — dock to top-left after 30s ─────────
 const welcomeEl = document.getElementById("welcome");
