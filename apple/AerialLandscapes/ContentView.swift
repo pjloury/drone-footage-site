@@ -15,6 +15,15 @@ struct ContentView: View {
         PlayerContainerView(model: model)
             .ignoresSafeArea()
             .background(Color.black)
+            .task {
+                // Pull the shared cloud catalog (coords + labels common to the
+                // website and Mac apps). The model already started from the
+                // bundled fallback; only rebuild if the set of videos changed,
+                // so a coordinate-identical launch doesn't interrupt playback.
+                if await VideoConfig.load() {
+                    model.loadSection(model.committedSection)
+                }
+            }
     }
 }
 

@@ -35,7 +35,9 @@ struct VideoConfig {
 
     /// Fetch the shared cloud catalog; keep the current data on any failure.
     /// Returns true if the set of video ids changed (worth rebuilding the queue).
-    @discardableResult
+    /// Main-actor isolated so mutating `allVideos` can't race the player model
+    /// reading it on the main thread.
+    @discardableResult @MainActor
     static func load() async -> Bool {
         guard let url = URL(string: "\(R2)/catalog.json") else { return false }
         var req = URLRequest(url: url)
