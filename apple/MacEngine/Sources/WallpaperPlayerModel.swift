@@ -83,7 +83,18 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     func start() {
+        // Start immediately from the bundled fallback so there's no launch
+        // delay, then upgrade to the cloud catalog in the background. If it
+        // brings new videos, reshuffle the queue so they enter rotation (the
+        // currently-playing clip keeps going).
         loadInitial()
+        Task { @MainActor [weak self] in
+            let changed = await VideoPlaylist.load()
+            guard let self, changed, !self.queue.isEmpty else { return }
+            self.queue = VideoPlaylist.shuffled()
+            self.currentIndex = 0
+            self.preloadBack()
+        }
     }
 
 

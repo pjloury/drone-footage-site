@@ -9,8 +9,34 @@ struct DroneVideo: Sendable {
     var posterURL:  URL { URL(string: "\(base)-poster.jpg")! }
 }
 
+private struct CatalogVideo: Decodable { let id: Int; let caption: String }
+private struct CatalogFile: Decodable { let videos: [CatalogVideo] }
+
 enum VideoPlaylist {
-    static let all: [DroneVideo] = [
+    /// Live catalog — starts from the bundled fallback, replaced by the cloud
+    /// manifest (videos.pjloury.com/catalog.json) via load() at startup so new
+    /// videos appear with no app update.
+    static var catalog: [DroneVideo] = fallback
+
+    /// Fetch the cloud manifest; keep current data on any failure. Returns true
+    /// if the set of video ids changed.
+    @discardableResult
+    static func load() async -> Bool {
+        guard let url = URL(string: "https://videos.pjloury.com/catalog.json") else { return false }
+        var req = URLRequest(url: url)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.timeoutInterval = 5
+        do {
+            let (data, _) = try await URLSession.shared.data(for: req)
+            let file = try JSONDecoder().decode(CatalogFile.self, from: data)
+            guard !file.videos.isEmpty else { return false }
+            let changed = Set(file.videos.map(\.id)) != Set(catalog.map(\.id))
+            catalog = file.videos.map { DroneVideo(id: $0.id, caption: $0.caption) }
+            return changed
+        } catch { return false }
+    }
+
+    static let fallback: [DroneVideo] = [
         DroneVideo(id: 2,  caption: "Good Morning Stanford"),
         DroneVideo(id: 3,  caption: "Snowy Tahoe Treetops"),
         DroneVideo(id: 4,  caption: "Carmel Waves at Dusk"),
@@ -102,6 +128,6 @@ enum VideoPlaylist {
     static let excludedHeavyIDs: Set<Int> = []
 
     static func shuffled() -> [DroneVideo] {
-        all.filter { !excludedHeavyIDs.contains($0.id) }.shuffled()
+        catalog.filter { !excludedHeavyIDs.contains($0.id) }.shuffled()
     }
 }
