@@ -62,12 +62,15 @@ final class WallpaperPlayerModel: NSObject {
     private var timeObserver: Any?
     private var timeObserverOwner: AVPlayer?
 
-    // Stall-watchdog state. Auto-advance is driven by currentTime approaching
-    // the clip end, so a frozen currentTime would otherwise NEVER advance —
-    // a stalled clip (e.g. a heavy high-bitrate desktop file underbuffering)
-    // freezes forever. This detects no-progress and skips to the next clip.
-    private var lastWatchdogTime: Double = -1
-    private var stalledTicks = 0
+    // Stall-watchdog state. A stalled clip (e.g. a buffer underrun) freezes
+    // forever otherwise: auto-advance only fires as currentTime nears the clip
+    // end, and — critically — this MUST run on a wall-clock timer, NOT AVPlayer's
+    // periodic time observer, because that observer stops firing the moment
+    // playback stalls (it's tied to the advancing timeline). The old
+    // observer-driven watchdog therefore never fired on a real stall.
+    private var stallTimer: Timer?
+    private var lastProgressTime: Double = -1
+    private var lastProgressWall = Date()
     private var loggedStall = false
 
     override init() {
@@ -240,48 +243,55 @@ final class WallpaperPlayerModel: NSObject {
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
             self?.updateStatus()
             self?.checkAutoFade()
-            self?.stallWatchdog()
         }
-        // Reset the watchdog baseline for the newly-front clip.
-        lastWatchdogTime = -1
-        stalledTicks = 0
+        // Stall detection runs on its own wall-clock timer so it keeps checking
+        // even when playback (and the time observer above) is frozen.
+        resetStallBaseline()
+        stallTimer?.invalidate()
+        stallTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkStall()
+        }
+    }
+
+    private func resetStallBaseline() {
+        lastProgressTime = -1
+        lastProgressWall = Date()
         loggedStall = false
     }
 
-    /// Detect a frozen front clip (playing, but currentTime not advancing) and
-    /// skip past it. Without this a stalled heavy clip freezes indefinitely,
-    /// because auto-advance only fires as currentTime nears the clip end.
-    private func stallWatchdog() {
-        guard !isCrossfading else { lastWatchdogTime = -1; stalledTicks = 0; return }
-        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return }
+    /// Wall-clock stall check: if the front clip should be playing but its
+    /// currentTime hasn't advanced for a few seconds, skip to the next clip.
+    private func checkStall() {
+        guard !isCrossfading else { resetStallBaseline(); return }
+        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else {
+            resetStallBaseline(); return
+        }
+        // A deliberately paused player (user hit Pause) isn't a stall.
+        guard frontPlayer.timeControlStatus != .paused else { return }
+
         let now = frontPlayer.currentTime().seconds
         guard now.isFinite else { return }
 
-        if lastWatchdogTime >= 0 {
-            let advanced = now - lastWatchdogTime
-            // We want it playing (rate > 0) but currentTime isn't moving.
-            if frontPlayer.rate > 0 && advanced < 0.05 {
-                stalledTicks += 1
-                if stalledTicks == 4 && !loggedStall {   // ~1s
-                    loggedStall = true
-                    WallpaperLog.shared.log("stall",
-                        "front frozen at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) keepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
-                }
-                if stalledTicks >= 16 {                  // ~4s stuck → skip it
-                    WallpaperLog.shared.log("stall",
-                        "skipping frozen clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
-                    stalledTicks = 0
-                    loggedStall = false
-                    let nextIdx = (currentIndex + 1) % queue.count
-                    startCrossfade(to: nextIdx, duration: manualFadeDuration)
-                    return
-                }
-            } else if advanced >= 0.05 {
-                stalledTicks = 0
-                loggedStall = false
-            }
+        if now > lastProgressTime + 0.1 {          // advancing — reset the clock
+            lastProgressTime = now
+            lastProgressWall = Date()
+            loggedStall = false
+            return
         }
-        lastWatchdogTime = now
+
+        let stuckFor = Date().timeIntervalSince(lastProgressWall)
+        if stuckFor >= 2 && !loggedStall {
+            loggedStall = true
+            WallpaperLog.shared.log("stall",
+                "front not advancing ~\(Int(stuckFor))s at t=\(String(format: "%.2f", now)) idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) keepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
+        }
+        if stuckFor >= 6 {                          // stuck 6s → skip it
+            WallpaperLog.shared.log("stall",
+                "skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
+            resetStallBaseline()
+            let nextIdx = (currentIndex + 1) % queue.count
+            startCrossfade(to: nextIdx, duration: manualFadeDuration)
+        }
     }
 
     private func checkAutoFade() {
@@ -302,6 +312,8 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     private func removeTimeObserver() {
+        stallTimer?.invalidate()
+        stallTimer = nil
         if let obs = timeObserver, let owner = timeObserverOwner {
             owner.removeTimeObserver(obs)
         }
