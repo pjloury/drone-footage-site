@@ -112,6 +112,12 @@ final class WallpaperWindowController: NSObject {
             screen: screen
         )
         window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopWindow)) + 1)
+        // ARC owns this window (we keep it in `screens`). Programmatic NSWindows
+        // default isReleasedWhenClosed = true, so teardown's close() would
+        // release it once and dropping our reference would release it AGAIN —
+        // an over-release that crashes (EXC_BAD_ACCESS in objc_release) on the
+        // next autorelease-pool drain, e.g. when a display is added/removed.
+        window.isReleasedWhenClosed = false
         // No open/close animation: an animated close spawns an
         // _NSWindowTransformAnimation that can be over-released during the next
         // CoreAnimation transaction commit, crashing the app (EXC_BAD_ACCESS).
