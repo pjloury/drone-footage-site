@@ -130,6 +130,11 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     private var currentIndex = 0
     private var isCrossfading = false
     private var timeObserver: Any?
+    // The exact player the observer was attached to. AVFoundation raises a
+    // fatal exception if you remove a time observer from a *different* player
+    // than the one it was added to — and frontPlayer flips on every crossfade,
+    // so we must remember the owner rather than assume it's the current front.
+    private var timeObserverOwner: AVPlayer?
 
     static let manualCrossfadeDuration: TimeInterval = 1.5
     static let autoCrossfadeDuration:   TimeInterval = 4.0
@@ -240,6 +245,7 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         removeTimeObserver()
         let interval = CMTime(seconds: 0.25, preferredTimescale: 600)
         let observed = frontPlayer
+        timeObserverOwner = observed
         timeObserver = observed.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self, let item = observed.currentItem else { return }
             let dur = item.duration.seconds
@@ -250,8 +256,11 @@ final class AerialPlayerModel: NSObject, ObservableObject {
 
     private func removeTimeObserver() {
         if let obs = timeObserver {
-            frontPlayer.removeTimeObserver(obs)
+            // Remove from the player it was added to — never assume it's the
+            // current frontPlayer, which may have flipped during a crossfade.
+            (timeObserverOwner ?? frontPlayer).removeTimeObserver(obs)
             timeObserver = nil
+            timeObserverOwner = nil
         }
     }
 
