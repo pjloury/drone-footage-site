@@ -84,7 +84,7 @@ struct ContentView: View {
                         .padding(.horizontal, 6)
                         .background(Capsule().fill(Color.black.opacity(0.35)))
                     Menu {
-                        ForEach(PlaybackMode.allCases) { m in
+                        ForEach(model.availableModes) { m in
                             Button {
                                 selectMode(m)
                             } label: {
