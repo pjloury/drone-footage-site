@@ -161,26 +161,37 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     // MARK: Public
 
     func setMode(_ newMode: PlaybackMode) {
+        let isInitial = playlist.isEmpty
+        // Ignore a switch while a crossfade is already running (mirrors skip*())
+        // so transitions never stack. The initial setup always proceeds.
+        guard isInitial || !isCrossfading else { return }
+
         mode = newMode
         let urls = newMode.clipNumbers.map(AerialCatalog.mobileURL)
+        guard !urls.isEmpty else { return }
         playlist = urls
         activeURLs = Set(urls)
         currentIndex = 0
-        isCrossfading = false
-        isFrontA = true
 
-        // Instantly reset opacities without animation.
-        var t = Transaction(); t.disablesAnimations = true
-        withTransaction(t) { opacityA = 1; opacityB = 0 }
+        if isInitial {
+            // First run: nothing is playing yet, so start instantly.
+            isFrontA = true
+            var t = Transaction(); t.disablesAnimations = true
+            withTransaction(t) { opacityA = 1; opacityB = 0 }
 
-        frontPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[0]))
-        frontPlayer.seek(to: .zero)
-        frontPlayer.play()
-        updateTitle(for: urls[0])
-        startTimeObserver()
+            frontPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[0]))
+            frontPlayer.seek(to: .zero)
+            frontPlayer.play()
+            updateTitle(for: urls[0])
+            startTimeObserver()
 
-        if urls.count > 1 {
-            backPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[1]))
+            if urls.count > 1 {
+                backPlayer.replaceCurrentItem(with: AVPlayerItem(url: urls[1]))
+            }
+        } else {
+            // Switching category while playing: dissolve from the current clip
+            // into the new category's first clip, same as a manual skip.
+            crossfade(to: urls[0], duration: Self.manualCrossfadeDuration)
         }
     }
 

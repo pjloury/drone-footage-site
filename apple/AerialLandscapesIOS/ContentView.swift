@@ -2,15 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var model = AerialPlayerModel()
-    @State private var coverOpacity = 0.0
 
     private func selectMode(_ m: PlaybackMode) {
         guard m != model.mode else { return }
-        withAnimation(.easeInOut(duration: 0.35)) { coverOpacity = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            model.setMode(m)
-            withAnimation(.easeInOut(duration: 0.55)) { coverOpacity = 0 }
-        }
+        // setMode dissolves via the player-layer crossfade, so no black cover.
+        model.setMode(m)
     }
 
     var body: some View {
@@ -76,12 +72,6 @@ struct ContentView: View {
             }
             .ignoresSafeArea()
             .allowsHitTesting(false)
-
-            // Dissolve cover for category transitions.
-            Color.black
-                .opacity(coverOpacity)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
 
             // Category switcher — top right.
             // .animation(nil) prevents crossfade animations bleeding into the
