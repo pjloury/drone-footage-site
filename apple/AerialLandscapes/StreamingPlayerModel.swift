@@ -159,7 +159,7 @@ class StreamingPlayerModel: ObservableObject {
     private var loggedStuck = false
 
     static let autoDuration:   TimeInterval = 4.0
-    static let manualDuration: TimeInterval = 1.5   // slightly longer for buffering headroom
+    static let manualDuration: TimeInterval = 4.0   // uniform 4s fade across all platforms/triggers
     // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
     static let limitPlayTime = true
     static let maxPlaySeconds: TimeInterval = 60

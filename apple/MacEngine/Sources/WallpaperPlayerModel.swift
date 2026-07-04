@@ -10,8 +10,8 @@
 import AVFoundation
 import Foundation
 
-private let autoFadeDuration:   TimeInterval = 5.0
-private let manualFadeDuration: TimeInterval = 2.0
+private let autoFadeDuration:   TimeInterval = 4.0   // uniform 4s fade across all platforms/triggers
+private let manualFadeDuration: TimeInterval = 4.0
 // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
 private let limitPlayTime = true
 private let maxPlaySeconds: TimeInterval = 60
