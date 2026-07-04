@@ -106,8 +106,17 @@ class StreamingPlayerModel: ObservableObject {
     /// view samples this via TimelineView(.animation), so the bar is exactly
     /// as smooth as the video itself: it freezes automatically when the feed
     /// stalls and never needs reset/pause/resume bookkeeping.
+    ///
+    /// During a crossfade the outgoing clip's bar keeps advancing while the
+    /// overlay fades out (so the forward motion never visibly stops or jumps
+    /// back); once the overlay has fully faded (overlayFadeDuration in), it
+    /// returns 0 while still invisible, so the bar fades back in empty for
+    /// the new clip with no backwards animation.
     var progressFraction: Double {
-        guard !isCrossfading else { return 0 }
+        if isCrossfading,
+           Date().timeIntervalSince(crossfadeStartedAt) >= Self.overlayFadeDuration {
+            return 0
+        }
         guard let effectiveDur = effectivePlayDuration() else { return 0 }
         let cur = frontPlayer.currentTime().seconds
         guard cur.isFinite else { return 0 }
@@ -128,6 +137,9 @@ class StreamingPlayerModel: ObservableObject {
     // ── Crossfade state ───────────────────────────────────────────────────
     private var crossfadeGeneration = 0
     private(set) var isCrossfading = false
+    /// When the in-progress crossfade began — gates progressFraction's reset
+    /// to after the overlay has finished fading out.
+    private var crossfadeStartedAt = Date.distantPast
     private var autoFadeArmed  = false
 
     private var timeObserver: Any?
@@ -301,9 +313,10 @@ class StreamingPlayerModel: ObservableObject {
         // Fade the whole overlay OUT immediately (web adds `.fade` at the
         // very start of the transition, before the new clip even buffers).
         overlayVisible = false
-        // progressFraction returns 0 for the whole crossfade (isCrossfading),
-        // so the bar empties while invisible and fades back in from 0 for the
-        // new clip.
+        // The bar keeps advancing while the overlay fades out, then
+        // progressFraction returns 0 (while invisible) for the rest of the
+        // crossfade — see progressFraction.
+        crossfadeStartedAt = Date()
 
         if !reusePreloaded {
             guard let url = targetURL else { isCrossfading = false; return }

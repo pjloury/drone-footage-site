@@ -37,8 +37,8 @@ struct PlayerOverlayView: View {
             GeometryReader { geo in
                 TimelineView(.animation) { _ in
                     ZStack(alignment: .leading) {
-                        Rectangle().fill(Color.white.opacity(0.08))
-                        Rectangle().fill(Color.white.opacity(0.35))
+                        Rectangle().fill(Color.white.opacity(0.11))
+                        Rectangle().fill(Color.white.opacity(0.50))
                             .frame(width: max(0, geo.size.width * CGFloat(model.progressFraction)))
                     }
                 }
