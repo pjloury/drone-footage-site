@@ -43,7 +43,7 @@ struct PlayerOverlayView: View {
                     }
                 }
             }
-            .frame(height: 5)
+            .frame(height: 7)
         }
         .ignoresSafeArea()
         .opacity(model.overlayVisible ? 1 : 0)
