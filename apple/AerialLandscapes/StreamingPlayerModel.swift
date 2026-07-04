@@ -120,12 +120,10 @@ class StreamingPlayerModel: ObservableObject {
         guard let effectiveDur = effectivePlayDuration() else { return 0 }
         let cur = frontPlayer.currentTime().seconds
         guard cur.isFinite else { return 0 }
-        // Fill toward the moment the auto-crossfade STARTS (autoDuration before
-        // the effective end), not the clip end itself — so the bar visibly
-        // reaches the right edge of the screen just as the fade-out begins,
-        // instead of vanishing at ~93%.
-        let fillWindow = max(1, effectiveDur - Self.autoDuration)
-        return min(1, max(0, cur / fillWindow))
+        // The auto-crossfade starts AT the effective end (universal semantic,
+        // matching web), so the bar reaches the right edge exactly as the
+        // fade-out begins.
+        return min(1, max(0, cur / effectiveDur))
     }
 
     // ── Sections ──────────────────────────────────────────────────────────
@@ -523,16 +521,19 @@ class StreamingPlayerModel: ObservableObject {
               item.status == .readyToPlay else { return }
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
-        // Cap each clip at maxPlaySeconds when the play-time limit is on, so the
-        // auto-fade arms before the cap and the crossfade completes at it.
+        // Universal semantic (matches web): the fade STARTS at the effective
+        // end (the 60s cap, or the clip's natural end if shorter) and the clip
+        // keeps playing underneath it. The progress bar therefore fills the
+        // whole window and reaches 100% as the fade begins.
         let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
         let rem = effectiveDur - elapsed
-        guard dur.isFinite, dur > 0, rem > 0 else { return }
+        guard dur.isFinite, dur > 0 else { return }
 
-        // Production: fire ~4 s before the clip's natural end.
+        // Production: fire when the effective end is reached (0.25s = one
+        // time-observer tick of slack; no lower bound so a late tick still fires).
         // Fast test mode: fire 3 s in with a quick 1 s fade, so the
         // auto-advance is observable in seconds for any clip length.
-        let shouldFade = fastAutoFade ? (elapsed >= 3.0) : (rem <= Self.autoDuration + 0.2)
+        let shouldFade = fastAutoFade ? (elapsed >= 3.0) : (rem <= 0.25)
         guard shouldFade else { return }
 
         xfadeLog.notice("checkAutoFade TRIGGER elapsed=\(elapsed, format: .fixed(precision: 1)) dur=\(dur, format: .fixed(precision: 1)) rem=\(rem, format: .fixed(precision: 1)) idx=\(self.currentQueueIndex) preview=\(self.isPreviewMode)")
