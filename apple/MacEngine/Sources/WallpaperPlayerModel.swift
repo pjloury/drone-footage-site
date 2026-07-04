@@ -15,7 +15,16 @@ private let manualFadeDuration: TimeInterval = 4.0
 // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
 private let limitPlayTime = true
 private let maxPlaySeconds: TimeInterval = 60
-private let desktopFallbackDelay: TimeInterval = 5.0
+// Unified buffer-readiness timeout before a crossfade proceeds anyway
+// (same value on the tvOS engine).
+private let bufferReadyTimeout: TimeInterval = 5.0
+// Unified stall-recovery ladder — same rungs on tvOS and Mac:
+// kick play() at 4s (system pause), reload the clip once at 8s,
+// skip to the next clip at 12s.
+private let stallKickAfter:   TimeInterval = 4
+private let stallReloadAfter: TimeInterval = 8
+private let stallSkipAfter:   TimeInterval = 12
+private let maxConsecutiveStallSkips = 5
 
 enum StreamStatus: Equatable {
     case loading, playing, paused, buffering
@@ -73,6 +82,12 @@ final class WallpaperPlayerModel: NSObject {
     private var lastProgressWall = Date()
     private var loggedStall = false
     private var kickedStall = false
+    private var reloadedStall = false
+    // Circuit breaker (mirrors the website's MAX_AUTO_SKIPS): after this many
+    // consecutive stall-skips with no healthy playback in between, stop
+    // strobing through the catalog (and hammering R2) and keep retrying the
+    // current clip instead. Cleared by any healthy advancement.
+    private var consecutiveStallSkips = 0
     private var progressLogTick = 0
 
     // Per-instance tag for the shared log — with one model per display, log
@@ -221,7 +236,7 @@ final class WallpaperPlayerModel: NSObject {
         // mobile version). If a clip can't keep up it is skipped by the stall
         // watchdog rather than degraded; known heavy clips are excluded from the
         // playlist up front (see VideoPlaylist).
-        waitUntilReady(gen: gen, maxWait: desktopFallbackDelay + 2) { [weak self] in
+        waitUntilReady(gen: gen, maxWait: bufferReadyTimeout) { [weak self] in
             guard let self, self.crossfadeGeneration == gen else { return }
             self.isCrossfading = true
             self.crossfadeCallback?(duration)
@@ -302,6 +317,9 @@ final class WallpaperPlayerModel: NSObject {
         lastProgressWall = Date()
         loggedStall = false
         kickedStall = false
+        reloadedStall = false
+        // consecutiveStallSkips deliberately NOT reset here — only healthy
+        // playback advancement clears the breaker.
     }
 
     /// Wall-clock stall check: if the front clip should be showing motion but
@@ -329,11 +347,14 @@ final class WallpaperPlayerModel: NSObject {
                 "progress t=\(String(format: "%.1f", now))/\(String(format: "%.1f", dur)) video=\(currentVideo?.caption ?? "—") tcs=\(frontPlayer.timeControlStatus.rawValue) rate=\(frontPlayer.rate) ready=\(ready) keepUp=\(item?.isPlaybackLikelyToKeepUp ?? false)")
         }
 
-        // Advancing (and finite) — reset the clock and we're healthy.
+        // Advancing (and finite) — reset the clock and clear the breaker.
         if ready, now.isFinite, now > lastProgressTime + 0.1 {
             lastProgressTime = now
             lastProgressWall = Date()
             loggedStall = false
+            kickedStall = false
+            reloadedStall = false
+            consecutiveStallSkips = 0
             return
         }
 
@@ -347,17 +368,39 @@ final class WallpaperPlayerModel: NSObject {
         }
         // A system-imposed pause (display sleep, lock screen) is best fixed by
         // resuming the same clip in place — try one play() kick before skipping.
-        if stuckFor >= 4, !kickedStall, frontPlayer.timeControlStatus == .paused {
+        if stuckFor >= stallKickAfter, !kickedStall, frontPlayer.timeControlStatus == .paused {
             kickedStall = true
             WallpaperLog.shared.log("stall", "m\(mid) kick: system-paused front, retrying play()")
             frontPlayer.play()
         }
-        if stuckFor >= 8 {                          // stuck 8s → skip it
+        if stuckFor >= stallReloadAfter, !reloadedStall {
+            reloadedStall = true
             WallpaperLog.shared.log("stall",
-                "m\(mid) skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
-            resetStallBaseline()
-            let nextIdx = (currentIndex + 1) % queue.count
-            startCrossfade(to: nextIdx, duration: manualFadeDuration)
+                "m\(mid) reloading stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—")")
+            if let video = currentVideo {
+                loadClip(video, on: frontPlayer)
+                frontPlayer.play()
+            }
+        }
+        if stuckFor >= stallSkipAfter {
+            if consecutiveStallSkips >= maxConsecutiveStallSkips {
+                // Breaker tripped (likely a dead network): stop strobing
+                // through the catalog; keep retrying this clip instead.
+                WallpaperLog.shared.log("stall",
+                    "m\(mid) breaker tripped (\(consecutiveStallSkips) skips) — retrying current clip idx=\(currentIndex)")
+                resetStallBaseline()
+                if let video = currentVideo {
+                    loadClip(video, on: frontPlayer)
+                    frontPlayer.play()
+                }
+            } else {
+                consecutiveStallSkips += 1
+                WallpaperLog.shared.log("stall",
+                    "m\(mid) skipping stuck clip idx=\(currentIndex) video=\(currentVideo?.caption ?? "—") (skip #\(consecutiveStallSkips))")
+                resetStallBaseline()
+                let nextIdx = (currentIndex + 1) % queue.count
+                startCrossfade(to: nextIdx, duration: manualFadeDuration)
+            }
         }
     }
 

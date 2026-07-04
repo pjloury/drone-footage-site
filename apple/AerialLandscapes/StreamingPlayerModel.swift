@@ -152,10 +152,34 @@ class StreamingPlayerModel: ObservableObject {
     // Stuck-watchdog state: tracks whether the VISIBLE front player's currentTime
     // is actually advancing. The queue-index state machine can complete while the
     // on-screen video is frozen — this is the symptom the old tests could not see.
-    private var lastWatchdogTime: Double = -1
-    private var stalledTicks = 0
-    private var loggedStuck = false
+    //
+    // CRITICAL: runs on a wall-clock Timer, NOT the AVPlayer periodic time
+    // observer — that observer is tied to the advancing timeline and stops
+    // firing the moment playback stalls, so an observer-driven watchdog never
+    // fires on a real stall (learned the hard way on the Mac wallpaper; see
+    // WallpaperPlayerModel).
+    private var stallTimer: Timer?
+    private var lastProgressTime: Double = -1
+    private var lastProgressWall = Date()
+    private var loggedStall = false
+    private var kickedStall = false
+    private var reloadedStall = false
+    // Circuit breaker (mirrors the website's MAX_AUTO_SKIPS): after this many
+    // consecutive stall-skips with no healthy playback in between, stop
+    // strobing through the catalog and just keep retrying the current clip.
+    private var consecutiveStallSkips = 0
 
+    // Unified stall-recovery ladder — same rungs on tvOS and Mac:
+    // kick play() at 4s (system pause), reload the clip once at 8s,
+    // skip to the next clip at 12s.
+    static let stallKickAfter:   TimeInterval = 4
+    static let stallReloadAfter: TimeInterval = 8
+    static let stallSkipAfter:   TimeInterval = 12
+    static let maxConsecutiveStallSkips = 5
+
+    // Unified buffer-readiness timeout before a crossfade proceeds anyway
+    // (same value on the Mac engine).
+    static let bufferReadyTimeout: TimeInterval = 5.0
     static let autoDuration:   TimeInterval = 4.0
     static let manualDuration: TimeInterval = 4.0   // uniform 4s fade across all platforms/triggers
     // Cap every clip at maxPlaySeconds so long clips don't linger. Default on.
@@ -330,11 +354,10 @@ class StreamingPlayerModel: ObservableObject {
         backPlayer.seek(to: .zero)
         backPlayer.play()
 
-        // Auto-fades: pre-loaded item should already be buffering — use a short
-        // 1 s timeout so high-bitrate short clips (e.g. Palma, 7 s / 52 Mbps)
-        // don't freeze on their last frame waiting for the next clip to buffer.
-        // Manual skips: allow up to 4 s for a cold item to buffer.
-        let bufferTimeout: TimeInterval = isAutoFade ? 1.0 : 4.0
+        // Unified buffer-readiness timeout (same on Mac). The outgoing clip
+        // keeps playing under the fade-at-cap semantic, so waiting a few
+        // seconds for the incoming clip to buffer no longer freezes anything.
+        let bufferTimeout = Self.bufferReadyTimeout
 
         waitUntilLikelyToKeepUp(gen: gen, maxWait: bufferTimeout) { [weak self] in
             guard let self = self, self.crossfadeGeneration == gen else {
@@ -454,48 +477,86 @@ class StreamingPlayerModel: ObservableObject {
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval,
                                                            queue: .main) { [weak self] _ in
             self?.checkAutoFade()
-            self?.stuckWatchdog()
         }
-        // Reset watchdog baseline for the new front clip.
-        lastWatchdogTime = -1
-        stalledTicks = 0
-        loggedStuck = false
+        // Stall detection runs on its own wall-clock timer so it keeps
+        // checking even when playback (and the time observer above) is frozen.
+        resetStallBaseline()
+        stallTimer?.invalidate()
+        stallTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.checkStall()
+        }
     }
 
-    /// Detects the real "stuck video" symptom: front player should be playing
-    /// (not crossfading, not preview-paused) but currentTime is not advancing.
-    private func stuckWatchdog() {
-        guard !isCrossfading else { lastWatchdogTime = -1; return }
-        guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return }
-        let now = frontPlayer.currentTime().seconds
-        guard now.isFinite else { return }
+    private func resetStallBaseline() {
+        lastProgressTime = -1
+        lastProgressWall = Date()
+        loggedStall = false
+        kickedStall = false
+        reloadedStall = false
+        // consecutiveStallSkips deliberately NOT reset here — only healthy
+        // playback advancement clears the breaker.
+    }
 
-        if lastWatchdogTime >= 0 {
-            let advanced = now - lastWatchdogTime
-            // Front player should be playing at rate 1; if it's not advancing
-            // meaningfully across a tick (0.25s) it's stalled.
-            if frontPlayer.rate > 0 && advanced < 0.05 {
-                stalledTicks += 1
-                if stalledTicks >= 4 && !loggedStuck {   // ~1s of no movement
-                    loggedStuck = true
-                    stuckEventCount += 1
-                    xfadeLog.error("STUCK front frozen at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex) title=\(self.currentTitle, privacy: .public) frontA=\(self.isFrontA) rate=\(self.frontPlayer.rate) tcs=\(self.frontPlayer.timeControlStatus.rawValue) reason=\(self.frontPlayer.reasonForWaitingToPlay?.rawValue ?? "nil", privacy: .public) likelyKeepUp=\(item.isPlaybackLikelyToKeepUp) bufEmpty=\(item.isPlaybackBufferEmpty)")
-                }
-                if stalledTicks >= 12 {  // ~3s stuck — reload the clip
-                    xfadeLog.error("STUCK 3s — reloading clip idx=\(self.currentQueueIndex)")
-                    stalledTicks = 0
-                    loggedStuck = false
-                    loadClip(at: currentQueueIndex, onFront: true, startPlaying: true)
-                }
-            } else if advanced >= 0.05 {
-                if loggedStuck {
-                    xfadeLog.notice("RECOVERED front advancing again at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex)")
-                }
-                stalledTicks = 0
-                loggedStuck = false
+    /// Wall-clock stall check (same ladder as the Mac wallpaper): if the front
+    /// clip should be showing motion but currentTime isn't advancing —
+    /// buffering underrun, an item that never reaches .readyToPlay, or a
+    /// system-imposed pause — escalate: kick play(), reload the clip once,
+    /// then skip to the next clip.
+    private func checkStall() {
+        guard !isCrossfading else { resetStallBaseline(); return }
+        guard frontPlayer.currentItem != nil else { resetStallBaseline(); return }
+
+        let item = frontPlayer.currentItem
+        let ready = item?.status == .readyToPlay
+        let now = frontPlayer.currentTime().seconds
+
+        // Advancing (and finite) — reset the clock and clear the breaker.
+        if ready, now.isFinite, now > lastProgressTime + 0.1 {
+            if loggedStall {
+                xfadeLog.notice("RECOVERED front advancing again at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex)")
+            }
+            lastProgressTime = now
+            lastProgressWall = Date()
+            loggedStall = false
+            kickedStall = false
+            reloadedStall = false
+            consecutiveStallSkips = 0
+            return
+        }
+
+        let stuckFor = Date().timeIntervalSince(lastProgressWall)
+        if stuckFor >= 2 && !loggedStall {
+            loggedStall = true
+            stuckEventCount += 1
+            xfadeLog.error("STUCK front frozen at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex) title=\(self.currentTitle, privacy: .public) frontA=\(self.isFrontA) rate=\(self.frontPlayer.rate) tcs=\(self.frontPlayer.timeControlStatus.rawValue) ready=\(ready) likelyKeepUp=\(item?.isPlaybackLikelyToKeepUp ?? false) bufEmpty=\(item?.isPlaybackBufferEmpty ?? false)")
+        }
+        // A system-imposed pause is best fixed by resuming in place.
+        if stuckFor >= Self.stallKickAfter, !kickedStall,
+           frontPlayer.timeControlStatus == .paused {
+            kickedStall = true
+            xfadeLog.error("STUCK kick: system-paused front, retrying play() idx=\(self.currentQueueIndex)")
+            frontPlayer.play()
+        }
+        if stuckFor >= Self.stallReloadAfter, !reloadedStall {
+            reloadedStall = true
+            xfadeLog.error("STUCK \(Int(Self.stallReloadAfter))s — reloading clip idx=\(self.currentQueueIndex)")
+            loadClip(at: currentQueueIndex, onFront: true, startPlaying: true)
+        }
+        if stuckFor >= Self.stallSkipAfter {
+            if consecutiveStallSkips >= Self.maxConsecutiveStallSkips {
+                // Breaker tripped (likely a dead network): stop strobing
+                // through the catalog; keep retrying this clip instead.
+                xfadeLog.error("STUCK breaker tripped (\(self.consecutiveStallSkips) skips) — retrying current clip idx=\(self.currentQueueIndex)")
+                resetStallBaseline()
+                loadClip(at: currentQueueIndex, onFront: true, startPlaying: true)
+            } else {
+                consecutiveStallSkips += 1
+                xfadeLog.error("STUCK \(Int(Self.stallSkipAfter))s — skipping stuck clip idx=\(self.currentQueueIndex) (skip #\(self.consecutiveStallSkips))")
+                resetStallBaseline()
+                startCrossfade(to: (currentQueueIndex + 1) % queue.count,
+                               duration: Self.manualDuration, isAutoFade: false)
             }
         }
-        lastWatchdogTime = now
     }
 
     /// The play window the bar fills across: the clip's full length, or the
@@ -508,6 +569,8 @@ class StreamingPlayerModel: ObservableObject {
     }
 
     private func removeTimeObserver() {
+        stallTimer?.invalidate()
+        stallTimer = nil
         if let obs = timeObserver, let owner = timeObserverOwner {
             owner.removeTimeObserver(obs)
         }
