@@ -101,23 +101,18 @@ class StreamingPlayerModel: ObservableObject {
     /// Playback progress (0…1) of the current front clip, driving the thin
     /// bottom progress bar — mirrors the website's #bar width.
     ///
-    /// The bar is animated as ONE continuous linear sweep from 0→1 over the
-    /// clip's expected play window (full length, or `maxPlaySeconds` when the
-    /// play-time cap is on), rather than being nudged every time-observer tick.
-    /// This makes it glide smoothly instead of stepping/jerking. It is only
-    /// re-synced to the true `currentTime` (and frozen) when the video feed
-    /// actually stalls — see `pauseSmoothProgress`/`resumeSmoothProgress`.
-    @Published var playbackProgress: Double = 0
-
-    /// Duration the view uses for the progress-bar fill animation. Set to the
-    /// remaining play time when kicking off the smooth sweep, and to 0 to snap
-    /// the bar instantly (on freeze / re-sync).
-    @Published var progressAnimDuration: TimeInterval = 0
-
-    /// Whether the continuous sweep has been armed for the current front clip.
-    private var progressStarted = false
-    /// Whether the sweep is currently frozen because the feed stalled.
-    private var progressPaused = false
+    /// Computed live from the front player's real `currentTime` (like the
+    /// website, which sets the bar width from currentTime every frame). The
+    /// view samples this via TimelineView(.animation), so the bar is exactly
+    /// as smooth as the video itself: it freezes automatically when the feed
+    /// stalls and never needs reset/pause/resume bookkeeping.
+    var progressFraction: Double {
+        guard !isCrossfading else { return 0 }
+        guard let effectiveDur = effectivePlayDuration() else { return 0 }
+        let cur = frontPlayer.currentTime().seconds
+        guard cur.isFinite else { return 0 }
+        return min(1, max(0, cur / effectiveDur))
+    }
 
     // ── Sections ──────────────────────────────────────────────────────────
     static let sections: [(id: String, name: String)] = [
@@ -132,7 +127,7 @@ class StreamingPlayerModel: ObservableObject {
 
     // ── Crossfade state ───────────────────────────────────────────────────
     private var crossfadeGeneration = 0
-    private var isCrossfading  = false
+    private(set) var isCrossfading = false
     private var autoFadeArmed  = false
 
     private var timeObserver: Any?
@@ -225,7 +220,6 @@ class StreamingPlayerModel: ObservableObject {
         queue = pool.shuffled()
         currentQueueIndex = 0
         loadClip(at: 0, onFront: true, startPlaying: true)
-        playbackProgress = 0
         overlayVisible = true        // initial overlay shows immediately (no fade)
         updateMetadata(from: 0)
         preloadBack()
@@ -307,11 +301,9 @@ class StreamingPlayerModel: ObservableObject {
         // Fade the whole overlay OUT immediately (web adds `.fade` at the
         // very start of the transition, before the new clip even buffers).
         overlayVisible = false
-        // Reset the progress bar to empty now (while it's invisible). It stays
-        // frozen at 0 during the crossfade — updateProgress() is suppressed
-        // while isCrossfading — so it fades back in from empty for the new
-        // clip rather than flashing the outgoing clip's near-full position.
-        playbackProgress = 0
+        // progressFraction returns 0 for the whole crossfade (isCrossfading),
+        // so the bar empties while invisible and fades back in from 0 for the
+        // new clip.
 
         if !reusePreloaded {
             guard let url = targetURL else { isCrossfading = false; return }
@@ -414,7 +406,6 @@ class StreamingPlayerModel: ObservableObject {
         currentQueueIndex = targetIdx
         isCrossfading = false
         autoFadeArmed = false
-        playbackProgress = 0          // restart the progress bar for the new clip
 
         // Finalize opacities only NOW that isFrontA is correct
         finalizeLayersCallback?()
@@ -446,7 +437,6 @@ class StreamingPlayerModel: ObservableObject {
         timeObserverOwner = frontPlayer
         timeObserver = frontPlayer.addPeriodicTimeObserver(forInterval: interval,
                                                            queue: .main) { [weak self] _ in
-            self?.updateProgress()
             self?.checkAutoFade()
             self?.stuckWatchdog()
         }
@@ -454,10 +444,6 @@ class StreamingPlayerModel: ObservableObject {
         lastWatchdogTime = -1
         stalledTicks = 0
         loggedStuck = false
-        // Re-arm the smooth progress sweep for the new clip.
-        progressStarted = false
-        progressPaused = false
-        progressAnimDuration = 0
     }
 
     /// Detects the real "stuck video" symptom: front player should be playing
@@ -474,10 +460,6 @@ class StreamingPlayerModel: ObservableObject {
             // meaningfully across a tick (0.25s) it's stalled.
             if frontPlayer.rate > 0 && advanced < 0.05 {
                 stalledTicks += 1
-                // Freeze the smooth progress bar as soon as the feed looks
-                // stopped (~0.5s of no movement) so it doesn't glide ahead of
-                // a video that isn't actually playing.
-                if stalledTicks >= 2 { pauseSmoothProgress() }
                 if stalledTicks >= 4 && !loggedStuck {   // ~1s of no movement
                     loggedStuck = true
                     stuckEventCount += 1
@@ -493,9 +475,6 @@ class StreamingPlayerModel: ObservableObject {
                 if loggedStuck {
                     xfadeLog.notice("RECOVERED front advancing again at t=\(now, format: .fixed(precision: 2)) idx=\(self.currentQueueIndex)")
                 }
-                // Feed is moving again — resume the smooth sweep from the true
-                // position if we had frozen it.
-                if progressPaused { resumeSmoothProgress() }
                 stalledTicks = 0
                 loggedStuck = false
             }
@@ -510,62 +489,6 @@ class StreamingPlayerModel: ObservableObject {
         let dur = item.duration.seconds
         guard dur.isFinite, dur > 0 else { return nil }
         return Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
-    }
-
-    /// Kicks off a single continuous 0→1 linear animation over the remaining
-    /// play window once the front clip's duration is known. Called on each
-    /// time-observer tick but no-ops after the first arm.
-    private func updateProgress() {
-        // Frozen during a crossfade — the bar is reset to 0 and fades back in
-        // from empty when the new clip commits (see startCrossfade/completeFade).
-        guard !isCrossfading, !progressStarted else { return }
-        guard let effectiveDur = effectivePlayDuration() else { return }
-        let cur = frontPlayer.currentTime().seconds
-        guard cur.isFinite else { return }
-        progressStarted = true
-
-        let frac = min(1, max(0, cur / effectiveDur))
-        let remaining = max(0, effectiveDur - cur)
-        // Snap instantly to the current position, then, on the next runloop,
-        // animate to full over the remaining window so SwiftUI treats the two
-        // writes as separate transactions (the snap must not be animated).
-        progressAnimDuration = 0
-        playbackProgress = frac
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.progressStarted, !self.progressPaused else { return }
-            self.progressAnimDuration = remaining
-            self.playbackProgress = 1
-        }
-    }
-
-    /// Freezes the bar at the video's true position when the feed stalls, so it
-    /// stops gliding while nothing is actually playing.
-    private func pauseSmoothProgress() {
-        guard progressStarted, !progressPaused else { return }
-        guard let effectiveDur = effectivePlayDuration() else { return }
-        let cur = frontPlayer.currentTime().seconds
-        guard cur.isFinite else { return }
-        progressPaused = true
-        progressAnimDuration = 0
-        playbackProgress = min(1, max(0, cur / effectiveDur))   // re-sync + freeze
-    }
-
-    /// Resumes the smooth sweep from the true position after the feed recovers.
-    private func resumeSmoothProgress() {
-        guard progressStarted, progressPaused else { return }
-        guard let effectiveDur = effectivePlayDuration() else { return }
-        let cur = frontPlayer.currentTime().seconds
-        guard cur.isFinite else { return }
-        progressPaused = false
-        let frac = min(1, max(0, cur / effectiveDur))
-        let remaining = max(0, effectiveDur - cur)
-        progressAnimDuration = 0
-        playbackProgress = frac
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.progressStarted, !self.progressPaused else { return }
-            self.progressAnimDuration = remaining
-            self.playbackProgress = 1
-        }
     }
 
     private func removeTimeObserver() {

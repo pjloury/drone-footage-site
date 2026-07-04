@@ -22,9 +22,10 @@ struct PlayerOverlayView: View {
     }
 
     // ── Translucent progress bar pinned to the bottom edge ────────────────
-    // 10px track at 12% white, fill at 55% white, width = playback progress,
-    // eased linearly so it advances smoothly. Sized thicker than the website's
-    // 4px so it stays clearly visible across a room on a large TV.
+    // Width is sampled every frame from the player's real currentTime
+    // (model.progressFraction) via TimelineView — the same approach as the
+    // website's rAF-driven #bar. No SwiftUI value animation, so it can never
+    // run backwards or drift; it freezes exactly when the video freezes.
     //
     // Fades out/in with the rest of the overlay via `overlayVisible` (see the
     // convention on StreamingPlayerModel.overlayVisible) so it disappears
@@ -34,19 +35,15 @@ struct PlayerOverlayView: View {
         VStack(spacing: 0) {
             Spacer()
             GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Rectangle().fill(Color.white.opacity(0.12))
-                    Rectangle().fill(Color.white.opacity(0.55))
-                        .frame(width: max(0, geo.size.width * CGFloat(model.playbackProgress)))
-                        // One continuous linear sweep across the whole clip
-                        // window (duration supplied by the model), rather than a
-                        // 0.25s catch-up per tick — glides instead of jerking.
-                        // Snaps instantly (duration 0) on stall freeze/re-sync.
-                        .animation(.linear(duration: model.progressAnimDuration),
-                                   value: model.playbackProgress)
+                TimelineView(.animation) { _ in
+                    ZStack(alignment: .leading) {
+                        Rectangle().fill(Color.white.opacity(0.08))
+                        Rectangle().fill(Color.white.opacity(0.35))
+                            .frame(width: max(0, geo.size.width * CGFloat(model.progressFraction)))
+                    }
                 }
             }
-            .frame(height: 10)
+            .frame(height: 5)
         }
         .ignoresSafeArea()
         .opacity(model.overlayVisible ? 1 : 0)
@@ -81,8 +78,8 @@ struct PlayerOverlayView: View {
                     .shadow(color: .black.opacity(0.95), radius: 2, x: 0, y: 1)
                     .shadow(color: .black.opacity(0.75), radius: 8, x: 0, y: 2)
                     .shadow(color: .black.opacity(0.45), radius: 20, x: 0, y: 4)
-                    .padding(.leading, 80)
-                    .padding(.bottom, 70)
+                    .padding(.leading, 56)
+                    .padding(.bottom, 44)
                     // Slide right when the sidebar is open so the caption
                     // clears the sidebar edge (animated from PlayerViewController).
                     .offset(x: model.captionOffset)
