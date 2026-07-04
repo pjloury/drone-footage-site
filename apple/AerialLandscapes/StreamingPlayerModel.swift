@@ -120,7 +120,12 @@ class StreamingPlayerModel: ObservableObject {
         guard let effectiveDur = effectivePlayDuration() else { return 0 }
         let cur = frontPlayer.currentTime().seconds
         guard cur.isFinite else { return 0 }
-        return min(1, max(0, cur / effectiveDur))
+        // Fill toward the moment the auto-crossfade STARTS (autoDuration before
+        // the effective end), not the clip end itself — so the bar visibly
+        // reaches the right edge of the screen just as the fade-out begins,
+        // instead of vanishing at ~93%.
+        let fillWindow = max(1, effectiveDur - Self.autoDuration)
+        return min(1, max(0, cur / fillWindow))
     }
 
     // ── Sections ──────────────────────────────────────────────────────────
