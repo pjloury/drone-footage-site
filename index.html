@@ -657,6 +657,65 @@
       #cast-controls { top: calc(68px + env(safe-area-inset-top, 0px)); }
       .cast-btn { width: 32px; height: 32px; }
     }
+
+    /* ── App Store upsell (top-center, clear of every other corner
+       widget across all breakpoints) ────────────────────────── */
+    #app-upsell {
+      position: fixed;
+      top: calc(20px + env(safe-area-inset-top, 0px));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex; align-items: stretch;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+    #app-upsell.visible { opacity: 1; pointer-events: auto; }
+    #app-upsell-link {
+      display: flex; align-items: center; gap: 7px;
+      height: 36px; padding: 0 14px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-right: none;
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      border-radius: 8px 0 0 8px;
+      text-decoration: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem; font-weight: 300; letter-spacing: 0.05em;
+      color: rgba(255,255,255,0.85);
+      white-space: nowrap;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    #app-upsell-link:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5); }
+    #app-upsell-link svg {
+      width: 15px; height: 15px; flex-shrink: 0;
+      stroke: rgba(255,255,255,0.8); stroke-width: 1.8;
+      stroke-linecap: round; stroke-linejoin: round; fill: none;
+    }
+    #app-upsell-close {
+      width: 30px; height: 36px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px) saturate(1.4);
+      -webkit-backdrop-filter: blur(12px) saturate(1.4);
+      border-radius: 0 8px 8px 0;
+      cursor: pointer;
+      color: rgba(255,255,255,0.55);
+      font-size: 0.8rem; line-height: 1;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+    }
+    #app-upsell-close:hover {
+      background: rgba(255,255,255,0.14);
+      border-color: rgba(255,255,255,0.5);
+      color: rgba(255,255,255,0.9);
+    }
+    @media (max-width: 480px) {
+      #app-upsell-link { height: 32px; padding: 0 10px; font-size: 0.66rem; }
+      #app-upsell-close { height: 32px; width: 26px; }
+    }
     @media (orientation: portrait) {
       /* Map sits just above the caption — minimal gap */
       #minimap, #minimap-dots {
@@ -736,6 +795,11 @@
 <div id="minimap"></div>
 <div id="minimap-dots"></div>
 <div id="map-tooltip"></div>
+
+<div id="app-upsell">
+  <a id="app-upsell-link" rel="noopener" target="_blank"></a>
+  <button id="app-upsell-close" aria-label="Dismiss">✕</button>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -1000,6 +1064,9 @@ const navLeft  = document.getElementById("nav-left");
 const navRight = document.getElementById("nav-right");
 const barEl    = document.getElementById("bar");
 const spinner  = document.getElementById("spinner");
+const appUpsellEl    = document.getElementById("app-upsell");
+const appUpsellLink  = document.getElementById("app-upsell-link");
+const appUpsellClose = document.getElementById("app-upsell-close");
 
 let current       = 0;
 let transitioning = false;
@@ -1127,6 +1194,49 @@ function getDeviceContext() {
 }
 
 const DEVICE_CONTEXT = getDeviceContext();
+
+// ── App Store upsell ──────────────────────────────────────
+// The website and the native apps show the exact same footage, so nudge
+// web visitors toward the native app for their platform: iPhone/iPad on
+// mobile, Mac on desktop. Never shown inside the native app wrapper
+// (IS_APP) or on TV (IS_TV *is* the native tvOS app already).
+const APP_STORE_URL_IOS = "https://apps.apple.com/us/app/aerial-landscapes/id6748286484";
+const APP_STORE_URL_MAC = "https://apps.apple.com/us/app/aerial-landscapes-wallpaper/id6781405217?mt=12";
+const UPSELL_SNOOZE_KEY = "appUpsellHiddenUntil";
+const ICON_PHONE =
+  '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2.2"/><line x1="10.5" y1="18.3" x2="13.5" y2="18.3"/></svg>';
+const ICON_DESKTOP =
+  '<svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="1.5"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
+
+let appUpsellReady = false;
+function initAppUpsell() {
+  if (IS_APP || IS_TV) return;
+  let hiddenUntil = 0;
+  try { hiddenUntil = Number(localStorage.getItem(UPSELL_SNOOZE_KEY) || 0); } catch (_) {}
+  if (Date.now() < hiddenUntil) return;
+
+  const isPhone  = DEVICE_CONTEXT.$device_type === "mobile";
+  const isTablet = DEVICE_CONTEXT.$device_type === "tablet";
+  const target = (isPhone || isTablet) ? APP_STORE_URL_IOS : APP_STORE_URL_MAC;
+  const label  = isPhone ? "Get the iPhone app" : isTablet ? "Get the iPad app" : "Get the Mac app";
+  const icon   = (isPhone || isTablet) ? ICON_PHONE : ICON_DESKTOP;
+
+  appUpsellLink.href = target;
+  appUpsellLink.innerHTML = `${icon}<span>${label}</span>`;
+  appUpsellLink.addEventListener("click", () => {
+    try { localStorage.setItem(UPSELL_SNOOZE_KEY, String(Date.now() + 180 * 86400000)); } catch (_) {}
+    queueTelemetry({ name: "app_upsell_clicked", target });
+  });
+  appUpsellClose.addEventListener("click", (e) => {
+    e.preventDefault();
+    try { localStorage.setItem(UPSELL_SNOOZE_KEY, String(Date.now() + 30 * 86400000)); } catch (_) {}
+    appUpsellEl.classList.remove("visible");
+    queueTelemetry({ name: "app_upsell_dismissed", target });
+  });
+  queueTelemetry({ name: "app_upsell_shown", target });
+  appUpsellReady = true;
+}
+initAppUpsell();
 
 function frontVid()   { return front === "A" ? vidA : vidB; }
 function frontLayer() { return front === "A" ? layerA : layerB; }
@@ -2461,7 +2571,7 @@ document.addEventListener("keydown", e => {
 // taps just gets silently dropped instead of stacking transitions.
 // The list of selectors below is explicit so we don't accidentally trigger
 // nav when the user meant to interact with one of the on-screen UI bits.
-const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud, #minimap, #minimap *, #minimap-dots, #minimap-dots *";
+const NAV_TAP_IGNORE = "#welcome, #section-btn, #section-dropdown, .nav-arrow, .nav-arrow *, #debug-hud, #minimap, #minimap *, #minimap-dots, #minimap-dots *, #app-upsell, #app-upsell *";
 document.addEventListener("click", (e) => {
   if (e.target.closest(NAV_TAP_IGNORE)) return;
   // If a swipe just happened, the touchend handler will have fired
@@ -2561,6 +2671,7 @@ function init() {
       sectionBtn.classList.add("visible");
       minimapEl.classList.add("visible");
       minimapDotsEl.classList.add("visible");
+      if (appUpsellReady) appUpsellEl.classList.add("visible");
     }, 1500);
     layerA.classList.add("active");
     safePlay(vidA, "init_begin");
