@@ -2518,8 +2518,15 @@ function updateMiniMap() {
         // touchend fires immediately on mobile; preventDefault stops the
         // subsequent click event from double-firing navigateToVideo
         g.addEventListener("touchend", e => { e.stopPropagation(); e.preventDefault(); navigateToVideo(file); }, { passive: false });
-        g.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
-        g.addEventListener("mouseleave", hideMapTooltip);
+        // Hover tooltip is desktop-only. On touch devices there's no real
+        // "hover" — iOS/Android fire a synthetic mouseenter right after
+        // touchend with no matching mouseleave (the finger just lifts), so
+        // the tooltip was getting stuck on-screen through the crossfade
+        // into the newly-selected video.
+        if (!IS_MOBILE) {
+          g.addEventListener("mouseenter", e => showMapTooltip(caption, e.clientX, e.clientY));
+          g.addEventListener("mouseleave", hideMapTooltip);
+        }
         pinsGroup.appendChild(g);
       });
     }
