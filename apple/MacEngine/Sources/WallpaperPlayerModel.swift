@@ -109,7 +109,47 @@ final class WallpaperPlayerModel: NSObject {
         // the stall watchdog already skips a clip that can't sustain playback.
         playerA.automaticallyWaitsToMinimizeStalling = false
         playerB.automaticallyWaitsToMinimizeStalling = false
+        observeRateChanges(playerA, tag: "A")
+        observeRateChanges(playerB, tag: "B")
+        // With automaticallyWaitsToMinimizeStalling=false a momentary buffer
+        // dry-out stalls playback (rate silently drops to 0) and AVPlayer
+        // NEVER auto-resumes — this was the dominant cause of multi-second
+        // freezes (clustered around crossfades, where two players fetch and
+        // decode at once). Resume immediately instead of waiting for the
+        // stall watchdog's multi-second kick.
+        let stallObs = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemPlaybackStalled, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let self, !self.isUserPaused,
+                  let item = note.object as? AVPlayerItem else { return }
+            let player: AVPlayer
+            if item === self.playerA.currentItem { player = self.playerA }
+            else if item === self.playerB.currentItem { player = self.playerB }
+            else { return }
+            self.recoverFromStall(player, item: item)
+        }
+        rateObservers.append(stallObs)
         // start() is called by WallpaperWindowController after windows are ready
+    }
+
+    // Diagnostic: AVFoundation reports WHY a player's rate changed. A stall
+    // where tcs flips to .paused without any pause() in this file means the
+    // pause came from outside — this reveals whether it's setRateFailed
+    // (decoder/resource failure), audioSessionInterrupted, appBackgrounded
+    // (App Nap), or an actual setRateCalled from somewhere unexpected.
+    private var rateObservers: [NSObjectProtocol] = []
+    private func observeRateChanges(_ player: AVPlayer, tag: String) {
+        let obs = NotificationCenter.default.addObserver(
+            forName: AVPlayer.rateDidChangeNotification, object: player, queue: .main
+        ) { [weak self, weak player] note in
+            guard let self, let player else { return }
+            let reason = note.userInfo?[AVPlayer.rateDidChangeReasonKey] as? String ?? "nil"
+            let waiting = player.reasonForWaitingToPlay?.rawValue ?? "-"
+            let isFront = (player === self.frontPlayer)
+            WallpaperLog.shared.log("rate",
+                "m\(self.mid) player\(tag)\(isFront ? "(front)" : "(back)") rate->\(player.rate) reason=\(reason) tcs=\(player.timeControlStatus.rawValue) waiting=\(waiting)")
+        }
+        rateObservers.append(obs)
     }
 
     func start() {
@@ -254,6 +294,15 @@ final class WallpaperPlayerModel: NSObject {
         frontPlayer.replaceCurrentItem(with: nil)
 
         isFrontA.toggle()
+        // The incoming player's rate can silently collapse to 0 mid-fade
+        // (rateDidChange reason=nil — observed while two players decode
+        // concurrently during the crossfade). Without this re-play() the new
+        // front starts frozen and sits there until the stall watchdog kicks
+        // it ~2-6s later, on nearly every fade.
+        if frontPlayer.timeControlStatus != .playing {
+            WallpaperLog.shared.log("xfade", "m\(mid) new front not playing after fade (tcs=\(frontPlayer.timeControlStatus.rawValue)) — re-play()")
+            frontPlayer.play()
+        }
         currentIndex = targetIdx
         if let prev = currentVideo { history.append(prev); if history.count > 50 { history.removeFirst() } }
         currentVideo = video
@@ -436,6 +485,35 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     // MARK: - Helpers
+
+    // Resume a stalled player as soon as its buffer can actually sustain
+    // playback. Replaying immediately on a dry buffer just re-stalls in a
+    // tight loop (observed several times per second on cold start), so wait
+    // for isPlaybackLikelyToKeepUp before the single play().
+    private var stallRecoveries: [ObjectIdentifier: NSKeyValueObservation] = [:]
+    private func recoverFromStall(_ player: AVPlayer, item: AVPlayerItem) {
+        let key = ObjectIdentifier(player)
+        guard stallRecoveries[key] == nil else { return }  // recovery already armed
+        let isFront = (player === frontPlayer)
+        WallpaperLog.shared.log("stall",
+            "m\(mid) playbackStalled on \(isFront ? "front" : "back") — waiting for buffer to recover")
+        if item.isPlaybackLikelyToKeepUp {
+            player.play()
+            return
+        }
+        stallRecoveries[key] = item.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self, weak player] obsItem, _ in
+            guard obsItem.isPlaybackLikelyToKeepUp else { return }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.stallRecoveries[key]?.invalidate()
+                self.stallRecoveries[key] = nil
+                guard let player, !self.isUserPaused,
+                      player.currentItem === obsItem else { return }
+                WallpaperLog.shared.log("stall", "m\(self.mid) buffer recovered — play()")
+                player.play()
+            }
+        }
+    }
 
     private func loadClip(_ video: DroneVideo, on player: AVPlayer) {
         player.replaceCurrentItem(with: AVPlayerItem(url: video.desktopURL))
