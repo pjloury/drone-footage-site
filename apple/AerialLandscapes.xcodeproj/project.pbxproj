@@ -1861,7 +1861,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>3</string>
+				<string>4</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf</string>
 				<key>DEVELOPMENT_TEAM</key>
@@ -1888,7 +1888,7 @@
 				<key>MACOSX_DEPLOYMENT_TARGET</key>
 				<string>13.0</string>
 				<key>MARKETING_VERSION</key>
-				<string>1.2</string>
+				<string>1.3</string>
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
@@ -1922,7 +1922,7 @@
 				<key>CODE_SIGN_STYLE</key>
 				<string>Automatic</string>
 				<key>CURRENT_PROJECT_VERSION</key>
-				<string>3</string>
+				<string>4</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf-with-dsym</string>
 				<key>DEVELOPMENT_TEAM</key>
@@ -1949,7 +1949,7 @@
 				<key>MACOSX_DEPLOYMENT_TARGET</key>
 				<string>13.0</string>
 				<key>MARKETING_VERSION</key>
-				<string>1.2</string>
+				<string>1.3</string>
 				<key>OBJROOT</key>
 				<string>$(PROJECT_DIR)/build-mas</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
