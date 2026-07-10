@@ -101,12 +101,13 @@ final class WallpaperPlayerModel: NSObject {
         super.init()
         playerA.isMuted = true
         playerB.isMuted = true
-        // Start playing the moment the first frames are decodable instead of
-        // waiting to pre-buffer a stall-proof window. The default (true) makes
-        // AVPlayer build a buffer sized for the clip's bitrate before it begins
-        // — for a heavy desktop encode cold from R2 that's a multi-second to
-        // ~30s black wait on first launch. We trade that for an immediate start;
-        // the stall watchdog already skips a clip that can't sustain playback.
+        // Start the moment first frames are decodable. Tried the tvOS default
+        // (autowait=true) here: AVPlayer then refuses to START until keepUp,
+        // which on these full-res encodes left every clip frozen at t=0 in
+        // waitingToPlayAtSpecifiedRate until the 9s watchdog skipped it — a
+        // strobe through the whole catalog with nothing ever playing. So keep
+        // instant start, buffer deeper ahead (see loadClip), and recover from
+        // the resulting non-auto-resuming dry-outs in recoverFromStall.
         playerA.automaticallyWaitsToMinimizeStalling = false
         playerB.automaticallyWaitsToMinimizeStalling = false
         observeRateChanges(playerA, tag: "A")
@@ -176,7 +177,7 @@ final class WallpaperPlayerModel: NSObject {
         currentIndex = 0
         currentVideo = video
         loadClip(video, on: frontPlayer)
-        frontPlayer.play()
+        frontPlayer.playImmediately(atRate: 1.0)
         updateStatus()
         preloadBack()
         startTimeObserver()
@@ -270,7 +271,7 @@ final class WallpaperPlayerModel: NSObject {
         let video = queue[targetIdx]
         loadClip(video, on: backPlayer)
         backPlayer.seek(to: .zero)
-        backPlayer.play()
+        backPlayer.playImmediately(atRate: 1.0)
 
         // Mac always streams the full-resolution desktop encode (never the 720p
         // mobile version). If a clip can't keep up it is skipped by the stall
@@ -516,7 +517,12 @@ final class WallpaperPlayerModel: NSObject {
     }
 
     private func loadClip(_ video: DroneVideo, on player: AVPlayer) {
-        player.replaceCurrentItem(with: AVPlayerItem(url: video.desktopURL))
+        let item = AVPlayerItem(url: video.desktopURL)
+        // Buffer ~10s ahead so brief R2 throughput dips don't drain the
+        // buffer mid-clip (0 = AVPlayer's automatic sizing, which kept the
+        // window too small for these high-bitrate desktop encodes).
+        item.preferredForwardBufferDuration = 10
+        player.replaceCurrentItem(with: item)
         player.isMuted = true
     }
 
