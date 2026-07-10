@@ -206,6 +206,12 @@ class StreamingPlayerModel: ObservableObject {
         playerA.isMuted = true
         playerB.isMuted = true
 
+        // Diagnostic (ported from Mac engine, where it found the wallpaper
+        // freeze): AVFoundation reports WHY a rate changed. A rate->0 with
+        // reason=nil is a system-side stall/pause no code in this file caused.
+        observeRateChanges(playerA, tag: "A")
+        observeRateChanges(playerB, tag: "B")
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(appDidBecomeActive),
             name: UIApplication.didBecomeActiveNotification, object: nil)
@@ -347,7 +353,7 @@ class StreamingPlayerModel: ObservableObject {
 
         if !reusePreloaded {
             guard let url = targetURL else { isCrossfading = false; return }
-            backPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
+            backPlayer.replaceCurrentItem(with: makeItem(url: url))
         }
 
         backPlayer.isMuted = true
@@ -441,6 +447,15 @@ class StreamingPlayerModel: ObservableObject {
 
         isFrontA.toggle()                   // swap players
         // both players stay muted — visual-only app, audio must not interrupt AirPlay
+
+        // Ported from Mac engine: the incoming player's rate can silently
+        // collapse mid-fade (rateDidChange reason=nil under double-decode).
+        // Without this the promoted front sits frozen until the stall
+        // watchdog kicks it seconds later.
+        if frontPlayer.timeControlStatus != .playing {
+            xfadeLog.error("completeFade: new front not playing (tcs=\(self.frontPlayer.timeControlStatus.rawValue)) — re-play()")
+            frontPlayer.play()
+        }
 
         currentQueueIndex = targetIdx
         isCrossfading = false
@@ -608,12 +623,33 @@ class StreamingPlayerModel: ObservableObject {
 
     // MARK: Private — helpers
 
+    private var rateObservers: [NSObjectProtocol] = []
+    private func observeRateChanges(_ player: AVPlayer, tag: String) {
+        let obs = NotificationCenter.default.addObserver(
+            forName: AVPlayer.rateDidChangeNotification, object: player, queue: .main
+        ) { [weak self, weak player] note in
+            guard let self, let player else { return }
+            let reason = note.userInfo?[AVPlayer.rateDidChangeReasonKey] as? String ?? "nil"
+            let isFront = (player === self.frontPlayer)
+            xfadeLog.notice("rate player\(tag, privacy: .public)\(isFront ? "(front)" : "(back)", privacy: .public) rate->\(player.rate) reason=\(reason, privacy: .public) tcs=\(player.timeControlStatus.rawValue)")
+        }
+        rateObservers.append(obs)
+    }
+
+    /// Buffer ~10s ahead so brief throughput dips don't drain the buffer
+    /// mid-clip (0 = AVPlayer's automatic sizing). Ported from the Mac engine.
+    private func makeItem(url: URL) -> AVPlayerItem {
+        let item = AVPlayerItem(url: url)
+        item.preferredForwardBufferDuration = 10
+        return item
+    }
+
     private func loadClip(at index: Int, onFront: Bool, startPlaying: Bool) {
         guard !queue.isEmpty, index < queue.count else { return }
         let video  = queue[index]
         let player = onFront ? frontPlayer : backPlayer
         guard let url = video.remoteVideoURL else { return }
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        player.replaceCurrentItem(with: makeItem(url: url))
         if onFront {
             if startPlaying { player.seek(to: .zero); player.play() }
         }
