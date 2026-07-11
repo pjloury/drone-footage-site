@@ -13,6 +13,7 @@
 // and the custom layer may be ignored.
 
 import AppKit
+import QuartzCore
 import AVFoundation
 
 /// One display's window + its own player model + crossfade layer wiring.
@@ -89,21 +90,33 @@ private final class WallpaperDisplay {
         model.finalizeLayersCallback = { [weak self] in self?.setLayerOpacities() }
     }
 
+    // Dissolve-through-black: the outgoing layer fades out over the first
+    // half of `duration`, then the incoming layer fades in over the second
+    // half — instead of both fading simultaneously — for a more cinematic
+    // transition. Total wall-clock time is unchanged.
     private func performCrossfade(duration: TimeInterval) {
         // isFrontA not yet toggled: front=A(showing), back=B(new video).
         let fadingIn  = model.isFrontA ? viewB.layer : viewA.layer
         let fadingOut = model.isFrontA ? viewA.layer : viewB.layer
-        let anim: (Float, Float) -> CABasicAnimation = { from, to in
-            let a = CABasicAnimation(keyPath: "opacity")
-            a.fromValue = from; a.toValue = to
-            a.duration  = duration
-            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            a.fillMode = .forwards
-            a.isRemovedOnCompletion = false
-            return a
-        }
-        fadingIn?.add(anim(0, 1),  forKey: "fadeIn")
-        fadingOut?.add(anim(1, 0), forKey: "fadeOut")
+        let half = duration / 2
+
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1; fadeOut.toValue = 0
+        fadeOut.duration  = half
+        fadeOut.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        fadeOut.fillMode = .forwards
+        fadeOut.isRemovedOnCompletion = false
+
+        let fadeIn = CABasicAnimation(keyPath: "opacity")
+        fadeIn.fromValue = 0; fadeIn.toValue = 1
+        fadeIn.beginTime = CACurrentMediaTime() + half
+        fadeIn.duration  = half
+        fadeIn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        fadeIn.fillMode = .forwards
+        fadeIn.isRemovedOnCompletion = false
+
+        fadingOut?.add(fadeOut, forKey: "fadeOut")
+        fadingIn?.add(fadeIn,   forKey: "fadeIn")
     }
 
     // model.isFrontA is already in its correct final state at both call sites.

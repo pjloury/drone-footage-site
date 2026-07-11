@@ -321,9 +321,19 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         backPlayer.play()
         updateTitle(for: url)
 
-        withAnimation(.easeInOut(duration: duration)) {
-            if isFrontA { opacityA = 0; opacityB = 1 }
-            else        { opacityB = 0; opacityA = 1 }
+        // Dissolve-through-black: fade the outgoing clip out over the first
+        // half of `duration`, then fade the incoming clip in over the second
+        // half — instead of both fading simultaneously — for a more
+        // cinematic transition. Total wall-clock time is unchanged.
+        let half = duration / 2
+        withAnimation(.easeInOut(duration: half)) {
+            if isFrontA { opacityA = 0 } else { opacityB = 0 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + half) { [weak self] in
+            guard let self else { return }
+            withAnimation(.easeInOut(duration: half)) {
+                if self.isFrontA { self.opacityB = 1 } else { self.opacityA = 1 }
+            }
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in

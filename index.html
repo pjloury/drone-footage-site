@@ -49,7 +49,12 @@
     .layer {
       position: absolute; inset: 0;
       opacity: 0;
-      transition: opacity 4s ease-in-out;
+      /* Half of CROSSFADE_MS (index.html JS) — the outgoing layer fades out
+         over this duration, then the incoming layer fades in over the same
+         duration starting at the midpoint, so a full transition dissolves
+         through black in the same total time a simultaneous crossfade used
+         to take. Keep in sync with CROSSFADE_MS / 2. */
+      transition: opacity 2s ease-in-out;
     }
     .layer.active { opacity: 1; }
 
@@ -1623,13 +1628,15 @@ function goTo(index, opts) {
     if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
     clearGoToLoad();
     safePlay(incoming, "goTo_crossfade");
-    // Fade out outgoing only now that incoming is ready — prevents black gap
-    // on iOS where preload="auto" is ignored and buffering takes time
+    // Cinematic dissolve-through-black: fade the outgoing layer out first
+    // (only now that incoming is ready — prevents a black gap on iOS where
+    // preload="auto" is ignored and buffering takes time)...
     outgoingLayer.classList.remove("active");
-    incomingLayer.classList.add("active");
     if (typeof castCurrentVideo === "function") castCurrentVideo();
 
-    // Caption + minimap fade in halfway through the crossfade
+    // ...then, once the screen is black at the midpoint, swap caption/minimap
+    // and fade the incoming layer in — instead of both layers crossfading
+    // simultaneously.
     setTimeout(() => {
       caption.textContent = VIDEOS[current].caption;
       caption.classList.remove("fade");
@@ -1637,6 +1644,7 @@ function goTo(index, opts) {
       minimapEl.classList.add("visible");
       minimapDotsEl.classList.add("visible");
       pushUrlState();
+      incomingLayer.classList.add("active");
     }, CROSSFADE_MS / 2);
 
     setTimeout(() => {

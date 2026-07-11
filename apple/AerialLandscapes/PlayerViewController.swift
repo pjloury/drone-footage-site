@@ -102,30 +102,43 @@ class PlayerViewController: UIViewController {
 
     // MARK: - Crossfade animation
     //
-    // Called by StreamingPlayerModel.crossfadeCallback with a duration:
-    //   4.0 s — automatic end-of-clip crossfade
-    //   1.2 s — manual ← / → skip
+    // Called by StreamingPlayerModel.crossfadeCallback with a duration — 4.0 s
+    // for both the automatic end-of-clip crossfade and manual ← / → skip
+    // (StreamingPlayerModel.autoDuration / .manualDuration).
 
     // Bug 1 fix: no asyncAfter cleanup here.
     // Cleanup is now driven by finalizeLayersCallback which fires inside
     // completeFade() AFTER isFrontA has been toggled — so setLayerOpacities()
     // always reads the correct (post-toggle) front/back assignment.
+    //
+    // Dissolve-through-black: the outgoing layer fades out over the first
+    // half of `duration`, then the incoming layer fades in over the second
+    // half — instead of both fading simultaneously — for a more cinematic
+    // transition. Total wall-clock time is unchanged; StreamingPlayerModel's
+    // midpoint caption/minimap swap already lines up with the black point.
     func performCrossfade(duration: TimeInterval) {
         let fadingIn  = model.isFrontA ? layerB : layerA   // back layer
         let fadingOut = model.isFrontA ? layerA : layerB   // front layer
+        let half = duration / 2
 
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        let makeAnim: (Float, Float) -> CABasicAnimation = { from, to in
-            let a = CABasicAnimation(keyPath: "opacity")
-            a.fromValue = from; a.toValue = to
-            a.duration  = duration
-            a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            a.fillMode = .forwards; a.isRemovedOnCompletion = false
-            return a
-        }
-        fadingIn?.add(makeAnim(0, 1),  forKey: "fadeIn")
-        fadingOut?.add(makeAnim(1, 0), forKey: "fadeOut")
+
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1; fadeOut.toValue = 0
+        fadeOut.duration  = half
+        fadeOut.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        fadeOut.fillMode = .forwards; fadeOut.isRemovedOnCompletion = false
+
+        let fadeIn = CABasicAnimation(keyPath: "opacity")
+        fadeIn.fromValue = 0; fadeIn.toValue = 1
+        fadeIn.beginTime = CACurrentMediaTime() + half
+        fadeIn.duration  = half
+        fadeIn.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        fadeIn.fillMode = .forwards; fadeIn.isRemovedOnCompletion = false
+
+        fadingOut?.add(fadeOut, forKey: "fadeOut")
+        fadingIn?.add(fadeIn,   forKey: "fadeIn")
         CATransaction.commit()
     }
 
