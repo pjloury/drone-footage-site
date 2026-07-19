@@ -120,9 +120,9 @@ class StreamingPlayerModel: ObservableObject {
         guard let effectiveDur = effectivePlayDuration() else { return 0 }
         let cur = frontPlayer.currentTime().seconds
         guard cur.isFinite else { return 0 }
-        // The auto-crossfade starts AT the effective end (universal semantic,
-        // matching web), so the bar reaches the right edge exactly as the
-        // fade-out begins.
+        // effectivePlayDuration ends at the auto-fade start point (universal
+        // semantic, matching web), so the bar reaches the right edge exactly
+        // as the fade-out begins.
         return min(1, max(0, cur / effectiveDur))
     }
 
@@ -574,13 +574,16 @@ class StreamingPlayerModel: ObservableObject {
         }
     }
 
-    /// The play window the bar fills across: the clip's full length, or the
-    /// play-time cap when it's on. Returns nil until the duration is known.
+    /// The play window the bar fills across: up to the auto-fade start point
+    /// (one fade-length before the natural end, or the play-time cap), so the
+    /// bar reaches 100% exactly as the fade begins. Returns nil until the
+    /// duration is known.
     private func effectivePlayDuration() -> Double? {
         guard let item = frontPlayer.currentItem, item.status == .readyToPlay else { return nil }
         let dur = item.duration.seconds
         guard dur.isFinite, dur > 0 else { return nil }
-        return Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+        let capped = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+        return max(1, min(capped, dur - Self.autoDuration))
     }
 
     private func removeTimeObserver() {
@@ -599,13 +602,16 @@ class StreamingPlayerModel: ObservableObject {
               item.status == .readyToPlay else { return }
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
-        // Universal semantic (matches web): the fade STARTS at the effective
-        // end (the 60s cap, or the clip's natural end if shorter) and the clip
-        // keeps playing underneath it. The progress bar therefore fills the
-        // whole window and reaches 100% as the fade begins.
-        let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
-        let rem = effectiveDur - elapsed
         guard dur.isFinite, dur > 0 else { return }
+        // Universal semantic (matches web/Mac): the fade must COMPLETE by the
+        // clip's natural end so it never plays over a frozen last frame —
+        // start one fade-length early. At the 60s cap the clip keeps playing
+        // underneath the fade, so the cap itself is the start time there. The
+        // progress bar fills the pre-fade window and reaches 100% as the fade
+        // begins.
+        let effectiveDur = Self.limitPlayTime ? min(dur, Self.maxPlaySeconds) : dur
+        let fireAt = max(1, min(effectiveDur, dur - Self.autoDuration))
+        let rem = fireAt - elapsed
 
         // Production: fire when the effective end is reached (0.25s = one
         // time-observer tick of slack; no lower bound so a late tick still fires).

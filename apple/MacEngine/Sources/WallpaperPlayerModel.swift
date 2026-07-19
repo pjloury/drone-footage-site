@@ -462,12 +462,15 @@ final class WallpaperPlayerModel: NSObject {
         let dur = item.duration.seconds
         let elapsed = frontPlayer.currentTime().seconds
         guard dur.isFinite, dur > 0, elapsed > 0 else { return }
-        // Universal semantic (matches web/tvOS): the fade STARTS at the
-        // effective end (60s cap, or natural end if shorter) and the clip
-        // keeps playing underneath it. 0.25s = one observer tick of slack;
-        // no lower bound so a late tick still fires.
+        // Universal semantic (matches web/tvOS): the fade must COMPLETE by
+        // the clip's natural end so it never plays over a frozen last frame —
+        // start one fade-length early. At the 60s cap the clip keeps playing
+        // underneath the fade, so the cap itself is the start time there.
+        // 0.25s = one observer tick of slack; no lower bound so a late tick
+        // still fires.
         let effectiveDur = limitPlayTime ? min(dur, maxPlaySeconds) : dur
-        let remaining = effectiveDur - elapsed
+        let fireAt = max(1, min(effectiveDur, dur - autoFadeDuration))
+        let remaining = fireAt - elapsed
         guard remaining <= 0.25 else { return }
 
         autoFadeArmed = true

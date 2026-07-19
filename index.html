@@ -1271,15 +1271,20 @@ function updateDots() {
       : "0";
   });
 }
+// When the auto-crossfade should begin. The fade must COMPLETE by the clip's
+// natural end so it never plays over a frozen last frame — start one
+// fade-length early. At the 60s cap the clip keeps playing underneath the
+// fade, so the cap itself is the start time there.
+function autoFadeStart(vid) {
+  const effDur = LIMIT_PLAY_TIME ? Math.min(vid.duration, MAX_PLAY_SECONDS) : vid.duration;
+  return Math.max(1, Math.min(effDur, vid.duration - CROSSFADE_MS / 1000));
+}
 function updateBar(vid) {
   if (!vid.duration) return;
-  // When the play-time limit is on, the bar fills over the capped window and
-  // the clip crossfades to the next once the cap is reached (shorter clips end
-  // naturally via onended). Longer clips never run past the cap.
-  const effDur = LIMIT_PLAY_TIME ? Math.min(vid.duration, MAX_PLAY_SECONDS) : vid.duration;
-  barEl.style.width = (vid.currentTime / effDur * 100) + "%";
-  if (LIMIT_PLAY_TIME && vid.duration > MAX_PLAY_SECONDS &&
-      vid.currentTime >= MAX_PLAY_SECONDS && !transitioning) {
+  // The bar fills over the pre-fade window, reaching 100% as the fade begins.
+  const fadeAt = autoFadeStart(vid);
+  barEl.style.width = (Math.min(1, vid.currentTime / fadeAt) * 100) + "%";
+  if (vid.currentTime >= fadeAt && !transitioning) {
     goTo(current + 1);
   }
 }
