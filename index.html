@@ -428,6 +428,21 @@
     }
     /* Video-picker level (level 2 of the dropdown) */
     #section-dropdown.picker-level { min-width: 230px; }
+    /* Slide transition between category list and video picker */
+    .dropdown-panel {
+      animation: panel-slide-in 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    .dropdown-panel.slide-back {
+      animation: panel-slide-back 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }
+    @keyframes panel-slide-in {
+      from { opacity: 0; transform: translateX(12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes panel-slide-back {
+      from { opacity: 0; transform: translateX(-12px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
     .picker-back {
       display: flex; align-items: center; gap: 7px;
       padding: 8px 16px 7px;
@@ -2207,9 +2222,11 @@ minimapDotsEl.addEventListener("touchend", e => e.stopPropagation());
 let dropdownLevel = "categories";
 let pickerSection = null; // section id shown in the video-picker level
 
-function buildSectionMenu() {
+function buildSectionMenu(animate) {
   sectionDropdown.innerHTML = "";
   sectionDropdown.classList.remove("picker-level");
+  const panel = document.createElement("div");
+  panel.className = "dropdown-panel" + (animate ? " slide-back" : "");
   SECTIONS.forEach(sec => {
     const el = document.createElement("div");
     el.className = "section-item" + (playbackMode === sec.id ? " active" : "");
@@ -2219,16 +2236,17 @@ function buildSectionMenu() {
       setPlaybackMode(sec.id);
       openVideoPicker(sec.id);
     });
-    sectionDropdown.appendChild(el);
+    panel.appendChild(el);
   });
   const divider = document.createElement("div");
   divider.className = "section-divider";
-  sectionDropdown.appendChild(divider);
+  panel.appendChild(divider);
   const shuf = document.createElement("div");
   shuf.className = "section-item" + (playbackMode === "shuffle" ? " active" : "");
   shuf.innerHTML = '<svg class="shuffle-icon" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Shuffle All';
   shuf.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode("shuffle"); closeSectionMenu(); });
-  sectionDropdown.appendChild(shuf);
+  panel.appendChild(shuf);
+  sectionDropdown.appendChild(panel);
 }
 
 function openVideoPicker(sectionId) {
@@ -2242,16 +2260,19 @@ function openVideoPicker(sectionId) {
   sectionDropdown.innerHTML = "";
   sectionDropdown.classList.add("picker-level");
 
+  const panel = document.createElement("div");
+  panel.className = "dropdown-panel";
+
   // Back button
   const back = document.createElement("div");
   back.className = "picker-back";
   back.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>' + (sec?.name ?? sectionId);
-  back.addEventListener("click", e => { e.stopPropagation(); dropdownLevel = "categories"; buildSectionMenu(); });
-  sectionDropdown.appendChild(back);
+  back.addEventListener("click", e => { e.stopPropagation(); dropdownLevel = "categories"; buildSectionMenu(true); });
+  panel.appendChild(back);
 
   const divider = document.createElement("div");
   divider.className = "section-divider";
-  sectionDropdown.appendChild(divider);
+  panel.appendChild(divider);
 
   const list = document.createElement("div");
   list.className = "picker-video-list";
@@ -2260,10 +2281,21 @@ function openVideoPicker(sectionId) {
     const isCurrent = v.file === currentFile;
     item.className = "picker-item" + (isCurrent ? " current" : "");
     item.textContent = v.caption;
-    item.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(v.file); closeSectionMenu(); });
+    item.addEventListener("click", e => {
+      e.stopPropagation();
+      navigateToVideo(v.file, sectionId);
+      closeSectionMenu();
+    });
     list.appendChild(item);
   });
-  sectionDropdown.appendChild(list);
+  panel.appendChild(list);
+  sectionDropdown.appendChild(panel);
+
+  // Scroll the current video into view
+  requestAnimationFrame(() => {
+    const cur = list.querySelector(".current");
+    if (cur) cur.scrollIntoView({ block: "nearest" });
+  });
 }
 
 // sectionFocusIdx tracks keyboard focus within the open dropdown.
@@ -2477,8 +2509,13 @@ function buildMapPinData() {
 
 // Navigate to a specific video by file name, switching to shuffle mode so
 // the full catalog is restored and the clicked clip plays immediately.
-function navigateToVideo(file) {
-  applyPlaybackMode("shuffle");
+function navigateToVideo(file, sectionId) {
+  // Stay in the category if one was given; otherwise fall back to shuffle
+  if (sectionId && sectionId !== playbackMode) {
+    applyPlaybackMode(sectionId);
+  } else if (!sectionId) {
+    applyPlaybackMode("shuffle");
+  }
   updateSectionBtn();
   const idx = VIDEOS.findIndex(v => v.file === file);
   if (idx < 0) return;
