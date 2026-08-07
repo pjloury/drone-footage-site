@@ -3,11 +3,18 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
     <key>teamID</key>
     <string>D2GRT69L42</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>installerSigningCertificate</key>
+    <string>3rd Party Mac Developer Installer</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.pjloury.aerial-landscapes-wallpaper</key>
+        <string>AerialLandscapes Mac AppStore 2026</string>
+    </dict>
     <key>uploadSymbols</key>
     <true/>
 </dict>
