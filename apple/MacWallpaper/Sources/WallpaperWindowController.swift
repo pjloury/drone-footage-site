@@ -15,6 +15,7 @@
 import AppKit
 import QuartzCore
 import AVFoundation
+import Network
 
 /// One display's window + its own player model + crossfade layer wiring.
 @MainActor
@@ -151,6 +152,14 @@ final class WallpaperWindowController: NSObject {
     private var screenSignature = ""  // skip no-op rebuilds (spurious notifications)
     private var statusChangedHandler: (() -> Void)?
 
+    // Network monitor: hide windows when offline so the real macOS wallpaper
+    // shows instead of a black screen. Windows are restored when connectivity
+    // returns and playback is woken from the suspended state.
+    private var pathMonitor: NWPathMonitor?
+    private var isNetworkAvailable = true
+    private var offlineHideTimer: Timer?       // small delay before hiding (avoids flash on transient blips)
+    private let offlineHideDelay: TimeInterval = 5.0
+
     // Menu bar reads the primary (first) display's model.
     private var primary: WallpaperPlayerModel? { displays.first?.model }
     var currentVideo: DroneVideo?  { primary?.currentVideo }
@@ -181,10 +190,58 @@ final class WallpaperWindowController: NSObject {
                 wake.addObserver(self, selector: #selector(self.systemWoke(_:)),
                                  name: name, object: nil)
             }
+            self.startNetworkMonitor()
+        }
+    }
+
+    private func startNetworkMonitor() {
+        let monitor = NWPathMonitor()
+        pathMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                self?.handleNetworkChange(satisfied: path.status == .satisfied)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "com.pjloury.aerial.network"))
+    }
+
+    private func handleNetworkChange(satisfied: Bool) {
+        guard satisfied != isNetworkAvailable else { return }
+        isNetworkAvailable = satisfied
+        if satisfied {
+            // Cancel any pending hide; restore windows immediately.
+            offlineHideTimer?.invalidate()
+            offlineHideTimer = nil
+            WallpaperLog.shared.log("network", "online — restoring wallpaper windows")
+            showWindows()
+        } else {
+            // Small delay so brief Wi-Fi handoffs don't flash the real wallpaper.
+            WallpaperLog.shared.log("network", "offline — will hide wallpaper windows in \(Int(offlineHideDelay))s")
+            offlineHideTimer?.invalidate()
+            offlineHideTimer = Timer.scheduledTimer(withTimeInterval: offlineHideDelay, repeats: false) { [weak self] _ in
+                guard let self, !self.isNetworkAvailable else { return }
+                WallpaperLog.shared.log("network", "offline confirmed — hiding wallpaper windows")
+                self.hideWindows()
+            }
+        }
+    }
+
+    private func hideWindows() {
+        displays.forEach {
+            $0.model.pause()
+            $0.window.orderOut(nil)
+        }
+    }
+
+    private func showWindows() {
+        displays.forEach {
+            $0.window.orderFront(nil)
+            $0.model.systemWake()
         }
     }
 
     deinit {
+        pathMonitor?.cancel()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
