@@ -426,6 +426,47 @@
       stroke: currentColor; stroke-width: 2; stroke-linecap: round;
       stroke-linejoin: round; fill: none; vertical-align: -1px;
     }
+    /* Video-picker level (level 2 of the dropdown) */
+    #section-dropdown.picker-level { min-width: 230px; }
+    .picker-back {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 16px 7px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem; font-weight: 400; letter-spacing: 0.07em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4);
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      transition: color 0.15s;
+    }
+    .picker-back:hover { color: rgba(255,255,255,0.75); }
+    .picker-back svg { width: 11px; height: 11px; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .picker-section-label {
+      padding: 0 18px 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem; font-weight: 500; letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.85);
+    }
+    .picker-video-list { max-height: 260px; overflow-y: auto; }
+    .picker-video-list::-webkit-scrollbar { width: 4px; }
+    .picker-video-list::-webkit-scrollbar-track { background: transparent; }
+    .picker-video-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+    .picker-item {
+      display: flex; align-items: center;
+      padding: 7px 18px 7px 22px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.76rem; font-weight: 300; letter-spacing: 0.03em;
+      color: rgba(255,255,255,0.5);
+      cursor: pointer; user-select: none; -webkit-user-select: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .picker-item:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.9); }
+    .picker-item.current { color: rgba(255,255,255,0.9); }
+    .picker-item.current::before {
+      content: ""; display: inline-block; width: 5px; height: 5px;
+      border-radius: 50%; background: #fff; margin-right: 9px; flex-shrink: 0;
+    }
+    .picker-item:not(.current)::before {
+      content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 9px; flex-shrink: 0;
+    }
 
     /* ── Mini map ─────────────────────────────────────────── */
     #minimap {
@@ -2162,13 +2203,22 @@ minimapDotsEl.addEventListener("touchend", e => e.stopPropagation());
 
 // ── Section selector ─────────────────────────────────────
 
+// dropdownLevel: "categories" (default) | "videos" (picker for a specific section)
+let dropdownLevel = "categories";
+let pickerSection = null; // section id shown in the video-picker level
+
 function buildSectionMenu() {
   sectionDropdown.innerHTML = "";
+  sectionDropdown.classList.remove("picker-level");
   SECTIONS.forEach(sec => {
     const el = document.createElement("div");
     el.className = "section-item" + (playbackMode === sec.id ? " active" : "");
     el.textContent = sec.name;
-    el.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode(sec.id); closeSectionMenu(); });
+    el.addEventListener("click", e => {
+      e.stopPropagation();
+      setPlaybackMode(sec.id);
+      openVideoPicker(sec.id);
+    });
     sectionDropdown.appendChild(el);
   });
   const divider = document.createElement("div");
@@ -2179,6 +2229,41 @@ function buildSectionMenu() {
   shuf.innerHTML = '<svg class="shuffle-icon" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Shuffle All';
   shuf.addEventListener("click", e => { e.stopPropagation(); setPlaybackMode("shuffle"); closeSectionMenu(); });
   sectionDropdown.appendChild(shuf);
+}
+
+function openVideoPicker(sectionId) {
+  dropdownLevel = "videos";
+  pickerSection = sectionId;
+  const sec = SECTIONS.find(s => s.id === sectionId);
+  const videos = MASTER_VIDEOS.filter(v => v.section === sectionId)
+    .sort((a, b) => a.caption.localeCompare(b.caption));
+  const currentFile = VIDEOS[current]?.file;
+
+  sectionDropdown.innerHTML = "";
+  sectionDropdown.classList.add("picker-level");
+
+  // Back button
+  const back = document.createElement("div");
+  back.className = "picker-back";
+  back.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>' + (sec?.name ?? sectionId);
+  back.addEventListener("click", e => { e.stopPropagation(); dropdownLevel = "categories"; buildSectionMenu(); });
+  sectionDropdown.appendChild(back);
+
+  const divider = document.createElement("div");
+  divider.className = "section-divider";
+  sectionDropdown.appendChild(divider);
+
+  const list = document.createElement("div");
+  list.className = "picker-video-list";
+  videos.forEach(v => {
+    const item = document.createElement("div");
+    const isCurrent = v.file === currentFile;
+    item.className = "picker-item" + (isCurrent ? " current" : "");
+    item.textContent = v.caption;
+    item.addEventListener("click", e => { e.stopPropagation(); navigateToVideo(v.file); closeSectionMenu(); });
+    list.appendChild(item);
+  });
+  sectionDropdown.appendChild(list);
 }
 
 // sectionFocusIdx tracks keyboard focus within the open dropdown.
@@ -2203,6 +2288,14 @@ function selectFocusedSection() {
 
 function openSectionMenu() {
   sectionMenuOpen = true;
+  // If already in a category, open directly at the video-picker level
+  if (playbackMode !== "shuffle" && dropdownLevel === "videos") {
+    sectionDropdown.classList.add("open");
+    sectionBtn.classList.add("active");
+    openVideoPicker(playbackMode);
+    return;
+  }
+  dropdownLevel = "categories";
   // Pre-select the currently active mode so D-pad confirms immediately
   const modes = sectionItemModes();
   const idx = modes.indexOf(playbackMode);
@@ -2212,7 +2305,12 @@ function openSectionMenu() {
   sectionBtn.classList.add("active");
   if (IS_TV) highlightSectionItem();
 }
-function closeSectionMenu() { sectionMenuOpen = false; sectionDropdown.classList.remove("open"); sectionBtn.classList.remove("active"); }
+function closeSectionMenu() {
+  sectionMenuOpen = false;
+  dropdownLevel = "categories";
+  sectionDropdown.classList.remove("open");
+  sectionBtn.classList.remove("active");
+}
 function toggleSectionMenu() { sectionMenuOpen ? closeSectionMenu() : openSectionMenu(); }
 
 sectionBtn.addEventListener("click", e => { e.stopPropagation(); toggleSectionMenu(); });
