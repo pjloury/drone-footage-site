@@ -1126,6 +1126,10 @@ function flushTelemetry() {
 if (typeof window !== "undefined") {
   window.addEventListener("pagehide", flushTelemetry);
   window.addEventListener("beforeunload", flushTelemetry);
+  window.addEventListener("online", () => {
+    degradedClips.clear();
+    consecutiveAutoSkips = 0;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1755,7 +1759,10 @@ function goTo(index, opts) {
       });
       clearGoToLoad();
       transitioning = false;
-      goTo(current + 1);
+      if (consecutiveAutoSkips < MAX_AUTO_SKIPS) {
+        consecutiveAutoSkips++;
+        goTo(current + 1);
+      }
     }, 5000);
   }
   if (!IS_MOBILE && !degradedClips.has(current) && incoming.readyState < 3) {
@@ -1841,7 +1848,10 @@ function goTo(index, opts) {
     });
     clearGoToLoad();
     transitioning = false;
-    goTo(current + 1);
+    if (consecutiveAutoSkips < MAX_AUTO_SKIPS) {
+      consecutiveAutoSkips++;
+      goTo(current + 1);
+    }
   }, 5000);
 
   if (incoming.readyState >= 3) {
