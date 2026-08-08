@@ -20,9 +20,12 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         super.init()
         refreshIcon()
 
-        // Custom action so we can intercept Option+click before the menu opens.
+        // Fire on mouse-down so our action runs before AppKit's default menu-open
+        // handling. Without this, statusItem.menu causes the menu to open on its
+        // own and our action is never called.
         statusItem.button?.target = self
         statusItem.button?.action = #selector(buttonClicked(_:))
+        statusItem.button?.sendAction(on: .leftMouseDown)
 
         let menu = NSMenu()
         menu.delegate = self
