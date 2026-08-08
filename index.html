@@ -1371,8 +1371,9 @@ function clearGoToLoad() {
     clearTimeout(activeGoToFallback);
     activeGoToFallback = null;
   }
-  // Cancel any in-flight doTransition timeouts and snap layers to a clean
-  // baseline so the next goTo's outgoing layer always has .active.
+  // Cancel any in-flight doTransition timeouts. Layer state is restored
+  // at the top of the next doTransition call (not here) so we don't
+  // accidentally snap the wrong layer visible mid-cancel.
   if (doTransitionMid != null) {
     clearTimeout(doTransitionMid);
     doTransitionMid = null;
@@ -1382,9 +1383,6 @@ function clearGoToLoad() {
     doTransitionEnd = null;
     transitioning = false;
   }
-  // Ensure layers reflect the current front/back state before any new transition.
-  frontLayer().classList.add("active");
-  backLayer().classList.remove("active");
   if (mobileAutoSkipTimer != null) {
     clearTimeout(mobileAutoSkipTimer);
     mobileAutoSkipTimer = null;
@@ -1708,6 +1706,14 @@ function goTo(index, opts) {
   function doTransition() {
     if (activeGoToFallback) { clearTimeout(activeGoToFallback); activeGoToFallback = null; }
     clearGoToLoad();
+    // Restore outgoing to full opacity before starting the fade — a previous
+    // cancelled mid-transition may have already removed .active from it, and
+    // a stale timer may have added .active to incoming. Force a reflow so the
+    // browser commits opacity=1 on outgoing before the CSS transition fires.
+    outgoingLayer.classList.add("active");
+    incomingLayer.classList.remove("active");
+    void outgoingLayer.offsetHeight;
+
     safePlay(incoming, "goTo_crossfade");
     // Cinematic dissolve-through-black: fade the outgoing layer out first
     // (only now that incoming is ready — prevents a black gap on iOS where
