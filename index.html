@@ -1146,6 +1146,8 @@ let front         = "A"; // which layer is currently showing
 let activeGoToAbort    = null;
 let activeGoToWatchdog = null;
 let activeGoToFallback = null; // initial-load quality-fallback timer; cancelled on any navigate
+let doTransitionMid    = null; // setTimeout: add .active to incoming layer at CROSSFADE_MS/2
+let doTransitionEnd    = null; // setTimeout: finalize transition at CROSSFADE_MS+100
 
 // Freeze tracking — always-on, feeds both PostHog telemetry and mobile auto-skip
 let freezeStartMs      = null;  // Date.now() when current freeze began (null = not frozen)
@@ -1369,6 +1371,20 @@ function clearGoToLoad() {
     clearTimeout(activeGoToFallback);
     activeGoToFallback = null;
   }
+  // Cancel any in-flight doTransition timeouts and snap layers to a clean
+  // baseline so the next goTo's outgoing layer always has .active.
+  if (doTransitionMid != null) {
+    clearTimeout(doTransitionMid);
+    doTransitionMid = null;
+  }
+  if (doTransitionEnd != null) {
+    clearTimeout(doTransitionEnd);
+    doTransitionEnd = null;
+    transitioning = false;
+  }
+  // Ensure layers reflect the current front/back state before any new transition.
+  frontLayer().classList.add("active");
+  backLayer().classList.remove("active");
   if (mobileAutoSkipTimer != null) {
     clearTimeout(mobileAutoSkipTimer);
     mobileAutoSkipTimer = null;
@@ -1626,8 +1642,6 @@ function goTo(index, opts) {
   const outgoing      = frontVid();
   const outgoingLayer = frontLayer();
 
-  console.log(`[goTo] idx=${index} force=${!!force} front=${front} outgoing.active=${outgoingLayer.classList.contains("active")} incoming.readyState=${incoming.readyState} incoming.src=${incoming.src.split("/").pop()}`);
-
   // Kill outgoing handlers IMMEDIATELY — prevents preloadNext() from
   // clobbering the incoming video's src while it's trying to load
   outgoing.ontimeupdate = null;
@@ -1694,7 +1708,6 @@ function goTo(index, opts) {
   function doTransition() {
     if (activeGoToFallback) { clearTimeout(activeGoToFallback); activeGoToFallback = null; }
     clearGoToLoad();
-    console.log(`[doTransition] outgoing.active=${outgoingLayer.classList.contains("active")} incoming.readyState=${incoming.readyState}`);
     safePlay(incoming, "goTo_crossfade");
     // Cinematic dissolve-through-black: fade the outgoing layer out first
     // (only now that incoming is ready — prevents a black gap on iOS where
@@ -1705,7 +1718,8 @@ function goTo(index, opts) {
     // ...then, once the screen is black at the midpoint, swap caption/minimap
     // and fade the incoming layer in — instead of both layers crossfading
     // simultaneously.
-    setTimeout(() => {
+    doTransitionMid = setTimeout(() => {
+      doTransitionMid = null;
       caption.textContent = VIDEOS[current].caption;
       caption.classList.remove("fade");
       updateMiniMap();
@@ -1715,7 +1729,8 @@ function goTo(index, opts) {
       incomingLayer.classList.add("active");
     }, CROSSFADE_MS / 2);
 
-    setTimeout(() => {
+    doTransitionEnd = setTimeout(() => {
+      doTransitionEnd = null;
       outgoing.pause();
       incoming.ontimeupdate = () => {
         updateBar(incoming);
