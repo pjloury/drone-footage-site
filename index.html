@@ -1145,6 +1145,7 @@ let front         = "A"; // which layer is currently showing
 
 let activeGoToAbort    = null;
 let activeGoToWatchdog = null;
+let activeGoToFallback = null; // initial-load quality-fallback timer; cancelled on any navigate
 
 // Freeze tracking — always-on, feeds both PostHog telemetry and mobile auto-skip
 let freezeStartMs      = null;  // Date.now() when current freeze began (null = not frozen)
@@ -1364,6 +1365,10 @@ function clearGoToLoad() {
     clearTimeout(activeGoToWatchdog);
     activeGoToWatchdog = null;
   }
+  if (activeGoToFallback != null) {
+    clearTimeout(activeGoToFallback);
+    activeGoToFallback = null;
+  }
   if (mobileAutoSkipTimer != null) {
     clearTimeout(mobileAutoSkipTimer);
     mobileAutoSkipTimer = null;
@@ -1547,7 +1552,7 @@ function onWaiting(e) {
   // In both cases the mobile encode (H.264 1080p @ 5 Mbps, lower overhead)
   // resumes from the same position without the user having to navigate away.
   if (!transitioning && !IS_MOBILE && !degradedClips.has(current) && v.currentTime > 1.0) {
-    const clipIdx   = current;       // stable closure — current may change during async ops
+    const clipIdx   = current;
     const savedTime = v.currentTime;
     degradedClips.add(clipIdx);
 
@@ -1558,29 +1563,20 @@ function onWaiting(e) {
       ...clipPayloadFromVideo(v),
     });
 
-    // Preserve live playback handlers; restore them after the seek lands.
-    const savedOntimeupdate = v.ontimeupdate;
-    const savedOnended      = v.onended;
-    v.ontimeupdate = null;
-    v.onended      = null;
-
-    // Swap source — url() now returns the mobile URL because clipIdx ∈ degradedClips.
-    v.src = url(clipIdx);
-    v.load();
-
-    // Seek to the saved position once the new file's metadata is ready.
-    v.addEventListener("loadedmetadata", () => {
-      if (v.duration && savedTime < v.duration) v.currentTime = savedTime;
+    // Pre-load the mobile encode into the back video at the stall position,
+    // then let goTo() crossfade into it — avoids the jarring in-place src-swap
+    // on the front video (which caused a visible blank frame + restart).
+    const bv = backVid();
+    bv.ontimeupdate = null;
+    bv.onended      = null;
+    // url() now returns the mobile URL because clipIdx ∈ degradedClips
+    setVideoSrc(bv, clipIdx);
+    bv.addEventListener("loadedmetadata", () => {
+      if (bv.duration && savedTime < bv.duration) bv.currentTime = savedTime;
     }, { once: true });
-
-    // After the seek completes, restore handlers and resume playback.
-    v.addEventListener("seeked", () => {
-      // Guard: user may have navigated away while the mobile file was loading.
-      if (v !== frontVid() || transitioning) return;
-      v.ontimeupdate = savedOntimeupdate;
-      v.onended      = savedOnended;
-      safePlay(v, "midplay_fallback");
-    }, { once: true });
+    // goTo sees bv already has the mobile src so skips the load; waits for
+    // canplay (which fires after the seek above), then crossfades normally.
+    goTo(clipIdx, { force: true });
   }
 }
 
@@ -1658,9 +1654,8 @@ function goTo(index, opts) {
 
   // Quality fallback: if full-res hasn't buffered within 2.5s, silently retry at mobile quality.
   // The existing canplay listener fires again for the new src — no other wiring needed.
-  let fallbackTimer = null;
   function tryFallback() {
-    fallbackTimer = null;
+    activeGoToFallback = null;
     if (IS_MOBILE || degradedClips.has(current)) return;
     degradedClips.add(current);
     queueTelemetry({
@@ -1691,11 +1686,11 @@ function goTo(index, opts) {
     }, 5000);
   }
   if (!IS_MOBILE && !degradedClips.has(current) && incoming.readyState < 3) {
-    fallbackTimer = setTimeout(tryFallback, 2500);
+    activeGoToFallback = setTimeout(tryFallback, 2500);
   }
 
   function doTransition() {
-    if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+    if (activeGoToFallback) { clearTimeout(activeGoToFallback); activeGoToFallback = null; }
     clearGoToLoad();
     safePlay(incoming, "goTo_crossfade");
     // Cinematic dissolve-through-black: fade the outgoing layer out first
