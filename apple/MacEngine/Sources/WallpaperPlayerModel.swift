@@ -270,7 +270,10 @@ final class WallpaperPlayerModel: NSObject {
 
         removeTimeObserver()
         bufferingObservation?.invalidate()
-        isCrossfading = false
+        // Mark crossfading immediately so the stall watchdog can't fire
+        // another startCrossfade during the buffering window and clobber ours
+        // via a generation mismatch before the animation even begins.
+        isCrossfading = true
         autoFadeArmed = false
         resetLayersCallback?()          // snap layers to clean baseline immediately
 
@@ -285,7 +288,6 @@ final class WallpaperPlayerModel: NSObject {
         // playlist up front (see VideoPlaylist).
         waitUntilReady(gen: gen, maxWait: bufferReadyTimeout) { [weak self] in
             guard let self, self.crossfadeGeneration == gen else { return }
-            self.isCrossfading = true
             self.crossfadeCallback?(duration)
 
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
