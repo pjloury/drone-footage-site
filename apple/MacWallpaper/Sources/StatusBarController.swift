@@ -6,27 +6,21 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let wallpaper: WallpaperWindowController
 
-    // Dev mode: 5 clicks on the status-bar button within 3s.
+    // Dev mode: 5 quick clicks on the video-name row inside the menu within 3s.
     // Stored in UserDefaults so it survives restarts.
     private static let devModeKey = "aerialDevMode"
     private var devMode: Bool {
         get { UserDefaults.standard.bool(forKey: Self.devModeKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.devModeKey); refreshIcon() }
     }
-    private var devClickCount = 0
-    private var devClickTimer: Timer?
+    private var devTapCount = 0
+    private var devTapTimer: Timer?
 
     init(wallpaper: WallpaperWindowController) {
         self.wallpaper = wallpaper
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         refreshIcon()
-
-        // Intercept button clicks to count toward dev-mode unlock BEFORE the menu opens.
-        // We add a custom action; the menu still opens via statusItem.menu.
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(buttonClicked(_:))
-        statusItem.button?.sendAction(on: .leftMouseDown)
 
         let menu = NSMenu()
         menu.delegate = self
@@ -35,17 +29,17 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         wallpaper.onStatusChanged = { [weak self] in self?.refreshIcon() }
     }
 
-    @objc private func buttonClicked(_ sender: NSStatusBarButton) {
-        devClickTimer?.invalidate()
-        devClickCount += 1
-        devClickTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-            self?.devClickCount = 0
+    @objc private func captionTapped() {
+        devTapTimer?.invalidate()
+        devTapCount += 1
+        devTapTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async { self?.devTapCount = 0 }
         }
-        if devClickCount >= 5 {
-            devClickCount = 0
-            devClickTimer?.invalidate(); devClickTimer = nil
+        if devTapCount >= 5 {
+            devTapCount = 0
+            devTapTimer?.invalidate(); devTapTimer = nil
             devMode = !devMode
-            // Brief amber flash on the button to confirm toggle
+            // Brief amber flash on the status bar icon to confirm toggle
             if let btn = statusItem.button {
                 let prev = btn.contentTintColor
                 btn.contentTintColor = NSColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
@@ -54,16 +48,21 @@ final class StatusBarController: NSObject, NSMenuDelegate {
                 }
             }
         }
-        // Let the menu open normally
-        statusItem.menu?.popUp(positioning: nil, at: .zero, in: sender)
     }
 
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        // Video name (or em-dash if nothing loaded yet)
+        // Video name row — looks like a disabled label but accepts clicks so the
+        // user can tap it 5× quickly to toggle dev mode (hidden feature).
         let caption = wallpaper.currentVideo?.caption ?? "—"
-        menu.addItem(disabled(caption))
+        let captionItem = NSMenuItem(title: "", action: #selector(captionTapped), keyEquivalent: "")
+        captionItem.target = self
+        // Dim gray attributed title to match the look of a disabled label
+        captionItem.attributedTitle = NSAttributedString(string: caption, attributes: [
+            .foregroundColor: NSColor.secondaryLabelColor,
+        ])
+        menu.addItem(captionItem)
         menu.addItem(.separator())
 
         // Menu-click targets (no key equivalents here — hotkeys are global ⌃⌥
@@ -218,11 +217,6 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         alert.runModal()
     }
 
-    private func disabled(_ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
-        return item
-    }
 
     private func refreshIcon() {
         let name: String
