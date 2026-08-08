@@ -1626,6 +1626,8 @@ function goTo(index, opts) {
   const outgoing      = frontVid();
   const outgoingLayer = frontLayer();
 
+  console.log(`[goTo] idx=${index} force=${!!force} front=${front} outgoing.active=${outgoingLayer.classList.contains("active")} incoming.readyState=${incoming.readyState} incoming.src=${incoming.src.split("/").pop()}`);
+
   // Kill outgoing handlers IMMEDIATELY — prevents preloadNext() from
   // clobbering the incoming video's src while it's trying to load
   outgoing.ontimeupdate = null;
@@ -1692,6 +1694,7 @@ function goTo(index, opts) {
   function doTransition() {
     if (activeGoToFallback) { clearTimeout(activeGoToFallback); activeGoToFallback = null; }
     clearGoToLoad();
+    console.log(`[doTransition] outgoing.active=${outgoingLayer.classList.contains("active")} incoming.readyState=${incoming.readyState}`);
     safePlay(incoming, "goTo_crossfade");
     // Cinematic dissolve-through-black: fade the outgoing layer out first
     // (only now that incoming is ready — prevents a black gap on iOS where
