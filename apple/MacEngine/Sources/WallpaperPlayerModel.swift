@@ -185,6 +185,12 @@ final class WallpaperPlayerModel: NSObject {
 
     // MARK: - Navigation
 
+    /// Jump directly to a specific video by id (dev-mode video picker).
+    func jumpToVideo(id: Int) {
+        guard let idx = queue.firstIndex(where: { $0.id == id }) else { return }
+        startCrossfade(to: idx, duration: manualFadeDuration)
+    }
+
     func next() {
         let idx = (currentIndex + 1) % queue.count
         startCrossfade(to: idx, duration: manualFadeDuration)

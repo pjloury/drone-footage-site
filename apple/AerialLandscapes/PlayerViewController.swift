@@ -42,6 +42,43 @@ class PlayerViewController: UIViewController {
         action()
     }
 
+    // Dev-mode unlock: 5 select-button taps within 3s (sidebar closed only)
+    private var devTapCount = 0
+    private var devTapTimer: Timer?
+    private func recordDevTap() {
+        devTapTimer?.invalidate()
+        devTapCount += 1
+        devTapTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            self?.devTapCount = 0
+        }
+        if devTapCount >= 5 {
+            devTapCount = 0
+            devTapTimer?.invalidate()
+            devTapTimer = nil
+            DevMode.toggle()
+            sidebarVC.reloadForDevMode()
+            showDevModeToast()
+        }
+    }
+
+    private func showDevModeToast() {
+        let label = UILabel()
+        label.text = DevMode.isEnabled ? "DEV MODE ON" : "DEV MODE OFF"
+        label.font = UIFont.monospacedSystemFont(ofSize: 18, weight: .medium)
+        label.textColor = DevMode.isEnabled ? UIColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1) : .white
+        label.alpha = 0
+        label.sizeToFit()
+        label.center = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        label.autoresizingMask = [.flexibleTopMargin, .flexibleBottomMargin,
+                                  .flexibleLeftMargin, .flexibleRightMargin]
+        view.addSubview(label)
+        UIView.animate(withDuration: 0.25) { label.alpha = 1.0 } completion: { _ in
+            UIView.animate(withDuration: 0.4, delay: 1.2) { label.alpha = 0 } completion: { _ in
+                label.removeFromSuperview()
+            }
+        }
+    }
+
     init(model: StreamingPlayerModel) {
         self.model = model
         super.init(nibName: nil, bundle: nil)
@@ -293,6 +330,7 @@ class PlayerViewController: UIViewController {
             case .leftArrow:            debounced { self.model.prev() }
             case .rightArrow:           debounced { self.model.next() }
             case .upArrow, .playPause:  debounced { self.openSidebar() }
+            case .select:               debounced { self.recordDevTap() }
             default: break
             }
         }

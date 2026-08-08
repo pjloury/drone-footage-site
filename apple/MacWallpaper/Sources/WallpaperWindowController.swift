@@ -256,6 +256,7 @@ final class WallpaperWindowController: NSObject {
     func prev()   { displays.forEach { $0.model.prev() } }
     func pause()  { displays.forEach { $0.model.pause() } }
     func resume() { displays.forEach { $0.model.resume() } }
+    func jumpToVideo(id: Int) { displays.forEach { $0.model.jumpToVideo(id: id) } }
 
     /// A stable fingerprint of the current display layout. If unchanged, a
     /// screen-change notification is spurious (display sleep, brightness, etc.)

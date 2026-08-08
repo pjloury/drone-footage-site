@@ -20,14 +20,25 @@ class SidebarViewController: UIViewController {
     var onCancel:  (() -> Void)?   // called when user presses Menu (cancel preview)
 
     private let tableView = UITableView(frame: .zero, style: .plain)
+    private let headerLabel = UILabel()
 
-    private let items: [(id: String?, name: String, symbol: String)] = [
+    // Sidebar display state: category list or video picker for a section
+    private enum SidebarLevel {
+        case categories
+        case videos(sectionId: String, sectionName: String)
+    }
+    private var level: SidebarLevel = .categories
+
+    private let categories: [(id: String?, name: String, symbol: String)] = [
         (nil,         "Shuffle All", "shuffle"),
         ("cities",    "Cities",      "building.2.fill"),
         ("coastal",   "Coastal",     "water.waves"),
         ("mountains", "Mountains",   "mountain.2.fill"),
         ("desert",    "Desert",      "sun.haze.fill"),
     ]
+
+    // Videos shown in the picker level, sorted alphabetically
+    private var pickerVideos: [Video] = []
 
     // MARK: Lifecycle
 
@@ -54,16 +65,14 @@ class SidebarViewController: UIViewController {
     }
 
     private func setupHeader() {
-        let label = UILabel()
-        label.text = "Categories"
-        label.font = UIFont.systemFont(ofSize: 26, weight: .semibold)
-        label.textColor = UIColor.white.withAlphaComponent(0.45)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
+        headerLabel.text = "Categories"
+        headerLabel.font = UIFont.systemFont(ofSize: 26, weight: .semibold)
+        headerLabel.textColor = UIColor.white.withAlphaComponent(0.45)
+        headerLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(headerLabel)
         NSLayoutConstraint.activate([
-            // 28 pt matches the cell's leading indent exactly
-            label.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
-            label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
+            headerLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 28),
+            headerLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 60),
         ])
     }
 
@@ -84,10 +93,56 @@ class SidebarViewController: UIViewController {
         ])
     }
 
+    // MARK: Dev mode
+
+    /// Called by PlayerViewController when DevMode is toggled — refresh gold dots.
+    func reloadForDevMode() {
+        tableView.reloadData()
+        updateHeaderForLevel()
+    }
+
+    private func updateHeaderForLevel() {
+        switch level {
+        case .categories:
+            headerLabel.text = DevMode.isEnabled ? "Categories ◆" : "Categories"
+            headerLabel.textColor = DevMode.isEnabled
+                ? UIColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 0.7)
+                : UIColor.white.withAlphaComponent(0.45)
+        case .videos(_, let name):
+            headerLabel.text = name
+            headerLabel.textColor = UIColor.white.withAlphaComponent(0.45)
+        }
+    }
+
+    private func openVideoPicker(sectionId: String, sectionName: String) {
+        pickerVideos = VideoConfig.allVideos
+            .filter { $0.geozone == sectionId }
+            .sorted { $0.displayTitle < $1.displayTitle }
+        level = .videos(sectionId: sectionId, sectionName: sectionName)
+        updateHeaderForLevel()
+        tableView.reloadData()
+        tableView.scrollToRow(at: IndexPath(row: 0, section: 0), at: .top, animated: false)
+        UIView.transition(with: tableView, duration: 0.28,
+                          options: .transitionCrossDissolve, animations: nil)
+    }
+
+    private func backToCategories() {
+        level = .categories
+        updateHeaderForLevel()
+        tableView.reloadData()
+        UIView.transition(with: tableView, duration: 0.28,
+                          options: .transitionCrossDissolve, animations: nil)
+    }
+
     // MARK: Remote
 
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
         for press in presses where press.type == .menu {
+            if case .videos = level {
+                // Back arrow in video picker returns to categories
+                backToCategories()
+                return
+            }
             onCancel?()   // revert preview before closing
             onClose?()
             return
@@ -101,30 +156,59 @@ class SidebarViewController: UIViewController {
 extension SidebarViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        items.count
+        switch level {
+        case .categories:           return categories.count
+        case .videos:               return pickerVideos.count
+        }
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath) as! SidebarCell
-        let item = items[indexPath.row]
-        cell.configure(name: item.name, symbol: item.symbol, active: item.id == model?.activeSection)
+        switch level {
+        case .categories:
+            let item = categories[indexPath.row]
+            cell.configure(name: item.name, symbol: item.symbol,
+                           active: item.id == model?.activeSection,
+                           devDot: item.id != nil && DevMode.isEnabled)
+        case .videos:
+            let v = pickerVideos[indexPath.row]
+            let isCurrentVideo = v.displayTitle == (model?.currentTitle ?? "")
+            cell.configure(name: v.displayTitle, symbol: "film",
+                           active: isCurrentVideo,
+                           devDot: false)
+        }
         return cell
     }
 
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat { 78 }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        // Section is already previewing — commit it and close
-        model?.loadSection(items[indexPath.row].id)
-        onClose?()
+        switch level {
+        case .categories:
+            let item = categories[indexPath.row]
+            if DevMode.isEnabled, let sectionId = item.id {
+                // In dev mode: commit the section but stay open to pick a video
+                model?.loadSection(sectionId)
+                openVideoPicker(sectionId: sectionId, sectionName: item.name)
+            } else {
+                model?.loadSection(item.id)
+                onClose?()
+            }
+        case .videos:
+            let v = pickerVideos[indexPath.row]
+            model?.jumpToVideo(id: v.id)
+            onClose?()
+        }
     }
 
-    // Fire a live preview as soon as focus moves to a row
+    // Fire a live preview as soon as focus moves to a row (categories level only)
     func tableView(_ tableView: UITableView,
                    didUpdateFocusIn context: UITableViewFocusUpdateContext,
                    with coordinator: UIFocusAnimationCoordinator) {
         guard let next = context.nextFocusedIndexPath else { return }
-        model?.previewSection(items[next.row].id)
+        if case .categories = level {
+            model?.previewSection(categories[next.row].id)
+        }
     }
 }
 
@@ -185,10 +269,14 @@ private class SidebarCell: UITableViewCell {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func configure(name: String, symbol: String, active: Bool) {
+    func configure(name: String, symbol: String, active: Bool, devDot: Bool) {
         iconView.image  = UIImage(systemName: symbol)
         nameLabel.text  = name
         activeDot.isHidden = !active
+        // Gold dot when dev mode is on for a category row, white otherwise
+        activeDot.backgroundColor = devDot
+            ? UIColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
+            : .white
         let alpha: CGFloat = active ? 1.0 : 0.55
         iconView.alpha  = alpha
         nameLabel.alpha = alpha

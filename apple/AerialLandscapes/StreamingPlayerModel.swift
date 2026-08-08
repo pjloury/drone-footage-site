@@ -253,6 +253,18 @@ class StreamingPlayerModel: ObservableObject {
 
     // MARK: Section loading
 
+    /// Jump directly to a specific video by id (dev-mode video picker).
+    func jumpToVideo(id: String) {
+        if let idx = queue.firstIndex(where: { $0.id == id }) {
+            currentQueueIndex = idx
+        } else if let video = VideoConfig.allVideos.first(where: { $0.id == id }) {
+            queue.insert(video, at: 0)
+            currentQueueIndex = 0
+        } else { return }
+        loadClip(at: currentQueueIndex, onFront: true, startPlaying: true)
+        updateMetadata(from: currentQueueIndex)
+    }
+
     func loadSection(_ section: String?) {
         xfadeLog.notice("loadSection(\(section ?? "nil", privacy: .public)) [COMMIT] activeWas=\(self.activeSection ?? "nil", privacy: .public)")
         committedSection = section   // this is a confirmed commit

@@ -6,19 +6,56 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let wallpaper: WallpaperWindowController
 
+    // Dev mode: 5 clicks on the status-bar button within 3s.
+    // Stored in UserDefaults so it survives restarts.
+    private static let devModeKey = "aerialDevMode"
+    private var devMode: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.devModeKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.devModeKey); refreshIcon() }
+    }
+    private var devClickCount = 0
+    private var devClickTimer: Timer?
+
     init(wallpaper: WallpaperWindowController) {
         self.wallpaper = wallpaper
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
-        statusItem.button?.image = NSImage(systemSymbolName: "play.rectangle.fill",
-                                           accessibilityDescription: "Wallpaper")
-        statusItem.button?.image?.isTemplate = true
+        refreshIcon()
+
+        // Intercept button clicks to count toward dev-mode unlock BEFORE the menu opens.
+        // We add a custom action; the menu still opens via statusItem.menu.
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(buttonClicked(_:))
+        statusItem.button?.sendAction(on: .leftMouseDown)
 
         let menu = NSMenu()
         menu.delegate = self
         statusItem.menu = menu
 
         wallpaper.onStatusChanged = { [weak self] in self?.refreshIcon() }
+    }
+
+    @objc private func buttonClicked(_ sender: NSStatusBarButton) {
+        devClickTimer?.invalidate()
+        devClickCount += 1
+        devClickTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            self?.devClickCount = 0
+        }
+        if devClickCount >= 5 {
+            devClickCount = 0
+            devClickTimer?.invalidate(); devClickTimer = nil
+            devMode = !devMode
+            // Brief amber flash on the button to confirm toggle
+            if let btn = statusItem.button {
+                let prev = btn.contentTintColor
+                btn.contentTintColor = NSColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    btn.contentTintColor = prev
+                }
+            }
+        }
+        // Let the menu open normally
+        statusItem.menu?.popUp(positioning: nil, at: .zero, in: sender)
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -78,6 +115,23 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         #endif
         install.target = self
         menu.addItem(install)
+
+        if devMode {
+            menu.addItem(.separator())
+            let chooseItem = NSMenuItem(title: "Choose Video…", action: nil, keyEquivalent: "")
+            let sub = NSMenu()
+            let videos = VideoPlaylist.catalog.sorted { $0.caption < $1.caption }
+            for video in videos {
+                let v = video  // capture by value
+                let item = NSMenuItem(title: v.caption, action: #selector(pickVideo(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = v.id
+                if wallpaper.currentVideo?.id == v.id { item.state = .on }
+                sub.addItem(item)
+            }
+            chooseItem.submenu = sub
+            menu.addItem(chooseItem)
+        }
 
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit",
@@ -177,11 +231,24 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         case .playing:             name = "play.rectangle.fill"
         case .paused:              name = "pause.rectangle.fill"
         }
-        statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "Wallpaper")
-        statusItem.button?.image?.isTemplate = true
+        let img = NSImage(systemSymbolName: name, accessibilityDescription: "Wallpaper")
+        if devMode {
+            // Non-template so tintColor is respected — amber in dev mode
+            img?.isTemplate = false
+            statusItem.button?.image = img
+            statusItem.button?.contentTintColor = NSColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
+        } else {
+            img?.isTemplate = true
+            statusItem.button?.image = img
+            statusItem.button?.contentTintColor = nil
+        }
     }
 
     @objc private func nextVideo()      { wallpaper.next() }
     @objc private func prevVideo()      { wallpaper.prev() }
     @objc private func togglePlayback() { wallpaper.isPlaying ? wallpaper.pause() : wallpaper.resume() }
+    @objc private func pickVideo(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? Int else { return }
+        wallpaper.jumpToVideo(id: id)
+    }
 }

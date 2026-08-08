@@ -369,6 +369,15 @@
       background: rgba(255,255,255,0.12);
       border-color: rgba(255,255,255,0.5);
     }
+    /* Dev mode: gold outline on section button */
+    #section-btn.dev-mode {
+      border-color: #c8941a;
+      box-shadow: 0 0 0 1px rgba(200,148,26,0.35);
+    }
+    #section-btn.dev-mode:hover, #section-btn.dev-mode.active {
+      border-color: #e5aa22;
+      box-shadow: 0 0 0 1px rgba(229,170,34,0.45);
+    }
     #section-btn svg {
       width: 16px; height: 16px;
       stroke: rgba(255,255,255,0.7);
@@ -2216,6 +2225,49 @@ minimapEl.addEventListener("touchend",   e => e.stopPropagation());
 minimapDotsEl.addEventListener("click",  e => e.stopPropagation());
 minimapDotsEl.addEventListener("touchend", e => e.stopPropagation());
 
+// ── Developer mode ───────────────────────────────────────
+// Hidden feature: tap/click the center of the screen 5 times in a row to
+// toggle dev mode. When on: gold outline on the section button + individual
+// video picking inside the category dropdown. Persisted in localStorage.
+
+const DEV_MODE_KEY = "aerialDevMode";
+let devMode = false;
+try { devMode = localStorage.getItem(DEV_MODE_KEY) === "1"; } catch (_) {}
+
+function setDevMode(on) {
+  devMode = on;
+  try { localStorage.setItem(DEV_MODE_KEY, on ? "1" : "0"); } catch (_) {}
+  sectionBtn.classList.toggle("dev-mode", on);
+  // If the picker level is open but dev mode was just turned off, collapse to categories
+  if (!on && dropdownLevel === "videos") { dropdownLevel = "categories"; buildSectionMenu(); }
+}
+
+// Apply on load
+sectionBtn.classList.toggle("dev-mode", devMode);
+
+// Track 5 center-taps (22%–78% of screen width, 20%–80% height) within 3s
+let devTapCount = 0, devTapTimer = null;
+function onDevTapCandidate(x, y) {
+  const w = window.innerWidth, h = window.innerHeight;
+  if (x < w * 0.22 || x > w * 0.78) return;   // left/right nav zones — ignore
+  if (y < h * 0.20 || y > h * 0.80) return;   // top/bottom chrome — ignore
+  if (devTapTimer) clearTimeout(devTapTimer);
+  devTapCount++;
+  devTapTimer = setTimeout(() => { devTapCount = 0; devTapTimer = null; }, 3000);
+  if (devTapCount >= 5) {
+    devTapCount = 0;
+    clearTimeout(devTapTimer); devTapTimer = null;
+    setDevMode(!devMode);
+    // Brief flash so the user knows the toggle fired
+    sectionBtn.style.transition = "none";
+    sectionBtn.style.opacity = "0.3";
+    requestAnimationFrame(() => {
+      sectionBtn.style.transition = "";
+      sectionBtn.style.opacity = "";
+    });
+  }
+}
+
 // ── Section selector ─────────────────────────────────────
 
 // dropdownLevel: "categories" (default) | "videos" (picker for a specific section)
@@ -2234,7 +2286,8 @@ function buildSectionMenu(animate) {
     el.addEventListener("click", e => {
       e.stopPropagation();
       setPlaybackMode(sec.id);
-      openVideoPicker(sec.id);
+      if (devMode) openVideoPicker(sec.id);
+      else closeSectionMenu();
     });
     panel.appendChild(el);
   });
@@ -2740,6 +2793,7 @@ document.addEventListener("click", (e) => {
   const x = e.clientX, w = window.innerWidth;
   if (x < w * 0.22) prev();
   else if (x > w * 0.78) next();
+  else onDevTapCandidate(e.clientX, e.clientY);
 });
 
 let touchX = null;
