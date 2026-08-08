@@ -6,21 +6,23 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let wallpaper: WallpaperWindowController
 
-    // Dev mode: 5 quick clicks on the video-name row inside the menu within 3s.
+    // Dev mode: Option+click the menu bar icon to toggle.
     // Stored in UserDefaults so it survives restarts.
     private static let devModeKey = "aerialDevMode"
     private var devMode: Bool {
         get { UserDefaults.standard.bool(forKey: Self.devModeKey) }
         set { UserDefaults.standard.set(newValue, forKey: Self.devModeKey); refreshIcon() }
     }
-    private var devTapCount = 0
-    private var devTapTimer: Timer?
 
     init(wallpaper: WallpaperWindowController) {
         self.wallpaper = wallpaper
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         super.init()
         refreshIcon()
+
+        // Custom action so we can intercept Option+click before the menu opens.
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(buttonClicked(_:))
 
         let menu = NSMenu()
         menu.delegate = self
@@ -29,39 +31,28 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         wallpaper.onStatusChanged = { [weak self] in self?.refreshIcon() }
     }
 
-    @objc private func captionTapped() {
-        devTapTimer?.invalidate()
-        devTapCount += 1
-        devTapTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
-            DispatchQueue.main.async { self?.devTapCount = 0 }
-        }
-        if devTapCount >= 5 {
-            devTapCount = 0
-            devTapTimer?.invalidate(); devTapTimer = nil
+    @objc private func buttonClicked(_ sender: NSStatusBarButton) {
+        if NSApp.currentEvent?.modifierFlags.contains(.option) == true {
             devMode = !devMode
-            // Brief amber flash on the status bar icon to confirm toggle
-            if let btn = statusItem.button {
-                let prev = btn.contentTintColor
-                btn.contentTintColor = NSColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    btn.contentTintColor = prev
-                }
+            // Brief amber flash to confirm toggle
+            let prev = sender.contentTintColor
+            sender.contentTintColor = NSColor(red: 0.85, green: 0.60, blue: 0.10, alpha: 1)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                sender.contentTintColor = prev
             }
+            // Don't open the menu — the Option+click was intentional
+            return
         }
+        statusItem.menu?.popUp(positioning: nil, at: .zero, in: sender)
     }
 
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        // Video name row — looks like a disabled label but accepts clicks so the
-        // user can tap it 5× quickly to toggle dev mode (hidden feature).
+        // Video name — disabled label at the top of the menu
         let caption = wallpaper.currentVideo?.caption ?? "—"
-        let captionItem = NSMenuItem(title: "", action: #selector(captionTapped), keyEquivalent: "")
-        captionItem.target = self
-        // Dim gray attributed title to match the look of a disabled label
-        captionItem.attributedTitle = NSAttributedString(string: caption, attributes: [
-            .foregroundColor: NSColor.secondaryLabelColor,
-        ])
+        let captionItem = NSMenuItem(title: caption, action: nil, keyEquivalent: "")
+        captionItem.isEnabled = false
         menu.addItem(captionItem)
         menu.addItem(.separator())
 
