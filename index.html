@@ -1706,13 +1706,21 @@ function goTo(index, opts) {
   function doTransition() {
     if (activeGoToFallback) { clearTimeout(activeGoToFallback); activeGoToFallback = null; }
     clearGoToLoad();
-    // Restore outgoing to full opacity before starting the fade — a previous
-    // cancelled mid-transition may have already removed .active from it, and
-    // a stale timer may have added .active to incoming. Force a reflow so the
-    // browser commits opacity=1 on outgoing before the CSS transition fires.
+    // Restore a clean layer baseline before starting the new fade:
+    //  - outgoingLayer must be at opacity 1 (may have lost .active from a
+    //    cancelled mid-flight transition)
+    //  - incomingLayer must snap to opacity 0 immediately — if it still has
+    //    .active from a stale timer, just removing the class would trigger a
+    //    2s CSS transition and the back layer (which sits on top in z-order)
+    //    would show through while fading, revealing the preloaded next video.
+    //    Setting an inline opacity=0 overrides any ongoing CSS transition
+    //    instantly, then we remove the inline style after the reflow so the
+    //    class-based rule (no .active → opacity:0) takes over cleanly.
     outgoingLayer.classList.add("active");
     incomingLayer.classList.remove("active");
-    void outgoingLayer.offsetHeight;
+    incomingLayer.style.opacity = "0";   // snap — bypass any ongoing CSS transition
+    void outgoingLayer.offsetHeight;     // commit both changes before transition starts
+    incomingLayer.style.opacity = "";    // restore CSS control (class rule keeps it at 0)
 
     safePlay(incoming, "goTo_crossfade");
     // Cinematic dissolve-through-black: fade the outgoing layer out first
