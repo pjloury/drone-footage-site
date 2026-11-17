@@ -161,6 +161,17 @@ enum AerialCatalog {
         for v in Catalog.shared.videos where mobileURL(v.id) == url { return v.caption }
         return ""
     }
+
+    /// Coordinates for a mobile URL, resolved through the live catalog —
+    /// feeds MinimapView the same way the tvOS engine does. nil hides the
+    /// minimap (matches tvOS's `if let lat = ..., let lng = ...` pattern).
+    static func coordinates(for url: URL) -> (lat: Double, lng: Double)? {
+        for v in Catalog.shared.videos where mobileURL(v.id) == url {
+            guard let lat = v.lat, let lng = v.lng else { return nil }
+            return (lat, lng)
+        }
+        return nil
+    }
 }
 
 // MARK: - Playback mode
@@ -196,6 +207,11 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     private var backPlayer:  AVPlayer { isFrontA ? playerB : playerA }
 
     @Published private(set) var currentTitle = ""
+    // Feeds MinimapView — nil (no coordinates in the catalog) hides it.
+    // `noPin` only suppresses this location's pin when some OTHER clip is
+    // current; it has no bearing on showing the dot for its own clip.
+    @Published private(set) var currentLat: Double?
+    @Published private(set) var currentLng: Double?
     @Published private(set) var mode: PlaybackMode = .shuffle
     // Data-driven switcher: Shuffle + one entry per category in the catalog.
     @Published private(set) var availableModes: [PlaybackMode] = PlaybackMode.all
@@ -354,9 +370,14 @@ final class AerialPlayerModel: NSObject, ObservableObject {
     }
 
     private func updateTitle(for url: URL) {
-        let title = AerialCatalog.caption(for: url)
+        let title  = AerialCatalog.caption(for: url)
+        let coords = AerialCatalog.coordinates(for: url)
         DispatchQueue.main.async {
-            withAnimation(.easeInOut(duration: 0.4)) { self.currentTitle = title }
+            withAnimation(.easeInOut(duration: 0.4)) {
+                self.currentTitle = title
+                self.currentLat = coords?.lat
+                self.currentLng = coords?.lng
+            }
         }
     }
 

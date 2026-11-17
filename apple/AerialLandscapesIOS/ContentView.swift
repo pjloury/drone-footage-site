@@ -114,14 +114,24 @@ struct ContentView: View {
             }
             .transaction { $0.animation = nil }
 
-            // Title caption — bottom-left.
-            Text(model.currentTitle)
-                .font(.system(.callout, design: .default))
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 2)
-                .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
-                .padding(.leading, 20)
-                .padding(.bottom, 20)
+            // Title caption (bottom-left) + minimap (bottom-right) — mirrors
+            // the tvOS/website bottom row.
+            HStack(alignment: .bottom) {
+                Text(model.currentTitle)
+                    .font(.system(.callout, design: .default))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.8), radius: 6, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.6), radius: 4, x: 0, y: 1)
+
+                Spacer()
+
+                if let lat = model.currentLat, let lng = model.currentLng {
+                    MinimapView(lat: lat, lng: lng)
+                }
+            }
+            .padding(.leading, 20)
+            .padding(.trailing, 12)
+            .padding(.bottom, 20)
         }
     }
 }
