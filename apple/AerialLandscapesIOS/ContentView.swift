@@ -3,10 +3,42 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var model = AerialPlayerModel()
 
+    // Hidden dev mode — 5 taps in the center of the screen (same exclusion
+    // zone as the skip strips, matching tvOS's 5-select-presses and the
+    // website's 5-center-clicks) within 3s toggles a persisted flag that
+    // gates the individual-video picker in the category Menu below.
+    @State private var devModeOn = DevMode.isEnabled
+    @State private var devTapCount = 0
+    @State private var devTapResetWorkItem: DispatchWorkItem?
+    @State private var toastText: String?
+    private static let devTapWindow: TimeInterval = 3.0
+
     private func selectMode(_ m: PlaybackMode) {
         guard m != model.mode else { return }
         // setMode dissolves via the player-layer crossfade, so no black cover.
         model.setMode(m)
+    }
+
+    private func registerDevTap() {
+        devTapResetWorkItem?.cancel()
+        devTapCount += 1
+        if devTapCount >= 5 {
+            devTapCount = 0
+            DevMode.toggle()
+            devModeOn = DevMode.isEnabled
+            showToast(devModeOn ? "DEV MODE ON" : "DEV MODE OFF")
+            return
+        }
+        let work = DispatchWorkItem { devTapCount = 0 }
+        devTapResetWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.devTapWindow, execute: work)
+    }
+
+    private func showToast(_ text: String) {
+        withAnimation(.easeOut(duration: 0.25)) { toastText = text }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeIn(duration: 0.4)) { toastText = nil }
+        }
     }
 
     var body: some View {
@@ -28,6 +60,14 @@ struct ContentView: View {
             GeometryReader { geo in
                 let stripW = geo.size.width * 0.2
                 ZStack {
+                    // Dev-tap catcher, full-size but UNDER the two skip strips
+                    // below in z-order, so a tap only reaches it from the
+                    // center ~60% — taps on the skip strips never count
+                    // toward the dev-mode counter, same exclusion the
+                    // website's center-zone check makes explicit.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { registerDevTap() }
                     Color.clear
                         .contentShape(Rectangle())
                         .frame(width: stripW)
@@ -85,13 +125,27 @@ struct ContentView: View {
                         .background(Capsule().fill(Color.black.opacity(0.35)))
                     Menu {
                         ForEach(model.availableModes) { m in
-                            Button {
-                                selectMode(m)
-                            } label: {
-                                if model.mode == m {
-                                    Label(m.label, systemImage: "checkmark")
-                                } else {
-                                    Text(m.label)
+                            // Dev mode: a category (not Shuffle) becomes a
+                            // submenu of its individual videos — tapping one
+                            // jumps straight to that clip (instant cut, no
+                            // crossfade), mirroring tvOS's jumpToVideo.
+                            if devModeOn, m.id != "shuffle" {
+                                Menu(m.label) {
+                                    ForEach(Catalog.shared.ids(in: m.id), id: \.self) { id in
+                                        Button(Catalog.shared.caption(forID: id)) {
+                                            model.jumpToVideo(id: id)
+                                        }
+                                    }
+                                }
+                            } else {
+                                Button {
+                                    selectMode(m)
+                                } label: {
+                                    if model.mode == m {
+                                        Label(m.label, systemImage: "checkmark")
+                                    } else {
+                                        Text(m.label)
+                                    }
                                 }
                             }
                         }
@@ -99,6 +153,11 @@ struct ContentView: View {
                         HStack(spacing: 5) {
                             Text(model.mode.label)
                                 .font(.system(size: 13, weight: .medium))
+                            if devModeOn {
+                                Circle()
+                                    .fill(Color(red: 0.85, green: 0.60, blue: 0.10))
+                                    .frame(width: 5, height: 5)
+                            }
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .semibold))
                         }
@@ -132,6 +191,17 @@ struct ContentView: View {
             .padding(.leading, 20)
             .padding(.trailing, 12)
             .padding(.bottom, 20)
+
+            // Dev-mode toggle toast — mirrors tvOS's centered "DEV MODE
+            // ON/OFF" flash.
+            if let toastText {
+                Text(toastText)
+                    .font(.system(size: 18, weight: .medium, design: .monospaced))
+                    .foregroundColor(devModeOn ? Color(red: 0.85, green: 0.60, blue: 0.10) : .white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
         }
     }
 }

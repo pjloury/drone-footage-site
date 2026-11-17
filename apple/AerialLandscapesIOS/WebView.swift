@@ -309,6 +309,27 @@ final class AerialPlayerModel: NSObject, ObservableObject {
         }
     }
 
+    /// Jump directly to a specific video by id (dev-mode video picker) — an
+    /// instant cut, no crossfade. Mirrors StreamingPlayerModel.jumpToVideo
+    /// on tvOS: find it in the current playlist, or insert it at the front.
+    func jumpToVideo(id: Int) {
+        let url = AerialCatalog.mobileURL(id)
+        if let idx = playlist.firstIndex(of: url) {
+            currentIndex = idx
+        } else {
+            playlist.insert(url, at: 0)
+            activeURLs.insert(url)
+            currentIndex = 0
+        }
+        removeTimeObserver()
+        frontPlayer.replaceCurrentItem(with: AVPlayerItem(url: url))
+        frontPlayer.seek(to: .zero)
+        frontPlayer.play()
+        updateTitle(for: url)
+        playbackProgress = 0
+        startTimeObserver()
+    }
+
     func skipForward() {
         guard !isCrossfading, !playlist.isEmpty else { return }
         currentIndex = (currentIndex + 1) % playlist.count
